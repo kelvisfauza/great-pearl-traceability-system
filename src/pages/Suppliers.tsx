@@ -815,6 +815,72 @@ const Suppliers = () => {
           <SupplierPerformanceRanking />
         )}
 
+        {/* Never-delivered suppliers */}
+        <Dialog open={neverDeliveredOpen} onOpenChange={setNeverDeliveredOpen}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <PackageX className="h-5 w-5" /> Suppliers who have never delivered
+              </DialogTitle>
+              <DialogDescription>
+                Registered suppliers with no coffee delivery on record, longest-waiting first.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {neverDeliveredLoading ? (
+                <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Checking delivery history…
+                </div>
+              ) : neverDelivered.length === 0 ? (
+                <p className="text-center text-muted-foreground py-10">Every registered supplier has at least one delivery.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Supplier Name</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Registered</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {neverDelivered.map((s, i) => (
+                      <TableRow key={s.id}>
+                        <TableCell>{i + 1}</TableCell>
+                        <TableCell>{s.code || '—'}</TableCell>
+                        <TableCell>{s.name}</TableCell>
+                        <TableCell>{s.phone || '—'}</TableCell>
+                        <TableCell>{s.origin || '—'}</TableCell>
+                        <TableCell>
+                          {s.date_registered || '—'}
+                          {s.daysSinceRegistration !== null && (
+                            <span className="text-muted-foreground"> ({s.daysSinceRegistration} days ago)</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+            <div className="flex items-center justify-between pt-3 border-t">
+              <span className="text-sm text-muted-foreground">
+                {neverDeliveredLoading ? 'Loading…' : `${neverDelivered.length} supplier(s) with no delivery on record`}
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={downloadNeverDeliveredCsv} disabled={neverDeliveredLoading || neverDelivered.length === 0}>
+                  <Download className="h-4 w-4 mr-2" /> Download CSV
+                </Button>
+                <Button onClick={printNeverDelivered} disabled={neverDeliveredLoading || neverDelivered.length === 0}>
+                  <Printer className="h-4 w-4 mr-2" /> Print list
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {!selectedSupplier && view === 'list' && canManageSuppliers && (
           <PendingSupplierRequests />
         )}
