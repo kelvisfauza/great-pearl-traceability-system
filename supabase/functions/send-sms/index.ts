@@ -493,6 +493,8 @@ serve(async (req) => {
       'booking_confirmation',
       'booking_expiry',
       'booking_fulfilled',
+      // Loyalty rewards switched back on — confirmation to all staff
+      'loyalty_reenabled',
     ]
     
     const lowerType = (messageType || '').toLowerCase()
