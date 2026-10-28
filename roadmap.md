@@ -1,5 +1,9 @@
 # Roadmap
 
+## Per diem printed-form requests
+- [ ] Require an issued printed per diem form number on employee submissions and show saved requests for award/payment.
+- [ ] Validate reference enforcement and request visibility; authenticated end-to-end checks depend on an available session.
+
 ## SEO findings
 - [x] Listed three stale failing findings and checked current source; fixed named menu, notification, vault and display controls and public headings.
 - [x] Published route-aware titles/descriptions/canonicals and same-origin public sitemap; two visibility tests passed, browser metadata verified, latest build clean; metadata finding marked fixed pending rescan.
