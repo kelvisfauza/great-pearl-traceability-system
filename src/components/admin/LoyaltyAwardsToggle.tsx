@@ -51,7 +51,7 @@ const LoyaltyAwardsToggle = () => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><Gift className="h-5 w-5" /> Loyalty Rewards</CardTitle>
-        <CardDescription>Turn loyalty earning and the daily 8pm payout on or off for all employees. Changes are silent — no messages are sent.</CardDescription>
+        <CardDescription>Turn loyalty earning and the daily 8pm payout on or off for all employees. Turning it ON sends every active employee an email and SMS confirmation, including any earnings held back while it was off. Turning it OFF is silent.</CardDescription>
       </CardHeader>
       <CardContent className="flex items-center justify-between gap-4">
         <div className="space-y-1">
