@@ -10,6 +10,9 @@ import { Download, Plane } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
+import { supabase } from '@/integrations/supabase/client';
+import PerDiemRequestSubmission from './PerDiemRequestSubmission';
+import { useQueryClient } from '@tanstack/react-query';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 
@@ -21,21 +24,14 @@ const loadImageAsBase64 = (url: string): Promise<string> =>
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
-      canvas.getContext('2d')!.drawImage(img, 0, 0);
+      const context = canvas.getContext('2d');
+      if (!context) { reject(new Error('Unable to load logo')); return; }
+      context.drawImage(img, 0, 0);
       resolve(canvas.toDataURL('image/png'));
     };
     img.onerror = () => reject(new Error('Failed to load logo'));
     img.src = url;
   });
-
-const generateRefNumber = () => {
-  const d = new Date();
-  const yr = d.getFullYear().toString().slice(-2);
-  const mo = String(d.getMonth() + 1).padStart(2, '0');
-  const dy = String(d.getDate()).padStart(2, '0');
-  const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
-  return `PD-${yr}${mo}${dy}-${rand}`;
-};
 
 interface PerDiemFormData {
   destination: string;
@@ -61,7 +57,10 @@ const generatePDF = async (
   employee: { name?: string; email?: string; department?: string; position?: string; phone?: string },
   data: PerDiemFormData,
 ) => {
-  const refNo = generateRefNumber();
+  const { data: issued, error: issueError } = await supabase.rpc('issue_per_diem_form', { p_data: { ...data } });
+  if (issueError) throw issueError;
+  if (!issued) throw new Error('Unable to issue per diem form');
+  const refNo = issued.document_number;
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-UG', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -327,6 +326,9 @@ const generatePDF = async (
   doc.text('Great Agro Coffee Ltd  |  A Member of YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
 
   await (await import('@/utils/pdfPrintStamp')).preparePdfPrint(doc, `Per diem ${refNo}`);
+  const { error: printError } = await supabase.rpc('mark_per_diem_form_printed', { p_id: issued.id });
+  if (printError) throw printError;
+  doc.autoPrint();
   const blobUrl = doc.output('bloburl');
   const printWin = window.open(blobUrl as unknown as string, '_blank');
   if (printWin) {
@@ -339,6 +341,7 @@ const generatePDF = async (
 
 const PerDiemTemplateDownload = () => {
   const { employee } = useAuth();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -386,6 +389,7 @@ const PerDiemTemplateDownload = () => {
         form,
       );
       toast({ title: 'Per Diem form ready', description: 'Form opened for printing and downloaded.' });
+      await queryClient.invalidateQueries({ queryKey: ['my-per-diem-requests'] });
       setOpen(false);
     } catch (e) {
       console.error(e);
@@ -412,6 +416,7 @@ const PerDiemTemplateDownload = () => {
             <Download className="h-4 w-4" />
             Open Per Diem Form
           </Button>
+          <PerDiemRequestSubmission />
         </CardContent>
       </Card>
 

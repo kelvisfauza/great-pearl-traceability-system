@@ -1,5 +1,7 @@
 # Project architecture
 
+- Issue employee per diem forms as immutable saved request snapshots; employees submit their own print-prepared number once, and Admin/HR awards atomically record the award plus a PER_DIEM wallet credit through existing treasury triggers to prevent duplicate or partial payments.
+
 - Manage route titles, descriptions and self-referencing canonicals through one Helmet provider and RouteMetadata, preserving static social fallback tags; keep sensitive document/employee and staff routes noindex and out of the static public sitemap.
 
 - Revoke misplaced Finance GRN print state through a permission-checked private routine and public invoker wrapper, archiving every removed active print row in audit_logs; match lot and batch records so selection resets without changing payments or Quality assessments.
