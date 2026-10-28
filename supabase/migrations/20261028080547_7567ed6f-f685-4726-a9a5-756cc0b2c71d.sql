@@ -1,0 +1,1 @@
+GRANT USAGE ON SCHEMA supplier_requests_private TO authenticated, service_role;
