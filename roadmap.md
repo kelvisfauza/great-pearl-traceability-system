@@ -1,8 +1,9 @@
 # Roadmap
 
 ## Misplaced GRN prints
-- [ ] Add authorized, audited revocation for chosen GRNs and restore Print/selection without changing payments.
-- [ ] Run focused regression tests and check available preview signals; real signed-in flow requires external Supabase access.
+- [x] Add authorized, audited revocation for chosen GRNs and restore Print/selection without changing payments; no existing GRNs reset automatically.
+- [x] Three focused regression/security tests passed and latest preview build clean.
+- [ ] Verify real signed-in revocation and printing — external Supabase authentication unavailable.
 
 ## Clearance confirmation and printed heading repair
 - [x] Align contract selection and confirmation so Procurement can confirm its chosen active contract despite different buyer labels; database function verified and KCL BUGOYE/Kyagalanyi regression passed.
