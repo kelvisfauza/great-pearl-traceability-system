@@ -24,20 +24,34 @@ const LoyaltyAwardsToggle = () => {
   const toggle = async (on: boolean) => {
     setSaving(true);
     const { data, error } = await (supabase as any).rpc("set_loyalty_awards_enabled", { p_enabled: on });
-    setSaving(false);
     if (error) {
+      setSaving(false);
       toast({ title: "Could not change loyalty", description: error.message, variant: "destructive" });
       return;
     }
     setStatus(data as Status);
-    toast({ title: on ? "Loyalty turned ON" : "Loyalty turned OFF", description: on ? "Staff will earn loyalty again; points are paid at the 8pm collection." : "No loyalty will be credited or paid to anyone." });
+
+    if (on) {
+      // Notify every active employee by email and SMS that loyalty is back on
+      const { data: notify, error: notifyError } = await (supabase as any).functions.invoke("loyalty-reenabled-notify");
+      setSaving(false);
+      if (notifyError || notify?.ok === false) {
+        toast({ title: "Loyalty turned ON", description: "But the confirmation emails/texts failed to send. Try switching off and on again.", variant: "destructive" });
+      } else {
+        toast({ title: "Loyalty turned ON", description: `Confirmations sent: ${notify?.emailsSent ?? 0} emails and ${notify?.smsSent ?? 0} texts to staff.` });
+      }
+      return;
+    }
+
+    setSaving(false);
+    toast({ title: "Loyalty turned OFF", description: "No loyalty will be credited or paid to anyone." });
   };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><Gift className="h-5 w-5" /> Loyalty Rewards</CardTitle>
-        <CardDescription>Turn loyalty earning and the daily 8pm payout on or off for all employees. Changes are silent — no messages are sent.</CardDescription>
+        <CardDescription>Turn loyalty earning and the daily 8pm payout on or off for all employees. Turning it ON sends every active employee an email and SMS confirmation, including any earnings held back while it was off. Turning it OFF is silent.</CardDescription>
       </CardHeader>
       <CardContent className="flex items-center justify-between gap-4">
         <div className="space-y-1">
