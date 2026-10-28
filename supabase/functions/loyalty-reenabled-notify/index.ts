@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
 // Sends an email + SMS confirmation to every active employee when an admin
@@ -56,7 +56,6 @@ Deno.serve(async (req) => {
     const { data: held } = await supabase
       .from('loyalty_daily_accruals')
       .select('user_id, amount')
-      .eq('credited', false)
       .gte('accrual_date', '2026-10-22')
     const heldByUser: Record<string, number> = {}
     for (const row of held || []) {
@@ -75,7 +74,7 @@ Deno.serve(async (req) => {
     for (const emp of employees || []) {
       const heldAmount = emp.auth_user_id ? Math.round(heldByUser[emp.auth_user_id] || 0) : 0
       const heldLine = heldAmount > 0
-        ? `You have UGX ${heldAmount.toLocaleString()} in loyalty earnings that were held while rewards were paused — these will now be credited to your wallet.`
+        ? `You have UGX ${heldAmount.toLocaleString()} in loyalty earnings that were held while rewards were paused — these have now been credited to your wallet.`
         : `You can start earning loyalty rewards again from today.`
 
       // Email confirmation
@@ -113,7 +112,7 @@ Deno.serve(async (req) => {
       // SMS confirmation
       if (emp.phone) {
         const sms = heldAmount > 0
-          ? `GREAT AGRO COFFEE: Loyalty rewards are back ON. Your held earnings of UGX ${heldAmount.toLocaleString()} will be credited to your wallet. Keep working normally to earn more.`
+          ? `GREAT AGRO COFFEE: Loyalty rewards are back ON. Your held earnings of UGX ${heldAmount.toLocaleString()} have been credited to your wallet. Keep working normally to earn more.`
           : `GREAT AGRO COFFEE: Loyalty rewards are back ON. Your daily system activities earn rewards again, paid to your wallet at 8pm daily.`
         try {
           const { error: smsError } = await supabase.functions.invoke('send-sms', {
