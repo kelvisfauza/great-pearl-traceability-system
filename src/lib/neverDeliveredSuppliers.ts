@@ -59,12 +59,19 @@ export function resolveNeverDeliveredSuppliers<
     if (n) deliveredNames.add(n);
   }
 
+  // Alias keys are supplier names as saved, so match them case-insensitively.
+  const aliasLookup = new Map<string, string[]>();
+  for (const [key, vals] of Object.entries(aliases)) {
+    const k = normalizeSupplierName(key);
+    if (!k) continue;
+    aliasLookup.set(k, [...(aliasLookup.get(k) || []), ...vals]);
+  }
+
   return suppliers
     .filter(s => {
       if (deliveredIds.has(s.id)) return false;
       const norm = normalizeSupplierName(s.name);
-      const aliasList = [...(aliases[s.name] || []), ...(aliases[norm] || [])];
-      const names = [norm, ...aliasList.map(normalizeSupplierName)];
+      const names = [norm, ...(aliasLookup.get(norm) || []).map(normalizeSupplierName)];
       return !names.some(n => n && deliveredNames.has(n));
     })
     .map(s => ({ ...s, daysSinceRegistration: daysSince(s.date_registered) }))
