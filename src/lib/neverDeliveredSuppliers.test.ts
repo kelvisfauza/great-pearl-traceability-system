@@ -27,8 +27,9 @@ it('matches legacy deliveries by normalized name, ignoring code suffixes', () =>
 it('counts days since registration and sorts longest-waiting first', () => {
   const out = resolveNeverDeliveredSuppliers(suppliers, [{ supplier_id: 's3' }]);
   assert.equal(out.length, 2);
+  assert.deepEqual(out.map(s => s.id), ['s1', 's2']);
   assert.ok(out[0].daysSinceRegistration! > out[1].daysSinceRegistration!);
-  assert.equal(out[1].daysSinceRegistration, null);
+  assert.ok(out[1].daysSinceRegistration! > 0);
 });
 
 it('normalizes legacy code suffixes for comparison', () => {
