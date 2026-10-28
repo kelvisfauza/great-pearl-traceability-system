@@ -1,5 +1,9 @@
 # Roadmap
 
+## Finance GRN receipt mismatch
+- [ ] Compare GRN 20260221018 and receipt RCP-60222009 against saved payments and fix mismatched receipt selection without changing payments.
+- [ ] Run focused receipt regression checks; authenticated Finance printing depends on an available staff session.
+
 ## Per diem printed-form requests
 - [x] Require an issued print-prepared per diem form number on employee submissions and show saved pending requests in HR awards; duplicate submission/award blocked and award plus treasury-backed wallet credit saved atomically.
 - [x] Four reference/eligibility tests passed, database wrappers verified and latest preview build clean.
