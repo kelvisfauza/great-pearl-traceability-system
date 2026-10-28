@@ -14,6 +14,7 @@ export const VaultButton = () => {
   return (
     <Button
       variant="outline"
+      aria-label="Open My Vault"
       size="sm"
       className="gap-1.5 px-2 sm:px-3 sm:gap-2"
       onClick={() => navigate('/vault')}

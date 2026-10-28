@@ -11,6 +11,7 @@ const NotificationButton = ({ onToggle, unreadCount }: NotificationButtonProps) 
   return (
     <Button
       onClick={onToggle}
+      aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
       variant="ghost"
       size="sm"
       className="relative hover-scale transition-all duration-200 hover:bg-primary/10"

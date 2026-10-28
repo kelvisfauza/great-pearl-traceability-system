@@ -89,7 +89,7 @@ const EmployeeProfile = () => {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <User className="w-8 h-8 text-red-500" />
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Employee Not Found</h2>
+            <h1 className="text-xl font-bold text-gray-800 mb-2">Employee Not Found</h1>
             <p className="text-gray-500">{error || 'The scanned QR code does not match any employee record.'}</p>
           </CardContent>
         </Card>

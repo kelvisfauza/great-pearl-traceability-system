@@ -129,7 +129,7 @@ export default function CareersSection() {
       <div className="mx-auto max-w-6xl px-4 py-16">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-3xl font-semibold">Careers at {COMPANY_NAME}</h2>
+            <h1 className="text-3xl font-semibold">Careers at {COMPANY_NAME}</h1>
             <p className="mt-3 max-w-2xl text-muted-foreground">
               We are always looking for people who care about coffee, farmers and doing work
               properly. Browse our current openings below and apply online — applications are
@@ -144,7 +144,7 @@ export default function CareersSection() {
         ) : openings.length === 0 ? (
           <div className="mt-10 rounded-lg border bg-card p-8 text-center">
             <Briefcase className="mx-auto h-8 w-8 text-primary" />
-            <h3 className="mt-4 text-lg font-medium">No advertised vacancies right now</h3>
+            <h2 className="mt-4 text-lg font-medium">No advertised vacancies right now</h2>
             <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
               You can still submit an open application. We keep applications on file and contact
               candidates when a matching position opens up.
@@ -156,7 +156,7 @@ export default function CareersSection() {
             {openings.map((o) => (
               <article key={o.id} className="flex flex-col rounded-lg border bg-card p-6">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-medium">{o.title}</h3>
+                  <h2 className="text-lg font-medium">{o.title}</h2>
                   {o.employment_type && <Badge variant="secondary">{o.employment_type}</Badge>}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
@@ -192,7 +192,7 @@ export default function CareersSection() {
 
         {/* Terms and conditions */}
         <div className="mt-12 rounded-lg border bg-card p-6">
-          <h3 className="text-lg font-medium">Recruitment terms &amp; conditions</h3>
+          <h2 className="text-lg font-medium">Recruitment terms &amp; conditions</h2>
           <ScrollArea className="mt-4 h-64 rounded border bg-muted/30 p-4">
             <div className="space-y-3 pr-3 text-sm text-muted-foreground">
               <p><strong>1. Equal opportunity.</strong> {COMPANY_NAME} is an equal opportunity employer. All applications are considered on merit, without regard to gender, tribe, religion, disability, marital status or political affiliation.</p>
@@ -218,7 +218,7 @@ export default function CareersSection() {
           {ref ? (
             <div className="py-6 text-center">
               <CheckCircle2 className="mx-auto h-12 w-12 text-primary" />
-              <h3 className="mt-4 text-xl font-semibold">Application received</h3>
+              <h2 className="mt-4 text-xl font-semibold">Application received</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Your reference number is <span className="font-mono font-semibold text-foreground">{ref}</span>.
                 We have sent a confirmation to your phone and email. Keep this reference for follow-up.

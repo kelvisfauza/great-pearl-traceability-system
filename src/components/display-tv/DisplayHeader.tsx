@@ -62,10 +62,10 @@ const DisplayHeader = ({
         </div>
 
         <div className="flex gap-2">
-          <Button variant="secondary" size="icon" onClick={onRefresh} className="h-14 w-14 rounded-2xl">
+          <Button variant="secondary" size="icon" aria-label="Refresh coffee display" title="Refresh coffee display" onClick={onRefresh} className="h-14 w-14 rounded-2xl">
             <RefreshCw className="h-5 w-5" />
           </Button>
-          <Button variant="secondary" size="icon" onClick={onToggleFullscreen} className="h-14 w-14 rounded-2xl">
+          <Button variant="secondary" size="icon" aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} onClick={onToggleFullscreen} className="h-14 w-14 rounded-2xl">
             {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
           </Button>
         </div>

@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react';
+import { HelmetProvider } from 'react-helmet-async';
+import RouteMetadata from '@/components/RouteMetadata';
 import { Toaster } from "@/components/ui/toaster";
 import PrintIntentDialog from "@/components/print/PrintIntentDialog";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -227,6 +229,7 @@ const App: React.ComponentType = () => {
   const queryClient = new QueryClient();
 
   return (
+    <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <LeaveEnforcementProvider>
@@ -243,6 +246,7 @@ const App: React.ComponentType = () => {
             <MissedGroupCallsBanner />
             <ScheduledMeetingPrompt />
             <BrowserRouter>
+              <RouteMetadata />
               <InactivityTimerInitializer />
               <OfflineSyncBoot />
               <OfflineIndicator />
@@ -719,6 +723,7 @@ const App: React.ComponentType = () => {
         </LeaveEnforcementProvider>
       </AuthProvider>
     </QueryClientProvider>
+    </HelmetProvider>
   );
 };
 

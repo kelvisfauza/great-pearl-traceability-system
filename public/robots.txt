@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://greatpearlcoffeesystem.site/sitemap.xml
+Sitemap: https://great-pearl-traceability-system.lovable.app/sitemap.xml
