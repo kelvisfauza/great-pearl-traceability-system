@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getGrnPayCode, formatPayCode } from '@/utils/grnPayCode';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskConical, QrCode, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { printGrnPaymentReceipt } from '@/utils/grnPaymentReceipt';
-import { bindGrnReceipt } from '@/lib/grnReceiptBinding';
+import { bindGrnReceipt, assertGrnPaymentTarget, captureGrnPaymentEntry, previousConfirmedGrnPayments } from '@/lib/grnReceiptBinding';
 import { getGRNPrintDocumentHTML } from '@/utils/grnPrintTemplate';
 import { enrichGRNListWithSuppliers } from '@/utils/enrichGRNSupplier';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
@@ -83,12 +83,15 @@ export default function GRNScanPay() {
   // duplicate batch numbers). Finance must see which lot is already paid and pay the rest.
   const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
   const [paidPrintEntry, setPaidPrintEntry] = useState<any>(null);
+  const [paymentTarget, setPaymentTarget] = useState<any>(null);
+  const paymentInFlight = useRef(false);
 
   useEffect(() => {
     setSelectedLotId(null);
     setPaidPrintEntry(null);
     setPrintPromptOpen(false);
     setPayOpen(false);
+    setPaymentTarget(null);
   }, [rawRef]);
 
   // Scan-only finance staff (Finance:view + Finance:create) cannot release money —
@@ -359,11 +362,7 @@ export default function GRNScanPay() {
       return;
     }
     const { lotValue, amount: thisPayment } = binding;
-    const previouslyPaid = (source?.payments || [])
-      .filter((p: any) =>
-        p.id !== payment.id &&
-        !['failed', 'cancelled', 'rejected'].includes(String(p.status || '').toLowerCase()))
-      .reduce((s: number, p: any) => s + Number(p.amount_paid_ugx || 0), 0);
+    const previouslyPaid = previousConfirmedGrnPayments(receiptLot, payment, source?.payments || []);
     trackActivity('report_generation', `printing supplier payment receipt for ${receiptLot.batch_number}`, {
       form_name: 'GRN Payment Receipt',
       batch: receiptLot.batch_number,
@@ -399,21 +398,27 @@ export default function GRNScanPay() {
     const lot = source?.lot;
     const entryRecord = source?.record;
     if (!lot) return;
+    try {
+      bindGrnReceipt(lot, source?.payment);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No matching saved payment');
+      return;
+    }
     const w = window.open('', '', 'width=1000,height=1200');
     if (!w) return;
     w.document.write('<html><body style="font-family:Arial;padding:24px">Preparing payment order…</body></html>');
     const base: any = {
-      grnNumber: `GRN-${lot.batch_number || batch}`,
+      grnNumber: `GRN-${lot.batch_number}`,
       supplierId: lot.supplier_id,
       supplierName: source?.supplierName || 'Unknown Supplier',
-      coffeeType: entryRecord?.coffee_type || quality?.coffee_type || '',
+      coffeeType: entryRecord?.coffee_type || source?.quality?.coffee_type || '',
       numberOfBags: Number(entryRecord?.bags || 0),
       totalKgs: Number(lot.quantity_kg || 0),
       unitPrice: Number(lot.unit_price_ugx || 0),
       totalAmount: Number(lot.total_amount_ugx || 0),
-      assessedBy: lot.assessed_by || quality?.assessed_by || '',
+      assessedBy: lot.assessed_by || source?.quality?.assessed_by || '',
       createdAt: lot.assessed_at || lot.created_at,
-      moisture: quality?.moisture ?? undefined,
+      moisture: source?.quality?.moisture ?? undefined,
       printedBy: employee?.name || user?.email || 'Finance',
     };
     const [data] = await enrichGRNListWithSuppliers([base]);
@@ -423,9 +428,21 @@ export default function GRNScanPay() {
   };
 
   const handlePay = async () => {
-    if (!lot) return;
+    if (!lot || !paymentTarget?.lot || paymentInFlight.current || !canPay) return;
+    paymentInFlight.current = true;
     setProcessing(true);
     try {
+      assertGrnPaymentTarget(paymentTarget.lot, lot);
+      const { data: currentLot, error: currentError } = await supabase
+        .from('finance_coffee_lots').select('*').eq('id', paymentTarget.lot.id).single();
+      if (currentError) throw currentError;
+      if (!currentLot) throw new Error('The saved GRN could not be checked. No payment was made.');
+      assertGrnPaymentTarget(paymentTarget.lot, currentLot);
+      if (String(currentLot.finance_status).toLowerCase() === 'paid') {
+        throw new Error('This GRN has already been paid. Refresh before continuing.');
+      }
+      const source = captureGrnPaymentEntry(paymentTarget);
+      const lot = source.lot;
       const payer = employee?.name || user?.email || 'Finance Department';
 
       const { error: updErr } = await supabase
@@ -449,15 +466,13 @@ export default function GRNScanPay() {
       }).select('*').single();
       if (payErr) throw payErr;
       if (!savedPayment) throw new Error('The saved payment could not be read back.');
-      setPaidPrintEntry({
-        ...entry,
-        lot: { ...lot },
-        record: entryRecord ? { ...entryRecord } : null,
+      bindGrnReceipt(lot, savedPayment);
+      setPaidPrintEntry(captureGrnPaymentEntry({
+        ...source,
         payment: savedPayment,
-        payments: [savedPayment, ...(entry?.payments || [])],
+        payments: [savedPayment, ...(source?.payments || [])],
         paidByName: payer,
-        referral: grnReferral,
-      });
+      }));
 
       const { data: balance } = await supabase.from('finance_cash_balance').select('*').maybeSingle();
       if (balance) {
@@ -516,6 +531,7 @@ export default function GRNScanPay() {
     } catch (e: any) {
       toast.error('Payment failed: ' + (e.message || 'Unknown error'));
     } finally {
+      paymentInFlight.current = false;
       setProcessing(false);
     }
   };
@@ -968,7 +984,10 @@ export default function GRNScanPay() {
                   </Button>
                 </div>
               ) : canPay ? (
-                <Button onClick={() => setPayOpen(true)} className="w-full">
+                <Button onClick={() => {
+                  setPaymentTarget(captureGrnPaymentEntry({ ...entry, quality, referral: grnReferral }));
+                  setPayOpen(true);
+                }} className="w-full" disabled={processing}>
                   <CreditCard className="h-4 w-4 mr-2" /> Pay this GRN
                 </Button>
               ) : (
@@ -1024,16 +1043,16 @@ export default function GRNScanPay() {
         </Card>
       )}
 
-      <Dialog open={payOpen} onOpenChange={setPayOpen}>
+      <Dialog open={payOpen} onOpenChange={(open) => { if (!processing) setPayOpen(open); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm payment</DialogTitle>
             <DialogDescription>
-              {entry?.supplierName} — {money(lot?.total_amount_ugx)} for GRN-{lot?.batch_number || batch}
+              {paymentTarget?.supplierName} — {money(paymentTarget?.lot?.total_amount_ugx)} for GRN-{paymentTarget?.lot?.batch_number}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <Select value={method} onValueChange={setMethod}>
+            <Select value={method} onValueChange={setMethod} disabled={processing}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="CASH">Cash</SelectItem>

@@ -10,9 +10,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Printer, Receipt, Search, CheckCircle2, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { printGrnPaymentReceipt, printGrnPaymentReceipts, GrnReceiptData } from "@/utils/grnPaymentReceipt";
+import { bindGrnReceipt } from '@/lib/grnReceiptBinding';
 
 interface ReleasedPayment {
   id: string;
+  status: string;
+  receipt_lot: { id: string; batch_number: string | null; total_amount_ugx: number | string | null } | null;
   amount_paid_ugx: number;
   gross_payable_ugx: number;
   method: string;
@@ -88,6 +91,8 @@ const PaymentReceiptsTab = () => {
         const rec = lot?.coffee_record_id ? recMap.get(lot.coffee_record_id) : null;
         return {
           id: p.id,
+          status: p.status,
+          receipt_lot: lot || null,
           amount_paid_ugx: Number(p.amount_paid_ugx) || 0,
           gross_payable_ugx: Number(p.gross_payable_ugx) || 0,
           method: String(p.method || "CASH"),
@@ -125,24 +130,28 @@ const PaymentReceiptsTab = () => {
     return m;
   }, [printRows]);
 
-  const toReceipt = (p: ReleasedPayment, printedBy: string | null): GrnReceiptData => ({
-    grnNumber: p.batch_number,
+  const toReceipt = (p: ReleasedPayment, printedBy: string | null): GrnReceiptData => {
+    if (!p.receipt_lot) throw new Error('No saved GRN is linked to this payment. Receipt printing blocked.');
+    const binding = bindGrnReceipt(p.receipt_lot, p);
+    return ({
+    grnNumber: binding.grnNumber,
     supplierName: p.supplier_name,
     coffeeType: p.coffee_type,
     quantityKg: p.quantity_kg,
     unitPrice: p.unit_price_ugx,
-    amount: p.amount_paid_ugx,
-    lotValue: p.lot_value,
+    amount: binding.amount,
+    lotValue: binding.lotValue,
     method: p.method,
     paidAt: p.payment_date,
     paidBy: p.approved_by || p.requested_by || "Finance",
     inputBy: p.requested_by,
     printedBy,
     notes: p.notes,
-    receiptNo: receiptNoFor(p),
+    receiptNo: binding.receiptNo,
     approvedBy: p.approved_by,
     approvedByEmail: p.approved_by,
   });
+  };
 
   const recordPrints = async (items: ReleasedPayment[]) => {
     const { data: auth } = await supabase.auth.getUser();
