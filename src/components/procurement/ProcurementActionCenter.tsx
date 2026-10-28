@@ -154,7 +154,7 @@ const ProcurementActionCenter = () => {
         const reg = days(s.date_registered);
         if (reg !== null && reg > 14) {
           out.push({
-            id: `nodel-${s.id}`, group: "Dormant suppliers", severity: "warning",
+            id: `nodel-${s.id}`, group: "Never delivered — investigate", severity: "critical",
             title: s.name, detail: `Registered ${reg} days ago with no delivery recorded yet — call and confirm intent.`,
             supplierId: s.id, supplierName: s.name, phone: s.phone,
             smsMessage: `Dear ${s.name}, you registered with Great Agro Coffee but we have not yet received any delivery from you. Please contact procurement on 0393101103 to confirm your supply plan.`,
@@ -288,7 +288,7 @@ const ProcurementActionCenter = () => {
   }), [items]);
 
   const groupIcon = (g: string) => {
-    if (g.includes("Dormant")) return UserX;
+    if (g.includes("Never delivered") || g.includes("Dormant")) return UserX;
     if (g.includes("Overdue")) return PackageX;
     if (g.includes("expiring")) return CalendarClock;
     if (g.includes("Buyer")) return Handshake;
