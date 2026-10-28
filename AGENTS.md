@@ -1,6 +1,6 @@
 # Project architecture
 
-- Bind post-payment GRN printing to the saved payment and a captured lot snapshot, not the current queue selection; validate payment-to-lot identity before generating a receipt so advancing the queue cannot change its figures.
+- Bind GRN confirmation and post-payment printing to deep-captured lot snapshots, validating the displayed and freshly saved lot identity/figures before payment; enforce saved-payment-to-lot binding in both receipt screens and count only confirmed same-lot payments so queue changes cannot replace receipt figures.
 
 - Issue employee per diem forms as immutable saved request snapshots; employees submit their own print-prepared number once, and Admin/HR awards atomically record the award plus a PER_DIEM wallet credit through existing treasury triggers to prevent duplicate or partial payments.
 
