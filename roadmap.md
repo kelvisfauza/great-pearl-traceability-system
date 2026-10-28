@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Finance GRN receipt mismatch
-- [ ] Lock payment confirmation to the displayed lot, validate it before saving, and enforce saved-payment identity in both receipt screens.
+- [x] Lock payment confirmation to a deep-captured displayed lot, check saved identity/amount before writing, block repeated clicks, and enforce saved-payment identity in both receipt screens; six regression tests passed and preview build clean.
 - [x] Compared saved lots/referrals/payments: 20260221018 has Musema's 15 October UGX 3,471,000 payment; today's Denis payment is UGX 3,471,000 on a separate lot under 20260222009, which also has an older UGX 3,738,000 paid lot. No payments changed.
 - [x] Capture the saved payment and lot for post-payment printing so queue changes cannot replace its figures; reject unmatched or unconfirmed receipt payments. Three regression checks passed and preview build clean.
 - [ ] Verify signed-in Finance payment/printing — external Supabase authentication unavailable; confirm with Finance which paper GRN Denis intended before any data correction.
