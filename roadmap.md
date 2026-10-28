@@ -1,8 +1,9 @@
 # Roadmap
 
 ## Per diem printed-form requests
-- [ ] Require an issued printed per diem form number on employee submissions and show saved requests for award/payment.
-- [ ] Validate reference enforcement and request visibility; authenticated end-to-end checks depend on an available session.
+- [x] Require an issued print-prepared per diem form number on employee submissions and show saved pending requests in HR awards; duplicate submission/award blocked and award plus treasury-backed wallet credit saved atomically.
+- [x] Four reference/eligibility tests passed, database wrappers verified and latest preview build clean.
+- [ ] Verify signed-in printing, submission and award — external Supabase session unavailable; browser stopped at the location-permission screen.
 
 ## SEO findings
 - [x] Listed three stale failing findings and checked current source; fixed named menu, notification, vault and display controls and public headings.
