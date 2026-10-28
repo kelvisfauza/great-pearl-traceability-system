@@ -9280,6 +9280,57 @@ export type Database = {
         }
         Relationships: []
       }
+      per_diem_requests: {
+        Row: {
+          amount: number
+          award_id: string | null
+          created_at: string
+          created_by: string
+          document_number: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          form_data: Json
+          id: string
+          printed_at: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          award_id?: string | null
+          created_at?: string
+          created_by?: string
+          document_number?: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          form_data: Json
+          id?: string
+          printed_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          award_id?: string | null
+          created_at?: string
+          created_by?: string
+          document_number?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          form_data?: Json
+          id?: string
+          printed_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       performance_data: {
         Row: {
           category: string
@@ -18071,6 +18122,31 @@ export type Database = {
         Args: { _call_id: string; _interacted?: boolean }
         Returns: Json
       }
+      award_per_diem_request: {
+        Args: { p_id: string }
+        Returns: {
+          amount: number
+          award_id: string | null
+          created_at: string
+          created_by: string
+          document_number: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          form_data: Json
+          id: string
+          printed_at: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "per_diem_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       backfill_discretion_finance_lots: { Args: never; Returns: Json }
       backfill_missing_finance_lots: {
         Args: { p_from?: string; p_to?: string }
@@ -18716,6 +18792,31 @@ export type Database = {
       is_user_role: { Args: never; Returns: boolean }
       is_v3_admin: { Args: { _user_id: string }; Returns: boolean }
       is_valid_grn_pay_code: { Args: { p_code: string }; Returns: boolean }
+      issue_per_diem_form: {
+        Args: { p_data: Json }
+        Returns: {
+          amount: number
+          award_id: string | null
+          created_at: string
+          created_by: string
+          document_number: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          form_data: Json
+          id: string
+          printed_at: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "per_diem_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       issue_quality_form_numbers: {
         Args: { p_count?: number; p_issued_by_name?: string }
         Returns: string[]
@@ -18818,6 +18919,7 @@ export type Database = {
         Args: { p_wish_ids: string[] }
         Returns: number
       }
+      mark_per_diem_form_printed: { Args: { p_id: string }; Returns: undefined }
       migrate_approved_assessments_to_finance: { Args: never; Returns: number }
       migrate_batch_numbers_to_new_format: { Args: never; Returns: Json }
       milling_unremitted_total: { Args: never; Returns: number }
@@ -19016,6 +19118,31 @@ export type Database = {
         Returns: Json
       }
       sg_is_automation: { Args: never; Returns: boolean }
+      submit_per_diem_form: {
+        Args: { p_number: string }
+        Returns: {
+          amount: number
+          award_id: string | null
+          created_at: string
+          created_by: string
+          document_number: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          form_data: Json
+          id: string
+          printed_at: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "per_diem_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_procurement_review: {
         Args: {
           _amount?: number
