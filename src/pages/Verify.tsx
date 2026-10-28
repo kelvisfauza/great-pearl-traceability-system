@@ -134,7 +134,7 @@ const Verify = () => {
             />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">
-            Document Verification
+            Great Agro Coffee — Document Verification
           </h1>
           <p className="text-green-100">
             Great Agro Coffee - Official Document Verification Portal
@@ -153,6 +153,7 @@ const Verify = () => {
             <form onSubmit={handleSearch} className="flex gap-2">
               <Input
                 placeholder="Enter verification code (e.g., GPCF-DOC-2026-XXXXXX)"
+                aria-label="Document verification code"
                 value={searchCode}
                 onChange={(e) => setSearchCode(e.target.value.toUpperCase())}
                 className="flex-1 font-mono"
@@ -271,7 +272,7 @@ const Verify = () => {
                 )}
                 {verification.subtype === 'daily_coffee_prices' && verification.meta?.prices && typeof verification.meta.prices === 'object' && (
                   <div className="border-t pt-4 text-foreground">
-                    <h3 className="font-semibold">Coffee prices — {String(verification.meta.date || '')}</h3>
+                    <h2 className="font-semibold">Coffee prices — {String(verification.meta.date || '')}</h2>
                     <dl className="mt-3 space-y-2">
                       {([
                         ['Drugar', 'drugar_local', 'UGX/kg'], ['Wugar', 'wugar_local', 'UGX/kg'],

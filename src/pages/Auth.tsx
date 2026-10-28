@@ -824,9 +824,9 @@ const Auth = () => {
             <div className="inline-flex p-3 rounded-2xl mb-3" style={{ background: '#03361b' }}>
               <img src={YEDA_LOGO_URL} alt="Great Agro Coffee" className="h-12 w-auto object-contain" />
             </div>
-            <h1 className="text-3xl" style={{ fontFamily: "'Instrument Serif', serif", color: '#03361b' }}>
+            <p className="text-3xl" style={{ fontFamily: "'Instrument Serif', serif", color: '#03361b' }}>
               Great Agro Coffee
-            </h1>
+            </p>
           </div>
 
           <div className="mb-8">
@@ -837,7 +837,7 @@ const Auth = () => {
               className="text-5xl mb-3"
               style={{ fontFamily: "'Instrument Serif', serif", color: '#03361b', letterSpacing: '-0.02em', lineHeight: 1.05 }}
             >
-              Welcome back.
+              Great Agro Coffee — Staff Sign In
             </h1>
             <p style={{ color: 'rgba(6,78,59,0.65)' }}>Enter your credentials to access your workspace.</p>
           </div>

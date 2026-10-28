@@ -79,7 +79,7 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
         <header className="sticky top-0 z-30 h-16 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border flex items-center justify-between px-4 md:px-6 print:hidden">
           <div className="flex items-center gap-4 min-w-0">
             {isMobile && (
-              <Button variant="ghost" size="icon" onClick={() => setIsMobileNavOpen(true)} className="flex-shrink-0">
+              <Button variant="ghost" size="icon" aria-label="Open navigation menu" aria-expanded={isMobileNavOpen} onClick={() => setIsMobileNavOpen(true)} className="flex-shrink-0">
                 <Menu className="h-5 w-5" />
               </Button>
             )}
