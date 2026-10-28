@@ -62,7 +62,9 @@ export function resolveNeverDeliveredSuppliers<
   return suppliers
     .filter(s => {
       if (deliveredIds.has(s.id)) return false;
-      const names = [normalizeSupplierName(s.name), ...(aliases[s.name] || []).map(normalizeSupplierName)];
+      const norm = normalizeSupplierName(s.name);
+      const aliasList = [...(aliases[s.name] || []), ...(aliases[norm] || [])];
+      const names = [norm, ...aliasList.map(normalizeSupplierName)];
       return !names.some(n => n && deliveredNames.has(n));
     })
     .map(s => ({ ...s, daysSinceRegistration: daysSince(s.date_registered) }))
