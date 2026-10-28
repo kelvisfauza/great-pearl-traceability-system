@@ -1,5 +1,10 @@
 # Roadmap
 
+## SEO findings
+- [ ] List stored failing findings and verify stale metadata/accessibility reports against current source.
+- [ ] Correct relevant page titles, canonical links and accessible controls, then validate and update findings.
+- [ ] Complete Google Search Console setup if the required account authorization is available.
+
 ## Misplaced GRN prints
 - [x] Add authorized, audited revocation for chosen GRNs and restore Print/selection without changing payments; no existing GRNs reset automatically.
 - [x] Three focused regression/security tests passed and latest preview build clean.
