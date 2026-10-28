@@ -46,7 +46,7 @@ export default function Support() {
         <Card className="max-w-lg w-full">
           <CardHeader className="text-center">
             <CheckCircle2 className="h-14 w-14 mx-auto text-green-600 mb-2" />
-            <CardTitle>Ticket received</CardTitle>
+            <h1 className="text-2xl font-semibold">Ticket received</h1>
             <CardDescription>We've logged your message and emailed a confirmation.</CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-3">
@@ -71,7 +71,7 @@ export default function Support() {
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Contact Customer Support</CardTitle>
+            <h1 className="text-2xl font-semibold">Contact Customer Support</h1>
             <CardDescription>
               Great Agro Coffee — {COMPANY_TAGLINE}. We usually respond within one business day.
             </CardDescription>
