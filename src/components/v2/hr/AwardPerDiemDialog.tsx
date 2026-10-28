@@ -9,9 +9,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet, Plus, RefreshCw } from "lucide-react";
+import { Wallet, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { perDiemAwardable, type PerDiemRequest } from '@/lib/perDiemRequests';
 import { sendPaymentReceipt } from "@/utils/sendPaymentReceipt";
 
 const AwardPerDiemDialog = () => {
@@ -22,25 +23,20 @@ const AwardPerDiemDialog = () => {
   const [refNumber, setRefNumber] = useState("");
   const [workType, setWorkType] = useState("");
 
-  const WORK_TYPES: { value: string; label: string; rate: number | null }[] = [
-    { value: "sunday_work", label: "Working on Sunday", rate: 10000 },
-    { value: "field_visit", label: "Field visit", rate: 15000 },
-    { value: "other", label: "Other (specify amount)", rate: null },
-  ];
   const { employee } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const generateRef = (empName?: string) => {
-    const initials = (empName || "EMP")
-      .split(" ")
-      .map((p) => p[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 3);
-    const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-    return `PD-${format(new Date(), "yyyyMMdd")}-${initials}-${rand}`;
-  };
+  const [requestId, setRequestId] = useState("");
+  const { data: requests, error: requestsError } = useQuery({
+    queryKey: ["pending-per-diem-requests"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("per_diem_requests").select("*").eq("status", "pending").order("submitted_at");
+      if (error) throw error;
+      return (data as unknown as PerDiemRequest[]).filter(perDiemAwardable);
+    },
+    refetchInterval: 15000,
+  });
 
   const { data: employees } = useQuery({
     queryKey: ["active-employees-for-perdiem"],
@@ -72,38 +68,11 @@ const AwardPerDiemDialog = () => {
     mutationFn: async () => {
       const emp = employees?.find((e) => e.id === selectedEmployee);
       if (!emp) throw new Error("Employee not found");
-      const reference = refNumber.trim() || generateRef(emp.name);
-
-      // 1. Insert per diem award record
-      const { error: awardError } = await supabase.from("per_diem_awards").insert({
-        employee_id: emp.id,
-        employee_email: emp.email,
-        employee_name: emp.name,
-        amount: parseFloat(amount),
-        reason: `${reason} (Ref: ${reference})`,
-        awarded_by: employee?.name || "HR",
-      });
+      const request = requests?.find(r => r.id === requestId);
+      if (!request || !perDiemAwardable(request)) throw new Error("Select a submitted printed request");
+      const reference = request.document_number;
+      const { error: awardError } = await supabase.rpc("award_per_diem_request", { p_id: request.id });
       if (awardError) throw awardError;
-
-      // 2. Add to ledger so it reflects in wallet balance
-      const userId = emp.auth_user_id;
-      if (userId) {
-        const { error: ledgerError } = await supabase.from("ledger_entries").insert({
-          user_id: userId,
-          entry_type: "DEPOSIT",
-          amount: parseFloat(amount),
-          reference,
-          metadata: {
-            type: "per_diem",
-            reason,
-            work_type: workType,
-            ref_number: reference,
-            awarded_by: employee?.name || "HR",
-            employee_name: emp.name,
-          },
-        });
-        if (ledgerError) throw ledgerError;
-      }
 
       // 3. Send SMS notification
       if (emp.phone) {
@@ -158,6 +127,8 @@ const AwardPerDiemDialog = () => {
       setReason("");
       setRefNumber("");
       setWorkType("");
+      setRequestId("");
+      queryClient.invalidateQueries({ queryKey: ["pending-per-diem-requests"] });
       queryClient.invalidateQueries({ queryKey: ["per-diem-history"] });
     },
     onError: (err: any) => {
@@ -183,105 +154,36 @@ const AwardPerDiemDialog = () => {
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div>
-              <Label>Employee</Label>
-              <Select
-                value={selectedEmployee}
-                onValueChange={(v) => {
-                  setSelectedEmployee(v);
-                  const emp = employees?.find((e) => e.id === v);
-                  if (!refNumber.trim()) setRefNumber(generateRef(emp?.name));
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees?.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.name} — {emp.department}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <Label>Submitted per diem request *</Label>
+              <Select value={requestId} onValueChange={v => {
+                const request = requests?.find(r => r.id === v);
+                if (!request) return;
+                setRequestId(v);
+                setSelectedEmployee(request.employee_id);
+                setRefNumber(request.document_number);
+                setAmount(String(request.amount));
+                setReason(request.form_data.purpose || "");
+                setWorkType(request.form_data.workType || "other");
+              }}>
+                <SelectTrigger><SelectValue placeholder="Select printed request" /></SelectTrigger>
+                <SelectContent>{requests?.map(r => <SelectItem key={r.id} value={r.id}>{r.employee_name} — {r.document_number}</SelectItem>)}</SelectContent>
               </Select>
+              {requestsError && <p className="text-sm text-destructive">Unable to load submitted requests.</p>}
+              {!requestsError && requests?.length === 0 && <p className="text-sm text-muted-foreground mt-2">No per diem requests awaiting award.</p>}
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label>Reference Number (Requisition Ref)</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs gap-1"
-                  onClick={() => {
-                    const emp = employees?.find((e) => e.id === selectedEmployee);
-                    setRefNumber(generateRef(emp?.name));
-                  }}
-                >
-                  <RefreshCw className="h-3 w-3" /> Regenerate
-                </Button>
-              </div>
-              <Input
-                value={refNumber}
-                onChange={(e) => setRefNumber(e.target.value)}
-                placeholder="Auto-generated, or paste from printed requisition"
-                className="font-mono text-sm"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Used on wallet ledger, SMS and history. Edit to match a printed requisition form.
-              </p>
-            </div>
-            <div>
-              <Label>Type of Work</Label>
-              <Select
-                value={workType}
-                onValueChange={(v) => {
-                  setWorkType(v);
-                  const t = WORK_TYPES.find((w) => w.value === v);
-                  if (t?.rate) {
-                    setAmount(String(t.rate));
-                    setReason(t.label);
-                  } else {
-                    setAmount("");
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type of work" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WORK_TYPES.map((w) => (
-                    <SelectItem key={w.value} value={w.value}>
-                      {w.label}
-                      {w.rate ? ` — UGX ${w.rate.toLocaleString()}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                Sunday work is paid UGX 10,000; field visits UGX 15,000.
-              </p>
-            </div>
-            <div>
-              <Label>Amount (UGX)</Label>
-              <Input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="e.g. 30000"
-                readOnly={!!WORK_TYPES.find((w) => w.value === workType)?.rate}
-              />
-            </div>
+            <div><Label>Printed form number</Label><Input value={refNumber} readOnly className="font-mono" /></div>
+            <div><Label>Amount (UGX)</Label><Input value={amount} readOnly /></div>
             <div>
               <Label>Reason</Label>
               <Textarea
                 value={reason}
-                onChange={(e) => setReason(e.target.value)}
+                readOnly
                 placeholder="e.g. Field visit to Kasese district"
               />
             </div>
             <Button
               onClick={() => awardMutation.mutate()}
-              disabled={!selectedEmployee || !workType || !amount || !reason || awardMutation.isPending}
+              disabled={!requestId || !selectedEmployee || !workType || !amount || !reason || awardMutation.isPending}
               className="w-full"
             >
               {awardMutation.isPending ? "Awarding..." : "Award Per Diem"}
