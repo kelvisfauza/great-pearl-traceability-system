@@ -1,5 +1,7 @@
 # Project architecture
 
+- Bind post-payment GRN printing to the saved payment and a captured lot snapshot, not the current queue selection; validate payment-to-lot identity before generating a receipt so advancing the queue cannot change its figures.
+
 - Issue employee per diem forms as immutable saved request snapshots; employees submit their own print-prepared number once, and Admin/HR awards atomically record the award plus a PER_DIEM wallet credit through existing treasury triggers to prevent duplicate or partial payments.
 
 - Manage route titles, descriptions and self-referencing canonicals through one Helmet provider and RouteMetadata, preserving static social fallback tags; keep sensitive document/employee and staff routes noindex and out of the static public sitemap.
