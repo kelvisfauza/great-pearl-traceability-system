@@ -37,3 +37,13 @@ it('normalizes legacy code suffixes for comparison', () => {
   assert.equal(normalizeSupplierName('Jeremiah (SUP12)'), 'jeremiah');
   assert.equal(normalizeSupplierName('Jeremiah'), 'jeremiah');
 });
+
+it('honours legacy aliases so renamed suppliers are not listed as never delivered', () => {
+  const aliases: SupplierAliases = { Jeremiah: ['Jelema'] };
+  const out = resolveNeverDeliveredSuppliers(
+    [{ id: 's1', name: 'Jeremiah (GPC 00373)', code: 'SUP002', phone: null, origin: null, date_registered: null }],
+    [{ supplier_name: 'Jelema' }],
+    aliases
+  );
+  assert.equal(out.length, 0);
+});
