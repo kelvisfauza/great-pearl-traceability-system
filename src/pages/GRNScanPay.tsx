@@ -432,7 +432,7 @@ export default function GRNScanPay() {
     paymentInFlight.current = true;
     setProcessing(true);
     try {
-      assertGrnPaymentTarget(paymentTarget.lot, lot);
+      assertGrnPaymentTarget(paymentTarget.lot, entry.lot);
       const { data: currentLot, error: currentError } = await supabase
         .from('finance_coffee_lots').select('*').eq('id', paymentTarget.lot.id).single();
       if (currentError) throw currentError;
