@@ -1,6 +1,6 @@
 import { it } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { normalizeSupplierName, resolveNeverDeliveredSuppliers } from './neverDeliveredSuppliers';
+import { normalizeSupplierName, resolveNeverDeliveredSuppliers, type SupplierAliases } from './neverDeliveredSuppliers';
 
 const suppliers = [
   { id: 's1', name: 'Bwambale Denis', code: 'SUP001', phone: '0770000001', origin: 'Kasese', date_registered: '2026-01-01' },

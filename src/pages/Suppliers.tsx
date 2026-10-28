@@ -88,6 +88,9 @@ const Suppliers = () => {
   const [neverDeliveredLoading, setNeverDeliveredLoading] = useState(false);
   const [neverDelivered, setNeverDelivered] = useState<NeverDeliveredSupplier[]>([]);
 
+  // Legacy records entered this supplier under a different name.
+  const LEGACY_SUPPLIER_ALIASES: SupplierAliases = { Jeremiah: ['Jelema'] };
+
   const openNeverDelivered = async () => {
     setNeverDeliveredOpen(true);
     setNeverDeliveredLoading(true);
@@ -97,7 +100,7 @@ const Suppliers = () => {
         .select('supplier_id, supplier_name')
         .limit(200000);
       if (error) throw error;
-      setNeverDelivered(resolveNeverDeliveredSuppliers(suppliers as any[], (data || []) as any[]));
+      setNeverDelivered(resolveNeverDeliveredSuppliers(suppliers as any[], (data || []) as any[], LEGACY_SUPPLIER_ALIASES));
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'Could not load delivery history', variant: 'destructive' });
     } finally {
