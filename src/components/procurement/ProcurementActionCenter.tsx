@@ -288,7 +288,7 @@ const ProcurementActionCenter = () => {
   }), [items]);
 
   const groupIcon = (g: string) => {
-    if (g.includes("Dormant")) return UserX;
+    if (g.includes("Never delivered") || g.includes("Dormant")) return UserX;
     if (g.includes("Overdue")) return PackageX;
     if (g.includes("expiring")) return CalendarClock;
     if (g.includes("Buyer")) return Handshake;
