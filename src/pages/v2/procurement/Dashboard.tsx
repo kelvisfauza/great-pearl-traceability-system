@@ -62,7 +62,7 @@ const ProcurementDashboard = () => {
               <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
                 {tabs.map(tab => (
                   <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-1.5 text-xs sm:text-sm px-2 py-1.5">
-                    <tab.icon className="h-3.5 w-3.5" /><span className={['clearance-confirmations', 'meal-plans'].includes(tab.id) ? '' : 'hidden sm:inline'}>{tab.label}</span>
+                    <tab.icon className="h-3.5 w-3.5" /><span className={['clearance-confirmations', 'meal-plans', 'action-center'].includes(tab.id) ? '' : 'hidden sm:inline'}>{tab.label}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
