@@ -18998,6 +18998,10 @@ export type Database = {
         Args: { p_claim?: boolean; p_id: string; p_notes: string }
         Returns: Json
       }
+      revoke_grn_prints: {
+        Args: { p_lot_ids: string[]; p_reason: string }
+        Returns: number
+      }
       scan_system_red_flags: { Args: never; Returns: Json }
       send_birthday_wish: {
         Args: { p_recipient_employee_id: string }

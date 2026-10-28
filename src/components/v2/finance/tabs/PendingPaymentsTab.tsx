@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee, Trash2, QrCode, Receipt, Printer } from "lucide-react";
+import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee, Trash2, QrCode, Receipt, Printer, RotateCcw } from "lucide-react";
 import { openBulkGRNPrintWindow, GRNData } from "@/utils/bulkGRNPrint";
 import { toast } from "sonner";
 import GRNScannerDialog from "@/components/finance/GRNScannerDialog";
 import { useNavigate } from "react-router-dom";
 import { getGrnPayCode } from "@/utils/grnPayCode";
+import { hasActiveGrnPrint } from "@/lib/grnPrintState";
 
 interface FinanceLot {
   id: string;
@@ -42,8 +43,19 @@ const PendingPaymentsTab = () => {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [revokeLots, setRevokeLots] = useState<FinanceLot[]>([]);
+  const [revokeReason, setRevokeReason] = useState("Misplaced GRN papers");
+  const [revoking, setRevoking] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { data: canRevoke = false } = useQuery({
+    queryKey: ["finance-can-revoke-grn"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("can_process_finance");
+      if (error) throw error;
+      return data === true;
+    },
+  });
 
   // Print state is shared across devices/users via public.grn_print_log
   const { data: printedRows } = useQuery({
@@ -57,6 +69,7 @@ const PendingPaymentsTab = () => {
         const { data, error } = await (supabase as any)
           .from("grn_print_log")
           .select("lot_id, batch_number")
+          .order("id")
           .range(from, from + pageSize - 1);
         if (error) throw error;
         const page = (data || []) as { lot_id: string; batch_number: string | null }[];
@@ -67,17 +80,25 @@ const PendingPaymentsTab = () => {
       return all;
     },
   });
-  const printedIds = useMemo(
-    () => new Set<string>((printedRows || []).map((r) => r.lot_id)),
-    [printedRows]
-  );
-  // Quality-printed GRNs are logged by batch number
-  const printedBatches = useMemo(
-    () => new Set<string>((printedRows || []).map((r) => (r.batch_number || "").toUpperCase()).filter(Boolean)),
-    [printedRows]
-  );
   const isPrinted = (l: { id: string; batch_number?: string | null }) =>
-    printedIds.has(l.id) || (!!l.batch_number && printedBatches.has(l.batch_number.toUpperCase()));
+    hasActiveGrnPrint(l, printedRows || []);
+
+  const revokePrints = async () => {
+    if (!canRevoke || !revokeLots.length || !revokeReason.trim()) return;
+    setRevoking(true);
+    try {
+      const { error } = await (supabase as any).rpc("revoke_grn_prints", {
+        p_lot_ids: revokeLots.map(lot => lot.id), p_reason: revokeReason.trim(),
+      });
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["finance-grn-print-log"] });
+      setSelectedIds(new Set());
+      setRevokeLots([]);
+      toast.success("Print status revoked — select these GRNs to print again");
+    } catch (error: any) {
+      toast.error(error?.message || "Could not revoke GRN prints");
+    } finally { setRevoking(false); }
+  };
 
   const markPrinted = async (items: { id: string; batch_number: string | null }[]) => {
     const { data: auth } = await supabase.auth.getUser();
@@ -301,6 +322,8 @@ const PendingPaymentsTab = () => {
   );
 
   const totalPending = filtered.reduce((s, l) => s + (l.total_amount_ugx || 0), 0);
+  const selectedUnprinted = filtered.filter(lot => selectedIds.has(lot.id) && !isPrinted(lot));
+  const selectedPrinted = filtered.filter(lot => selectedIds.has(lot.id) && isPrinted(lot));
 
   return (
     <div className="space-y-4 mt-4">
@@ -349,16 +372,22 @@ const PendingPaymentsTab = () => {
               <Button size="sm" variant="outline" className="gap-1" onClick={() => setScanOpen(true)}>
                 <QrCode className="h-3.5 w-3.5" /> Scan GRN
               </Button>
-              {selectedIds.size > 0 && (
+              {selectedUnprinted.length > 0 && (
                 <Button
                   size="sm"
                   variant="secondary"
                   className="gap-1"
-                  disabled={printing}
-                  onClick={() => printGrns(filtered.filter((l) => selectedIds.has(l.id)))}
+                  disabled={printing || revoking}
+                  onClick={() => printGrns(selectedUnprinted)}
                 >
                   {printing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer className="h-3 w-3" />}
-                  Print GRNs ({selectedIds.size})
+                  Print GRNs ({selectedUnprinted.length})
+                </Button>
+              )}
+              {canRevoke && selectedPrinted.length > 0 && (
+                <Button size="sm" variant="outline" className="gap-1" disabled={printing || revoking}
+                  onClick={() => setRevokeLots(selectedPrinted)}>
+                  <RotateCcw className="h-3.5 w-3.5" /> Revoke prints ({selectedPrinted.length})
                 </Button>
               )}
               {selectedIds.size > 0 && (
@@ -412,9 +441,9 @@ const PendingPaymentsTab = () => {
                     <TableCell>
                       <Checkbox
                         checked={selectedIds.has(lot.id)}
-                        disabled={isPrinted(lot)}
+                        disabled={printing || revoking || (isPrinted(lot) && !canRevoke)}
                         onCheckedChange={() => toggleSelect(lot.id)}
-                        title={isPrinted(lot) ? "Already printed — use Reprint" : undefined}
+                        title={isPrinted(lot) ? (canRevoke ? "Select to revoke misplaced print" : "Already printed — use Reprint") : undefined}
                       />
                     </TableCell>
 
@@ -495,6 +524,13 @@ const PendingPaymentsTab = () => {
                           )}
                           {isPrinted(lot) ? "Reprint" : "Print"}
                         </Button>
+                        {isPrinted(lot) && canRevoke && (
+                          <Button size="icon" variant="ghost" className="h-7 w-7" disabled={printing || revoking}
+                            aria-label={`Revoke print ${lot.batch_number || lot.id}`} title="Revoke misplaced GRN print"
+                            onClick={() => setRevokeLots([lot])}>
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -514,6 +550,29 @@ const PendingPaymentsTab = () => {
       </Card>
 
       {/* Delete Confirmation Dialog */}
+      <Dialog open={revokeLots.length > 0} onOpenChange={open => { if (!open && !revoking) setRevokeLots([]); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke misplaced GRN prints</DialogTitle>
+            <DialogDescription>
+              Revoke {revokeLots.length} GRN print(s)? These will show Print and become selectable again.
+              Payment records stay unchanged. Previous print details remain in the audit history.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-40 overflow-y-auto text-sm font-mono">
+            {revokeLots.map(lot => <p key={lot.id}>{lot.batch_number || lot.id} · {lot.supplier_name}</p>)}
+          </div>
+          <Input aria-label="Reason for revoking GRN prints" value={revokeReason}
+            onChange={event => setRevokeReason(event.target.value)} disabled={revoking} />
+          <DialogFooter>
+            <Button variant="outline" disabled={revoking} onClick={() => setRevokeLots([])}>Cancel</Button>
+            <Button disabled={revoking || !revokeReason.trim()} onClick={revokePrints}>
+              {revoking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+              Revoke prints
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
         <DialogContent>
           <DialogHeader>
