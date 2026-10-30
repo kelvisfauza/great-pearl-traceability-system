@@ -14,6 +14,7 @@ import ReconciliationTab from "@/components/v2/store/tabs/ReconciliationTab";
 import StoreReportsTab from "@/components/v2/store/tabs/StoreReportsTab";
 import SamplingOrdersTab from "@/components/v2/quality/tabs/SamplingOrdersTab";
 import StoreClearanceForms from "@/components/store/StoreClearanceForms";
+import SaleWeighingTickets from "@/components/store/SaleWeighingTickets";
 import { Plus } from "lucide-react";
 import { useState as useDialogState } from "react";
 
@@ -68,7 +69,7 @@ const CoffeeReceipts = () => {
               </div>
               <TabsContent value="receipts"><CoffeeReceiptsTable /><NewCoffeeReceiptDialog open={showNewDialog} onOpenChange={setShowNewDialog} /></TabsContent>
               <TabsContent value="sampling-orders"><SamplingOrdersTab /></TabsContent>
-              <TabsContent value="clearance"><StoreClearanceForms /></TabsContent>
+              <TabsContent value="clearance" className="space-y-6"><SaleWeighingTickets /><StoreClearanceForms /></TabsContent>
               <TabsContent value="verification"><StockVerificationTab /></TabsContent>
               <TabsContent value="damaged"><DamagedBagsTab /></TabsContent>
               <TabsContent value="reconciliation"><ReconciliationTab /></TabsContent>
