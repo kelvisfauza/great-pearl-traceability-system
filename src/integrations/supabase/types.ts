@@ -13383,6 +13383,77 @@ export type Database = {
         }
         Relationships: []
       }
+      store_weighing_tickets: {
+        Row: {
+          approved_by: string | null
+          bags: number
+          buyer_name: string
+          clearance_form_id: string | null
+          coffee_type: string
+          created_at: string
+          created_by: string | null
+          driver_name: string | null
+          gross_weight_kg: number
+          id: string
+          net_weight_kg: number | null
+          released_by: string
+          remarks: string | null
+          tare_weight_kg: number
+          ticket_number: string | null
+          updated_at: string
+          vehicle_registration: string | null
+          weighed_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          bags?: number
+          buyer_name: string
+          clearance_form_id?: string | null
+          coffee_type: string
+          created_at?: string
+          created_by?: string | null
+          driver_name?: string | null
+          gross_weight_kg: number
+          id?: string
+          net_weight_kg?: number | null
+          released_by: string
+          remarks?: string | null
+          tare_weight_kg?: number
+          ticket_number?: string | null
+          updated_at?: string
+          vehicle_registration?: string | null
+          weighed_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          bags?: number
+          buyer_name?: string
+          clearance_form_id?: string | null
+          coffee_type?: string
+          created_at?: string
+          created_by?: string | null
+          driver_name?: string | null
+          gross_weight_kg?: number
+          id?: string
+          net_weight_kg?: number | null
+          released_by?: string
+          remarks?: string | null
+          tare_weight_kg?: number
+          ticket_number?: string | null
+          updated_at?: string
+          vehicle_registration?: string | null
+          weighed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_weighing_tickets_clearance_form_id_fkey"
+            columns: ["clearance_form_id"]
+            isOneToOne: false
+            referencedRelation: "store_clearance_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_advances: {
         Row: {
           amount_ugx: number
