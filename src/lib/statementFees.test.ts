@@ -1,19 +1,18 @@
-import { describe, it, expect } from 'vitest';
-import { STATEMENT_FEE_PER_PAGE, STATEMENT_PRINT_FEE, statementFeeForPages } from './statementFees';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { STATEMENT_FEE_PER_PAGE, STATEMENT_PRINT_FEE, statementFeeForPages } from './statementFees.ts';
 
-describe('statement pricing rules', () => {
-  it('charges UGX 500 per statement page', () => {
-    expect(STATEMENT_FEE_PER_PAGE).toBe(500);
-    expect(statementFeeForPages(1)).toBe(500);
-    expect(statementFeeForPages(3)).toBe(1500);
-    expect(statementFeeForPages(7)).toBe(3500);
-  });
+test('statement costs UGX 500 per page', () => {
+  assert.equal(STATEMENT_FEE_PER_PAGE, 500);
+  assert.equal(statementFeeForPages(1), 500);
+  assert.equal(statementFeeForPages(3), 1500);
+  assert.equal(statementFeeForPages(7), 3500);
+});
 
-  it('charges UGX 1,000 per printed statement', () => {
-    expect(STATEMENT_PRINT_FEE).toBe(1000);
-  });
+test('printing a statement costs UGX 1,000', () => {
+  assert.equal(STATEMENT_PRINT_FEE, 1000);
+});
 
-  it('never charges less than one page', () => {
-    expect(statementFeeForPages(0)).toBe(500);
-  });
+test('never charges less than one page', () => {
+  assert.equal(statementFeeForPages(0), 500);
 });
