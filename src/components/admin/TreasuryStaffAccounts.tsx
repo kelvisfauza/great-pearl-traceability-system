@@ -43,8 +43,8 @@ export default function TreasuryStaffAccounts() {
           }));
           resolved.push(...batch);
         }
-        if (active) setRows(resolved.sort((a, b) => a.name.localeCompare(b.name)));
-      } catch (e: any) { if (active) setError(e.message || "Could not load employee accounts"); }
+        if (active) setRows(resolved.sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""))));
+      } catch (e: any) { if (active) { setRows([]); setError(e.message || "Could not load employee accounts"); } }
       finally { if (active) setBusy(false); }
     }
     void load();

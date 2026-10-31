@@ -12,6 +12,7 @@ export default function TreasuryWorkflows({ area }: { area: "loans" | "staff" })
     { title: "Loan portfolio report", path: "/reports/loans", icon: FileText },
     { title: "Overdraft accounts", path: "/admin/overdraft", icon: Landmark },
     { title: "Loan appeals", path: "/admin/loan-appeals", icon: ShieldCheck },
+    ...(hasPermission("Human Resources") ? [{ title: "Employee registry & borrower registration", path: "/human-resources", icon: Users }] : []),
   ] : [
     { title: "Employee statements", path: "/admin/user-statement", icon: FileText },
     { title: "Wallet transactions & reversals", path: "/admin/system-transactions", icon: Wallet },
