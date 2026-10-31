@@ -18281,7 +18281,14 @@ export type Database = {
       can_view_quality_postings: { Args: never; Returns: boolean }
       charge_balance_check: { Args: never; Returns: Json }
       charge_statement_fee: {
-        Args: { p_period_from: string; p_period_to: string; p_user_id: string }
+        Args: {
+          p_amount?: number
+          p_kind?: string
+          p_pages?: number
+          p_period_from: string
+          p_period_to: string
+          p_user_id: string
+        }
         Returns: Json
       }
       check_auth_user_exists: { Args: { user_uuid: string }; Returns: Json }
