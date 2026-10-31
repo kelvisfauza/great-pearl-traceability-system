@@ -68,18 +68,7 @@ const ICONS: Record<string, any> = {
   profits: TrendingUp, loyalty_fund: Gift, operations: Truck, fees_income: Percent,
 };
 
-const FUNDED_FROM: Record<string, string> = {
-  general: "Salaries, bonuses, allowances, per diem, overtime",
-  loyalty_fund: "Loyalty points and activity rewards",
-  operations: "Meal plans, service providers, requisitions",
-  loans_overdrafts: "Loan payouts and overdraft draws; repayments return here",
-  invest_earn: "Staff savings locked in; principal repaid from here",
-  profits: "Loan/overdraft interest, penalties, statement fees; pays investment interest",
-  fees_income: "Withdrawal and service fees collected",
-  user_wallets: "Total money held on behalf of staff (liability)",
-};
-
-export default function TreasuryAccountsPanel() {
+export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "accounts" | "reconciliation" }) {
   const { toast } = useToast();
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -230,12 +219,12 @@ export default function TreasuryAccountsPanel() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h2 className="text-lg font-semibold flex items-center gap-2"><Landmark className="h-5 w-5 text-primary" /> Treasury Accounts</h2>
-          <p className="text-xs text-muted-foreground">Every wallet credit is drawn from its account. Empty account = payment blocked and Super Admin alerted.</p>
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Landmark className="h-5 w-5 text-primary" /> {view === "accounts" ? "Account ledger" : "Provider reconciliation"}</h2>
+
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />Refresh</Button>
-          {data?.is_super_admin && (
+          {view === "accounts" && data?.is_super_admin && (
             <>
               <Button size="sm" onClick={() => setFundOpen(true)}><Plus className="h-4 w-4 mr-1" />Fund account</Button>
               <Button size="sm" variant="outline" onClick={() => setMoveOpen(true)}><ArrowLeftRight className="h-4 w-4 mr-1" />Move between accounts</Button>
@@ -248,55 +237,32 @@ export default function TreasuryAccountsPanel() {
         <Card className="border-destructive bg-destructive/5"><CardContent className="p-3 text-sm text-destructive">{error}</CardContent></Card>
       )}
 
-      {/* Live provider balances — refreshed every second */}
       {data && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Card className="border-primary/30">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  Yo Payments balance
-                  <span className="inline-flex items-center gap-1 text-[10px] text-green-600"><span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />LIVE</span>
-                </div>
-                <div className="text-2xl font-bold tabular-nums">{fmt(data.yo_balance)}</div>
-                <div className="text-[10px] text-muted-foreground">
-                  {data.yo_synced_at ? `Yo last checked ${new Date(data.yo_synced_at).toLocaleTimeString()}` : "not synced yet"} · re-checked with Yo every minute · screen refreshes every second
-                </div>
-              </div>
-              <RefreshCw className="h-6 w-6 text-primary/60" />
-            </CardContent>
-          </Card>
-          <Card className="border-primary/30">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  GosentePay balance
-                  <span className="inline-flex items-center gap-1 text-[10px] text-green-600"><span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />LIVE</span>
-                </div>
-                <div className={`text-2xl font-bold tabular-nums ${Number(data.gosente_balance) < 0 ? "text-destructive" : ""}`}>{fmt(data.gosente_balance)}</div>
-                <div className="text-[10px] text-muted-foreground">updated {lastTick.toLocaleTimeString()} · refreshes every second</div>
-              </div>
-              <RefreshCw className="h-6 w-6 text-primary/60" />
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x border-y py-4">
+          {(view === "accounts" ? [
+            ["Allocated account total", data.expected_float],
+            ["Employee wallet liability", byCode.user_wallets?.balance],
+            ["Operations / Procurement", byCode.operations?.balance],
+            ["Loans & Overdrafts fund", byCode.loans_overdrafts?.balance],
+          ] : [
+            ["Recorded Yo float", data.yo_balance],
+            ["Recorded GosentePay float", data.gosente_balance],
+            ["Account total", data.expected_float],
+            ["Provider − account difference", data.drift],
+          ]).map(([label, value]) => <div key={String(label)} className="px-4 py-3 min-w-0"><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-semibold tabular-nums mt-2 break-words">{value == null ? "—" : fmt(Number(value))}</p></div>)}
         </div>
       )}
-
-      {/* Real-money check */}
-      {data && (
-        <Card className={driftBad ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20" : "bg-muted/30"}>
-          <CardContent className="p-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            <div><div className="text-[11px] text-muted-foreground">System says we should hold</div><div className="font-semibold">{fmt(data.expected_float)}</div><div className="text-[10px] text-muted-foreground">sum of all accounts</div></div>
-            <div><div className="text-[11px] text-muted-foreground">Yo Payments</div><div className="font-semibold">{fmt(data.yo_balance)}</div><div className="text-[10px] text-muted-foreground">{data.yo_synced_at ? `synced ${new Date(data.yo_synced_at).toLocaleString()}` : "not synced yet"}</div></div>
-            <div><div className="text-[11px] text-muted-foreground">GosentePay</div><div className="font-semibold">{fmt(data.gosente_balance)}</div></div>
-            <div>
-              <div className="text-[11px] text-muted-foreground">Difference (real − system)</div>
-              <div className={`font-semibold ${driftBad ? "text-amber-700 dark:text-amber-300" : "text-green-700"}`}>{data.drift >= 0 ? "+" : "−"}{fmt(driftAbs)}</div>
-              <div className="text-[10px] text-muted-foreground">{driftBad ? "Checked hourly — Super Admin is alerted" : "Within tolerance"}</div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {view === "reconciliation" && data && <div className="border-b pb-4 space-y-3">
+        <div className="flex flex-wrap gap-3 justify-between items-center">
+          <div className="text-sm text-muted-foreground">Yo last checked: {data.yo_synced_at ? new Date(data.yo_synced_at).toLocaleString("en-GB", { timeZone: "Africa/Kampala" }) : "Not checked"} · Account data read: {lastTick.toLocaleTimeString("en-GB", { timeZone: "Africa/Kampala" })}</div>
+          <Button variant="outline" onClick={async () => {
+            const result = await supabase.functions.invoke("sync-yo-balance");
+            if (result.error || result.data?.ok === false) toast({ title: "Sync failed", description: result.error?.message || result.data?.error, variant: "destructive" });
+            else { toast({ title: "Yo balance checked" }); await load(); }
+          }}><RefreshCw className="mr-2 h-4 w-4" />Check Yo balance</Button>
+        </div>
+        <p className={driftBad ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{driftBad ? "Difference requires review" : "Difference within existing alert tolerance"} · {fmt(driftAbs)}</p>
+      </div>}
 
       {/* Alerts */}
       {data && data.alerts.length > 0 && (
@@ -317,42 +283,26 @@ export default function TreasuryAccountsPanel() {
         </Card>
       )}
 
-      {/* Account cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {loading && !data ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-32" />) : accounts.map((a) => {
-          const Icon = ICONS[a.code] || Landmark;
-          const bal = Number(a.balance);
-          const isFund = a.kind === "fund" || a.kind === "income";
-          const empty = isFund && bal <= 0;
-          const low = isFund && !empty && bal < Number(a.low_balance_threshold);
-          return (
-            <Card key={a.code} className={empty ? "border-destructive" : low ? "border-amber-500" : ""}>
-              <CardHeader className="pb-1">
-                <CardTitle className="text-xs flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5"><Icon className="h-4 w-4 text-primary" />{a.name}</span>
-                  {empty && <Badge variant="destructive" className="text-[10px]">EMPTY</Badge>}
-                  {low && <Badge className="text-[10px] bg-amber-500 hover:bg-amber-500">LOW</Badge>}
-                  {a.kind === "liability" && <Badge variant="secondary" className="text-[10px]">LIABILITY</Badge>}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-xl font-bold ${bal < 0 ? "text-destructive" : ""}`}>{fmt(bal)}</div>
-                <div className="text-[10px] text-muted-foreground mt-1 min-h-[28px]">{FUNDED_FROM[a.code] || a.description}</div>
-                {isFund && <div className="text-[10px] text-muted-foreground">Alert below {fmt(a.low_balance_threshold)}</div>}
-                <div className="flex gap-1 mt-2 flex-wrap">
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => openHistory(a.code)}><History className="h-3 w-3 mr-1" />Movements</Button>
-                  {data?.is_super_admin && a.code !== "user_wallets" && (
-                    <>
-                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => { setTarget(a.code); setFundOpen(true); }}><Plus className="h-3 w-3 mr-1" />Fund</Button>
-                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => { setTarget(a.code); setThreshold(String(a.low_balance_threshold)); setThresholdOpen(true); }}><Settings2 className="h-3 w-3 mr-1" />Alert level</Button>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {view === "accounts" && <div className="overflow-x-auto border rounded-md">
+        <Table><TableHeader><TableRow><TableHead>Account</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Balance · UGX</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>
+          {loading && !data ? <TableRow><TableCell colSpan={5}><Skeleton className="h-32" /></TableCell></TableRow> : accounts.map(a => {
+            const Icon = ICONS[a.code] || Landmark;
+            const bal = Number(a.balance);
+            const isFund = a.kind === "fund" || a.kind === "income";
+            const empty = isFund && bal <= 0;
+            const low = isFund && !empty && bal < Number(a.low_balance_threshold);
+            return <TableRow key={a.code}>
+              <TableCell className="min-w-[220px]"><div className="flex items-center gap-2 font-medium"><Icon className="h-4 w-4 text-primary shrink-0" />{a.name}</div><div className="text-xs text-muted-foreground mt-1 font-mono">{a.code}</div></TableCell>
+              <TableCell className="capitalize text-sm">{a.kind}</TableCell>
+              <TableCell className={`text-right font-mono font-semibold whitespace-nowrap ${bal < 0 ? "text-destructive" : ""}`}>{Number(a.balance).toLocaleString()}</TableCell>
+              <TableCell><Badge variant={empty || low ? "destructive" : "secondary"}>{empty ? "Empty" : low ? "Low balance" : "Open"}</Badge></TableCell>
+              <TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" onClick={() => openHistory(a.code)}><History className="h-3 w-3 mr-1" />Movements</Button>
+                {data?.is_super_admin && a.code !== "user_wallets" && <><Button size="icon" variant="ghost" title={`Fund ${a.name}`} aria-label={`Fund ${a.name}`} onClick={() => { setTarget(a.code); setFundOpen(true); }}><Plus className="h-4 w-4" /></Button><Button size="icon" variant="ghost" title={`Alert level for ${a.name}`} aria-label={`Alert level for ${a.name}`} onClick={() => { setTarget(a.code); setThreshold(String(a.low_balance_threshold)); setThresholdOpen(true); }}><Settings2 className="h-4 w-4" /></Button></>}
+              </div></TableCell>
+            </TableRow>;
+          })}
+        </TableBody></Table>
+      </div>}
 
       {/* Fund dialog */}
       <Dialog open={fundOpen} onOpenChange={(o) => !busy && setFundOpen(o)}>
@@ -464,7 +414,7 @@ export default function TreasuryAccountsPanel() {
                       <TableCell className="text-xs align-top whitespace-nowrap">{e.related_user_name || e.related_user_email || "system"}</TableCell>
                       <TableCell className="text-xs align-top whitespace-nowrap">{e.counter_account ? (byCode[e.counter_account]?.name || e.counter_account) : "—"}</TableCell>
                       <TableCell className="text-xs align-top whitespace-nowrap">{e.performed_by || "system"}</TableCell>
-                      <TableCell className={`text-xs text-right font-mono align-top whitespace-nowrap ${e.direction === "credit" ? "text-green-600" : "text-red-600"}`}>{e.direction === "credit" ? "+" : "−"}{Math.round(Number(e.amount)).toLocaleString()}</TableCell>
+                      <TableCell className={`text-xs text-right font-mono align-top whitespace-nowrap ${e.direction === "credit" ? "text-primary" : "text-foreground"}`}>{e.direction === "credit" ? "+" : "−"}{Math.round(Number(e.amount)).toLocaleString()}</TableCell>
                       <TableCell className="text-xs text-right font-mono align-top whitespace-nowrap">{Math.round(Number(e.balance_after)).toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
