@@ -1,5 +1,9 @@
 # Roadmap
 
+## Operations deduction reconciliation and movement visibility
+- [ ] Reconcile the seven confirmed wallet deductions (UGX 38,000) into Operations exactly once, retaining original references and wallet balances.
+- [ ] Check and repair Treasury Pool movement visibility; verify available checks and report authenticated limitations.
+
 ## Milling monthly report printing
 - [x] Reserve the print window during the click, keep it open for shared verification, avoid a duplicate QR footer, and report blocked popups or preparation errors.
 - [x] Three actual-handler checks passed for synchronous opening, keeping the print window alive, and error/retry handling; latest preview build clean.
