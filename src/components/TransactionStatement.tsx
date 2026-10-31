@@ -166,6 +166,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [visibleCount, setVisibleCount] = useState(DISPLAY_LIMIT);
@@ -184,55 +185,84 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     return withBalance.reverse();
   }, [entries, currentBalance]);
 
-  const printStatement = () => {
+  const printStatement = async () => {
+    if (!user?.email) return;
+    // Reserve the print window synchronously so the browser doesn't block it
     const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    if (!printWindow) {
+      toast({ title: 'Popup blocked', description: 'Please allow popups to print the statement.', variant: 'destructive' });
+      return;
+    }
+    setPrinting(true);
+    try {
+      // Charge the UGX 1,000 printing fee before printing
+      const { data: userIdData } = await supabase
+        .rpc('get_unified_user_id', { input_email: user.email });
+      const unifiedUserId = userIdData || user.id;
+      const { error: feeError } = await supabase.rpc('charge_statement_fee', {
+        p_user_id: unifiedUserId,
+        p_period_from: '',
+        p_period_to: '',
+        p_amount: STATEMENT_PRINT_FEE,
+        p_pages: 1,
+        p_kind: 'print',
+      });
+      if (feeError) throw feeError;
 
-    const rows = entriesWithBalance.map(e => {
-      const activityLabel = getActivityLabel(e);
-      const transferMeta = getTransferMeta(e);
-      const isCredit = e.amount > 0;
-      
-      let typeCol = `${getEntryLabel(e)}${activityLabel ? ' - ' + activityLabel : ''}`;
-      if (transferMeta) {
-        if (e.amount < 0 && transferMeta.to_email) {
-          typeCol += `<br/><span style="font-size:10px;color:#666">To: ${transferMeta.to_name} (${transferMeta.to_email})</span>`;
-        } else if (e.amount > 0 && transferMeta.from_email) {
-          typeCol += `<br/><span style="font-size:10px;color:#666">From: ${transferMeta.from_name} (${transferMeta.from_email})</span>`;
+      const rows = entriesWithBalance.map(e => {
+        const activityLabel = getActivityLabel(e);
+        const transferMeta = getTransferMeta(e);
+        const isCredit = e.amount > 0;
+
+        let typeCol = `${getEntryLabel(e)}${activityLabel ? ' - ' + activityLabel : ''}`;
+        if (transferMeta) {
+          if (e.amount < 0 && transferMeta.to_email) {
+            typeCol += `<br/><span style="font-size:10px;color:#666">To: ${transferMeta.to_name} (${transferMeta.to_email})</span>`;
+          } else if (e.amount > 0 && transferMeta.from_email) {
+            typeCol += `<br/><span style="font-size:10px;color:#666">From: ${transferMeta.from_name} (${transferMeta.from_email})</span>`;
+          }
         }
-      }
-      
-      return `<tr>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${format(new Date(e.created_at), 'MMM dd, yyyy h:mm a')}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${typeCol}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:${isCredit ? '#15803d' : '#b91c1c'};font-weight:600">${isCredit ? '+' : ''}${e.amount.toLocaleString()}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;font-weight:600">${(e as any).runningBalance != null ? (e as any).runningBalance.toLocaleString() : '—'}</td>
-      </tr>`;
-    }).join('');
 
-    const content = `<!doctype html><html><head><meta charset="utf-8"/><title>Transaction Statement</title>
-      <style>body{font:13px/1.5 system-ui;margin:0;padding:20px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px;border-bottom:2px solid #333;font-size:12px}@media print{.no-print{display:none}}</style>
-    </head><body onload="window.print();">
-      <div style="max-width:750px;margin:0 auto">
-        <h2 style="margin:0 0 4px">Great Agro Coffee</h2>
-        <h3 style="margin:0 0 16px;font-weight:normal;color:#555">Transaction Statement</h3>
-        <div style="margin-bottom:12px;font-size:13px">
-          <strong>Employee:</strong> ${employee?.name || user?.email || 'N/A'}<br/>
-          <strong>Date:</strong> ${format(new Date(), 'MMMM dd, yyyy')}<br/>
-          <strong>Balance from last month:</strong> UGX ${balanceBroughtForward.toLocaleString()}<br/>
-          <strong>This month:</strong> UGX ${thisMonthEarnings.toLocaleString()}<br/>
-          <strong>Wallet Balance:</strong> UGX ${currentBalance.toLocaleString()}${spendableBalance != null ? `<br/><strong>Available to spend:</strong> UGX ${spendableBalance.toLocaleString()}` : ''}
+        return `<tr>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${format(new Date(e.created_at), 'MMM dd, yyyy h:mm a')}</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${typeCol}</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:${isCredit ? '#15803d' : '#b91c1c'};font-weight:600">${isCredit ? '+' : ''}${e.amount.toLocaleString()}</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;font-weight:600">${(e as any).runningBalance != null ? (e as any).runningBalance.toLocaleString() : '—'}</td>
+        </tr>`;
+      }).join('');
+
+      const content = `<!doctype html><html><head><meta charset="utf-8"/><title>Transaction Statement</title>
+        <style>body{font:13px/1.5 system-ui;margin:0;padding:20px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px;border-bottom:2px solid #333;font-size:12px}@media print{.no-print{display:none}}</style>
+      </head><body onload="window.print();">
+        <div style="max-width:750px;margin:0 auto">
+          <h2 style="margin:0 0 4px">Great Agro Coffee</h2>
+          <h3 style="margin:0 0 16px;font-weight:normal;color:#555">Transaction Statement</h3>
+          <div style="margin-bottom:12px;font-size:13px">
+            <strong>Employee:</strong> ${employee?.name || user?.email || 'N/A'}<br/>
+            <strong>Date:</strong> ${format(new Date(), 'MMMM dd, yyyy')}<br/>
+            <strong>Balance from last month:</strong> UGX ${balanceBroughtForward.toLocaleString()}<br/>
+            <strong>This month:</strong> UGX ${thisMonthEarnings.toLocaleString()}<br/>
+            <strong>Wallet Balance:</strong> UGX ${currentBalance.toLocaleString()}${spendableBalance != null ? `<br/><strong>Available to spend:</strong> UGX ${spendableBalance.toLocaleString()}` : ''}<br/>
+            <strong>Print charge:</strong> UGX ${STATEMENT_PRINT_FEE.toLocaleString()}
+          </div>
+          <table>
+            <thead><tr><th>Date</th><th>Type</th><th style="text-align:right">Amount (UGX)</th><th style="text-align:right">Balance (UGX)</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div style="margin-top:20px;font-size:11px;color:#888">Printed on ${new Date().toLocaleString()}</div>
         </div>
-        <table>
-          <thead><tr><th>Date</th><th>Type</th><th style="text-align:right">Amount (UGX)</th><th style="text-align:right">Balance (UGX)</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <div style="margin-top:20px;font-size:11px;color:#888">Printed on ${new Date().toLocaleString()}</div>
-      </div>
-    </body></html>`;
+      </body></html>`;
 
-    printWindow.document.write(content);
-    printWindow.document.close();
+      printWindow.document.write(content);
+      printWindow.document.close();
+      toast({ title: 'Printing', description: `UGX ${STATEMENT_PRINT_FEE.toLocaleString()} printing fee charged to your wallet.` });
+      fetchEntries();
+    } catch (err: any) {
+      printWindow.close();
+      toast({ title: 'Print failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setPrinting(false);
+    }
   };
 
   const fetchEntries = async () => {
@@ -875,7 +905,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           Transaction Statement
         </h3>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={printStatement} disabled={entries.length === 0}>
+          <Button variant="ghost" size="sm" onClick={printStatement} disabled={entries.length === 0 || printing}>
             <Printer className="h-4 w-4 mr-1" />
             Print
           </Button>
