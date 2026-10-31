@@ -65,19 +65,20 @@ serve(async (req) => {
     }
 
     // 3. Drift check
-    const expected = (accounts || []).reduce((s: number, a: any) => s + Number(a.balance), 0);
+    const expected = (accounts || []).filter((a: any) => a.kind !== "holding").reduce((s: number, a: any) => s + Number(a.balance), 0);
+    const bank = (accounts || []).filter((a: any) => a.kind === "holding").reduce((s: number, a: any) => s + Number(a.balance), 0);
     const { data: pool } = await supabase.from("treasury_pool_balance").select("last_yo_synced_balance").eq("id", 1).maybeSingle();
     const { data: gos } = await supabase.from("gosentepay_balance").select("balance").order("updated_at", { ascending: false }).limit(1).maybeSingle();
     const { data: thrRow } = await supabase.from("system_settings").select("setting_value").eq("setting_key", "treasury_drift_threshold").maybeSingle();
     const driftThreshold = Number((thrRow?.setting_value as any)?.amount ?? 50000);
-    const actual = Number(pool?.last_yo_synced_balance || 0) + Number(gos?.balance || 0);
+    const actual = Number(pool?.last_yo_synced_balance || 0) + Number(gos?.balance || 0) + bank;
     const drift = actual - expected;
     results.drift = { expected, actual, drift, threshold: driftThreshold };
 
     if (Math.abs(drift) >= driftThreshold) {
       if (!openKeys.has("null:drift") && !openKeys.has(":drift")) {
         newAlerts.push({ account_code: null, alert_type: "drift", amount_required: expected, balance_at_alert: actual,
-          message: `Real money (Yo ${fmt(Number(pool?.last_yo_synced_balance || 0))} + GosentePay ${fmt(Number(gos?.balance || 0))} = ${fmt(actual)}) differs from the system total (${fmt(expected)}) by ${drift >= 0 ? "+" : "−"}${fmt(Math.abs(drift))}.`,
+          message: `Real money (Yo ${fmt(Number(pool?.last_yo_synced_balance || 0))} + GosentePay ${fmt(Number(gos?.balance || 0))} + Bank ${fmt(bank)} = ${fmt(actual)}) differs from the system total (${fmt(expected)}) by ${drift >= 0 ? "+" : "−"}${fmt(Math.abs(drift))}.`,
           metadata: { expected, actual, drift } });
       }
     } else {
