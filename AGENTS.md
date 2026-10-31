@@ -1,6 +1,7 @@
 # Project architecture
 
 - Treasury account movements use direct reads under the existing administrator-only RLS policy with explicit authenticated SELECT grants; surface read failures instead of displaying a misleading empty history.
+- Organize Treasury as a tabbed operations workspace over authoritative treasury_accounts and treasury_account_entries; link or embed existing loan, payroll and wallet workflows without duplicating balances, changing approval rules or treating internal account movements as external bank transfers.
 
 - Milling monthly reports reserve their print window synchronously in the click and leave verification, the single printed-by/QR footer, and dismissal to the shared print handler, avoiding blocked popups and closing before verification completes.
 
