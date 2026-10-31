@@ -1,3 +1,4 @@
+import { gosenteWithdrawFee } from "./gosentepay-fees.ts";
 // Shared GosentePay API client (v1 — https://api.gosentepay.com)
 // Handles Bearer token exchange + caching (24h), and exposes
 // deposit / withdraw / status helpers.
@@ -126,7 +127,7 @@ function sanitizeRef(ref: string): string {
 }
 
 export async function gosenteWithdraw(input: GosenteWithdrawInput) {
-  return authedPost("/withdraw", {
+  const res = await authedPost("/withdraw", {
     secret_key: secretKey(),
     phone: normalizePhone(input.phone),
     amount: input.amount,
@@ -134,6 +135,34 @@ export async function gosenteWithdraw(input: GosenteWithdrawInput) {
     reason: sanitizeReason(input.reason),
     ref: sanitizeRef(input.ref),
   });
+  if (isGosenteSuccess(res.status, res.body)) {
+    await recordPayoutOnBalance(input, sanitizeRef(input.ref));
+  }
+  return res;
+}
+
+/** Reduce the tracked GosentePay balance by amount + service fee (idempotent per ref). */
+async function recordPayoutOnBalance(input: GosenteWithdrawInput, ref: string) {
+  try {
+    const url = Deno.env.get("SUPABASE_URL");
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !key) return;
+    const amount = Number(input.amount) || 0;
+    const fee = gosenteWithdrawFee(amount);
+    await fetch(`${url}/rest/v1/rpc/gosentepay_balance_adjust`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        p_delta: -(amount + fee),
+        p_type: "payout_deduction",
+        p_reference: ref,
+        p_notes: `Payout UGX ${amount} to ${normalizePhone(input.phone)} + fee UGX ${fee}`,
+        p_by: "system",
+      }),
+    });
+  } catch (e) {
+    console.error("[gosentepay] balance record failed", e);
+  }
 }
 
 export async function gosenteStatus(ref: string) {
