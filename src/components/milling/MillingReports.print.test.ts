@@ -8,7 +8,7 @@ const source = ts.transpileModule(readFileSync(new URL('./MillingReports.tsx', i
   compilerOptions: { jsx: ts.JsxEmit.React, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 const start = source.indexOf('const printMonthReport =');
-const end = source.indexOf('// Customer debt analysis', start);
+const end = source.indexOf('const customerDebtAnalysis =', start);
 assert.ok(start >= 0 && end > start, 'Monthly print handler must be found');
 const createHandler = new Function('window', 'monthReportData', 'customers', 'customerDebtAnalysis', 'reportPrintError', 'setShowMonthSelector',
   `${source.slice(start, end)}; return printMonthReport;`);
