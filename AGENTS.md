@@ -1,5 +1,7 @@
 # Project architecture
 
+- Milling monthly reports reserve their print window synchronously in the click and leave verification, the single printed-by/QR footer, and dismissal to the shared print handler, avoiding blocked popups and closing before verification completes.
+
 - Bind GRN confirmation and post-payment printing to deep-captured lot snapshots, validating the displayed and freshly saved lot identity/figures before payment; enforce saved-payment-to-lot binding in both receipt screens and count only confirmed same-lot payments so queue changes cannot replace receipt figures.
 
 - Issue employee per diem forms as immutable saved request snapshots; employees submit their own print-prepared number once, and Admin/HR awards atomically record the award plus a PER_DIEM wallet credit through existing treasury triggers to prevent duplicate or partial payments.
