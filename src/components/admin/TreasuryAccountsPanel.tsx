@@ -91,6 +91,7 @@ export default function TreasuryAccountsPanel() {
   const [historyCode, setHistoryCode] = useState<string | null>(null);
   const [history, setHistory] = useState<Entry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   const [target, setTarget] = useState("general");
   const [fromAcc, setFromAcc] = useState("profits");
@@ -150,14 +151,22 @@ export default function TreasuryAccountsPanel() {
   const openHistory = async (code: string) => {
     setHistoryCode(code);
     setHistoryLoading(true);
-    const { data: rows } = await (supabase as any)
-      .from("treasury_account_entries")
-      .select("*")
-      .eq("account_code", code)
-      .order("created_at", { ascending: false })
-      .limit(100);
-    setHistory((rows as Entry[]) || []);
-    setHistoryLoading(false);
+    setHistory([]);
+    setHistoryError(null);
+    try {
+      const { data: rows, error: readError } = await (supabase as any)
+        .from("treasury_account_entries")
+        .select("*")
+        .eq("account_code", code)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (readError) throw readError;
+      setHistory((rows as Entry[]) || []);
+    } catch (e: any) {
+      setHistoryError(e.message || "Could not load account movements");
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   const printHistory = () => {
@@ -331,7 +340,7 @@ export default function TreasuryAccountsPanel() {
                 <div className="text-[10px] text-muted-foreground mt-1 min-h-[28px]">{FUNDED_FROM[a.code] || a.description}</div>
                 {isFund && <div className="text-[10px] text-muted-foreground">Alert below {fmt(a.low_balance_threshold)}</div>}
                 <div className="flex gap-1 mt-2 flex-wrap">
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => openHistory(a.code)}><History className="h-3 w-3 mr-1" />History</Button>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => openHistory(a.code)}><History className="h-3 w-3 mr-1" />Movements</Button>
                   {data?.is_super_admin && a.code !== "user_wallets" && (
                     <>
                       <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => { setTarget(a.code); setFundOpen(true); }}><Plus className="h-3 w-3 mr-1" />Fund</Button>
@@ -426,7 +435,11 @@ export default function TreasuryAccountsPanel() {
               <Printer className="h-4 w-4 mr-1" /> Print
             </Button>
           </DialogHeader>
-          {historyLoading ? <Skeleton className="h-40" /> : (
+          {historyError && <div role="alert" className="text-sm text-destructive flex flex-wrap items-center gap-3">
+            <span>{historyError}</span>
+            <Button size="sm" variant="outline" onClick={() => historyCode && openHistory(historyCode)}><RefreshCw className="h-4 w-4 mr-1" />Retry</Button>
+          </div>}
+          {historyLoading ? <Skeleton className="h-40" /> : !historyError && (
             <div className="flex-1 min-h-0 overflow-auto rounded-md border">
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
