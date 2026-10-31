@@ -1,9 +1,10 @@
 # Roadmap
 
 ## Banking-style Treasury workspace
-- [ ] Replace the long Treasury page with organised accounts, transactions, deposits, loan profiles, salaries/wallets and reconciliation views.
-- [ ] Reuse existing saved accounts and authorised finance workflows; remove duplicate legacy metrics and unsafe maintenance controls from everyday banking.
-- [ ] Verify movement browsing, banking navigation and available tests; report signed-in limitations.
+- [x] Replaced the long Treasury page with six banking views: account directory, paginated/filterable movements, deposits, existing borrower profiles, employee salary/wallet profiles and provider reconciliation.
+- [x] Reused existing loan applications/approvals, employee registration, payroll, advances, withdrawals, statements and overdraft workflows; removed duplicate legacy pool metrics, estimated investment returns and ledger replay/manual legacy adjustment controls from the page. No financial data or payment rules changed.
+- [x] Six movement-handler/filter tests passed and preview build clean; isolated desktop layout confirmed six tabs and payroll links, without authenticated data.
+- [ ] Verify signed-in account data, borrower profiles, deposits and payroll navigation — external Supabase session unavailable; actual route stopped at location-permission check. New standalone loan-profile creation is not implemented; existing borrower registration/application workflows are linked.
 
 ## Operations deduction reconciliation and movement visibility
 - [x] Reconciled seven deductions into Operations: verified seven credits totaling UGX 38,000, balance UGX 2,276,501; original wallet debits retained and external destination labels corrected with audit metadata.
