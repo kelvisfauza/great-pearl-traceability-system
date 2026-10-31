@@ -2,7 +2,7 @@
 
 ## Milling monthly report printing
 - [x] Reserve the print window during the click, keep it open for shared verification, avoid a duplicate QR footer, and report blocked popups or preparation errors.
-- [ ] Validate print-window lifecycle and current preview build.
+- [x] Three actual-handler checks passed for synchronous opening, keeping the print window alive, and error/retry handling; latest preview build clean.
 - [ ] Verify the real signed-in monthly report — external Supabase authentication unavailable.
 
 ## Finance GRN receipt mismatch
