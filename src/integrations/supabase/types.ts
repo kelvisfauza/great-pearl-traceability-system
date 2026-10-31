@@ -18789,6 +18789,16 @@ export type Database = {
           yo_reference: string
         }[]
       }
+      gosentepay_balance_adjust: {
+        Args: {
+          p_by?: string
+          p_delta: number
+          p_notes: string
+          p_reference: string
+          p_type: string
+        }
+        Returns: number
+      }
       "great pearl": { Args: { conversation_id: string }; Returns: boolean }
       has_active_loan_obligation: {
         Args: { p_user_id: string }
