@@ -1,5 +1,10 @@
 # Roadmap
 
+## Milling monthly report printing
+- [x] Reserve the print window during the click, keep it open for shared verification, avoid a duplicate QR footer, and report blocked popups or preparation errors.
+- [ ] Validate print-window lifecycle and current preview build.
+- [ ] Verify the real signed-in monthly report — external Supabase authentication unavailable.
+
 ## Finance GRN receipt mismatch
 - [x] Lock payment confirmation to a deep-captured displayed lot, check saved identity/amount before writing, block repeated clicks, and enforce saved-payment identity in both receipt screens; six regression tests passed and preview build clean.
 - [x] Compared saved lots/referrals/payments: 20260221018 has Musema's 15 October UGX 3,471,000 payment; today's Denis payment is UGX 3,471,000 on a separate lot under 20260222009, which also has an older UGX 3,738,000 paid lot. No payments changed.

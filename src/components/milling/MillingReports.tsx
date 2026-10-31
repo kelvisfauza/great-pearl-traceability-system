@@ -9,7 +9,7 @@ import { FileText, Download, TrendingUp, TrendingDown, DollarSign, Package2, Use
 import { useMillingData } from '@/hooks/useMillingData';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import StandardPrintHeader from '@/components/print/StandardPrintHeader';
-import { createPrintVerification, getVerificationHtml, getVerificationStyles } from '@/utils/printVerification';
+import { reportPrintError } from '@/lib/documentPrintStamp';
 
 const MillingReports = () => {
   const { getReportData, stats, customers, transactions, cashTransactions, expenses } = useMillingData();
@@ -199,16 +199,17 @@ ${reportData.cashTransactions.map((p: any) =>
   };
 
   // Print month report
-  const printMonthReport = async () => {
+  const printMonthReport = () => {
     if (!monthReportData) return;
 
-    // Create verification record
-    const { code, qrUrl } = await createPrintVerification({
-      type: 'report',
-      subtype: 'Milling Monthly Report',
-      reference_no: `MILL-MONTH-${monthReportData.monthName.replace(' ', '-')}`,
-      meta: { monthName: monthReportData.monthName }
-    });
+    // Reserve the window during the click, before shared verification runs.
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      reportPrintError(new Error('Please allow pop-ups to print the monthly report.'));
+      return;
+    }
+
+    try {
 
     const debtAnalysis = customerDebtAnalysis();
     const totalDebt = customers.reduce((sum, customer) => sum + customer.current_balance, 0);
@@ -688,18 +689,20 @@ ${reportData.cashTransactions.map((p: any) =>
             </table>
           </div>
 
-          ${getVerificationHtml(code, qrUrl)}
         </body>
       </html>
     `;
 
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
       printWindow.document.write(printContent);
       printWindow.document.close();
       printWindow.focus();
+      // The shared print handler registers the printed-by/QR footer and owns
+      // dismissal. Closing here races its asynchronous verification.
       printWindow.print();
+      setShowMonthSelector(false);
+    } catch (error) {
       printWindow.close();
+      reportPrintError(error);
     }
   };
 
@@ -917,10 +920,7 @@ ${reportData.cashTransactions.map((p: any) =>
                       </Button>
                       {monthReportData && (
                         <Button
-                          onClick={() => {
-                            printMonthReport();
-                            setShowMonthSelector(false);
-                          }}
+                          onClick={printMonthReport}
                           variant="outline"
                           className="flex-1"
                         >
