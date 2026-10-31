@@ -1,0 +1,1 @@
+UPDATE public.employees SET phone = '0767857624' WHERE id = '10c85338-d57a-4fd2-afc5-1066dac8b58c' AND lower(email) = 'nuwagabagadaffi@greatpearlcoffee.com';
