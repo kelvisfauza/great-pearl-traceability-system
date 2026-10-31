@@ -1,5 +1,10 @@
 # Roadmap
 
+## Banking-style Treasury workspace
+- [ ] Replace the long Treasury page with organised accounts, transactions, deposits, loan profiles, salaries/wallets and reconciliation views.
+- [ ] Reuse existing saved accounts and authorised finance workflows; remove duplicate legacy metrics and unsafe maintenance controls from everyday banking.
+- [ ] Verify movement browsing, banking navigation and available tests; report signed-in limitations.
+
 ## Operations deduction reconciliation and movement visibility
 - [x] Reconciled seven deductions into Operations: verified seven credits totaling UGX 38,000, balance UGX 2,276,501; original wallet debits retained and external destination labels corrected with audit metadata.
 - [x] Restored authenticated read grant under existing admin-only RLS, labelled the account button Movements, and surfaced read errors with Retry; two handler tests passed and preview build clean.
