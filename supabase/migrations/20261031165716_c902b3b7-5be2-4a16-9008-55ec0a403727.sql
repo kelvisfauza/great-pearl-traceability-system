@@ -1,0 +1,1 @@
+UPDATE public.budget_withdrawal_requests SET payout_mode='personal_wallet', updated_at=now() WHERE id='43455761-3a23-4c7e-aa6d-ebea97f744d4' AND status='approved_1';
