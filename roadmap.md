@@ -1,8 +1,9 @@
 # Roadmap
 
 ## Operations deduction reconciliation and movement visibility
-- [ ] Reconcile the seven confirmed wallet deductions (UGX 38,000) into Operations exactly once, retaining original references and wallet balances.
-- [ ] Check and repair Treasury Pool movement visibility; verify available checks and report authenticated limitations.
+- [x] Reconciled seven deductions into Operations: verified seven credits totaling UGX 38,000, balance UGX 2,276,501; original wallet debits retained and external destination labels corrected with audit metadata.
+- [x] Restored authenticated read grant under existing admin-only RLS, labelled the account button Movements, and surfaced read errors with Retry; two handler tests passed and preview build clean.
+- [ ] Verify real signed-in Treasury movements — external Supabase authentication unavailable; database results and handler tests verified instead.
 
 ## Milling monthly report printing
 - [x] Reserve the print window during the click, keep it open for shared verification, avoid a duplicate QR footer, and report blocked popups or preparation errors.
