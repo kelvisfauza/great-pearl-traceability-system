@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.charge_statement_fee(text, text, text, integer, integer, text) FROM PUBLIC, anon;

@@ -18,6 +18,7 @@ import {
   Gift, Smartphone, Loader2, ChevronDown, TrendingUp, Minus, Printer, Send, RotateCcw, AlertTriangle, Mail, Calendar, CheckCircle2
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { STATEMENT_FEE_PER_PAGE, STATEMENT_PRINT_FEE, statementFeeForPages } from '@/lib/statementFees';
 
 interface LedgerEntry {
   id: string;
@@ -165,6 +166,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [visibleCount, setVisibleCount] = useState(DISPLAY_LIMIT);
@@ -183,55 +185,84 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     return withBalance.reverse();
   }, [entries, currentBalance]);
 
-  const printStatement = () => {
+  const printStatement = async () => {
+    if (!user?.email) return;
+    // Reserve the print window synchronously so the browser doesn't block it
     const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    if (!printWindow) {
+      toast({ title: 'Popup blocked', description: 'Please allow popups to print the statement.', variant: 'destructive' });
+      return;
+    }
+    setPrinting(true);
+    try {
+      // Charge the UGX 1,000 printing fee before printing
+      const { data: userIdData } = await supabase
+        .rpc('get_unified_user_id', { input_email: user.email });
+      const unifiedUserId = userIdData || user.id;
+      const { error: feeError } = await supabase.rpc('charge_statement_fee', {
+        p_user_id: unifiedUserId,
+        p_period_from: '',
+        p_period_to: '',
+        p_amount: STATEMENT_PRINT_FEE,
+        p_pages: 1,
+        p_kind: 'print',
+      });
+      if (feeError) throw feeError;
 
-    const rows = entriesWithBalance.map(e => {
-      const activityLabel = getActivityLabel(e);
-      const transferMeta = getTransferMeta(e);
-      const isCredit = e.amount > 0;
-      
-      let typeCol = `${getEntryLabel(e)}${activityLabel ? ' - ' + activityLabel : ''}`;
-      if (transferMeta) {
-        if (e.amount < 0 && transferMeta.to_email) {
-          typeCol += `<br/><span style="font-size:10px;color:#666">To: ${transferMeta.to_name} (${transferMeta.to_email})</span>`;
-        } else if (e.amount > 0 && transferMeta.from_email) {
-          typeCol += `<br/><span style="font-size:10px;color:#666">From: ${transferMeta.from_name} (${transferMeta.from_email})</span>`;
+      const rows = entriesWithBalance.map(e => {
+        const activityLabel = getActivityLabel(e);
+        const transferMeta = getTransferMeta(e);
+        const isCredit = e.amount > 0;
+
+        let typeCol = `${getEntryLabel(e)}${activityLabel ? ' - ' + activityLabel : ''}`;
+        if (transferMeta) {
+          if (e.amount < 0 && transferMeta.to_email) {
+            typeCol += `<br/><span style="font-size:10px;color:#666">To: ${transferMeta.to_name} (${transferMeta.to_email})</span>`;
+          } else if (e.amount > 0 && transferMeta.from_email) {
+            typeCol += `<br/><span style="font-size:10px;color:#666">From: ${transferMeta.from_name} (${transferMeta.from_email})</span>`;
+          }
         }
-      }
-      
-      return `<tr>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${format(new Date(e.created_at), 'MMM dd, yyyy h:mm a')}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${typeCol}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:${isCredit ? '#15803d' : '#b91c1c'};font-weight:600">${isCredit ? '+' : ''}${e.amount.toLocaleString()}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;font-weight:600">${(e as any).runningBalance != null ? (e as any).runningBalance.toLocaleString() : '—'}</td>
-      </tr>`;
-    }).join('');
 
-    const content = `<!doctype html><html><head><meta charset="utf-8"/><title>Transaction Statement</title>
-      <style>body{font:13px/1.5 system-ui;margin:0;padding:20px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px;border-bottom:2px solid #333;font-size:12px}@media print{.no-print{display:none}}</style>
-    </head><body onload="window.print();">
-      <div style="max-width:750px;margin:0 auto">
-        <h2 style="margin:0 0 4px">Great Agro Coffee</h2>
-        <h3 style="margin:0 0 16px;font-weight:normal;color:#555">Transaction Statement</h3>
-        <div style="margin-bottom:12px;font-size:13px">
-          <strong>Employee:</strong> ${employee?.name || user?.email || 'N/A'}<br/>
-          <strong>Date:</strong> ${format(new Date(), 'MMMM dd, yyyy')}<br/>
-          <strong>Balance from last month:</strong> UGX ${balanceBroughtForward.toLocaleString()}<br/>
-          <strong>This month:</strong> UGX ${thisMonthEarnings.toLocaleString()}<br/>
-          <strong>Wallet Balance:</strong> UGX ${currentBalance.toLocaleString()}${spendableBalance != null ? `<br/><strong>Available to spend:</strong> UGX ${spendableBalance.toLocaleString()}` : ''}
+        return `<tr>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${format(new Date(e.created_at), 'MMM dd, yyyy h:mm a')}</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${typeCol}</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:${isCredit ? '#15803d' : '#b91c1c'};font-weight:600">${isCredit ? '+' : ''}${e.amount.toLocaleString()}</td>
+          <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;font-weight:600">${(e as any).runningBalance != null ? (e as any).runningBalance.toLocaleString() : '—'}</td>
+        </tr>`;
+      }).join('');
+
+      const content = `<!doctype html><html><head><meta charset="utf-8"/><title>Transaction Statement</title>
+        <style>body{font:13px/1.5 system-ui;margin:0;padding:20px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px;border-bottom:2px solid #333;font-size:12px}@media print{.no-print{display:none}}</style>
+      </head><body onload="window.print();">
+        <div style="max-width:750px;margin:0 auto">
+          <h2 style="margin:0 0 4px">Great Agro Coffee</h2>
+          <h3 style="margin:0 0 16px;font-weight:normal;color:#555">Transaction Statement</h3>
+          <div style="margin-bottom:12px;font-size:13px">
+            <strong>Employee:</strong> ${employee?.name || user?.email || 'N/A'}<br/>
+            <strong>Date:</strong> ${format(new Date(), 'MMMM dd, yyyy')}<br/>
+            <strong>Balance from last month:</strong> UGX ${balanceBroughtForward.toLocaleString()}<br/>
+            <strong>This month:</strong> UGX ${thisMonthEarnings.toLocaleString()}<br/>
+            <strong>Wallet Balance:</strong> UGX ${currentBalance.toLocaleString()}${spendableBalance != null ? `<br/><strong>Available to spend:</strong> UGX ${spendableBalance.toLocaleString()}` : ''}<br/>
+            <strong>Print charge:</strong> UGX ${STATEMENT_PRINT_FEE.toLocaleString()}
+          </div>
+          <table>
+            <thead><tr><th>Date</th><th>Type</th><th style="text-align:right">Amount (UGX)</th><th style="text-align:right">Balance (UGX)</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div style="margin-top:20px;font-size:11px;color:#888">Printed on ${new Date().toLocaleString()}</div>
         </div>
-        <table>
-          <thead><tr><th>Date</th><th>Type</th><th style="text-align:right">Amount (UGX)</th><th style="text-align:right">Balance (UGX)</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <div style="margin-top:20px;font-size:11px;color:#888">Printed on ${new Date().toLocaleString()}</div>
-      </div>
-    </body></html>`;
+      </body></html>`;
 
-    printWindow.document.write(content);
-    printWindow.document.close();
+      printWindow.document.write(content);
+      printWindow.document.close();
+      toast({ title: 'Printing', description: `UGX ${STATEMENT_PRINT_FEE.toLocaleString()} printing fee charged to your wallet.` });
+      fetchEntries();
+    } catch (err: any) {
+      printWindow.close();
+      toast({ title: 'Print failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setPrinting(false);
+    }
   };
 
   const fetchEntries = async () => {
@@ -266,7 +297,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     }
   };
 
-  const STATEMENT_FEE = 0; // statements are free
+  // Fees come from src/lib/statementFees.ts: 500/page (statement), 1,000 (print)
 
   const handleSendStatement = async () => {
     if (!user?.email || !dateFrom || !dateTo) return;
@@ -275,14 +306,6 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const { data: userIdData } = await supabase
         .rpc('get_unified_user_id', { input_email: user.email });
       const unifiedUserId = userIdData || user.id;
-
-      // Charge the UGX 500 statement fee via SECURITY DEFINER RPC (bypasses ledger RLS safely)
-      const { error: feeError } = await supabase.rpc('charge_statement_fee', {
-        p_user_id: unifiedUserId,
-        p_period_from: dateFrom,
-        p_period_to: dateTo,
-      });
-      if (feeError) throw feeError;
 
       const periodStart = `${dateFrom}T00:00:00`;
       const periodEnd = `${dateTo}T23:59:59`;
@@ -360,107 +383,72 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const periodTo = format(new Date(dateTo), 'MMM dd, yyyy');
       const empName = employee?.name || user.email || 'Employee';
 
-      // 3. Generate PDF
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pageW = doc.internal.pageSize.getWidth();
-      const margin = 15;
-      let y = 20;
+      // 3. Build the statement PDF. The statement charge is UGX 500 per page,
+      // so we build once to count pages, then rebuild with the real fee.
+      const buildStatementDoc = (statementFee: number) => {
+        // 3. Generate PDF
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pageW = doc.internal.pageSize.getWidth();
+        const margin = 15;
+        let y = 20;
 
-      // Header
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(26, 86, 50); // brand green
-      doc.text('Great Agro Coffee', margin, y);
-      y += 7;
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100);
-      doc.text('Transaction Statement', margin, y);
-      y += 10;
-
-      // Separator line
-      doc.setDrawColor(200);
-      doc.line(margin, y, pageW - margin, y);
-      y += 8;
-
-      // Employee info
-      doc.setFontSize(10);
-      doc.setTextColor(50);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Employee:', margin, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(empName, margin + 25, y);
-      y += 5;
-      doc.setFont('helvetica', 'bold');
-      doc.text('Period:', margin, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`${periodFrom} - ${periodTo}`, margin + 25, y);
-      y += 5;
-      doc.setFont('helvetica', 'bold');
-      doc.text('Balance at end of period:', margin, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`UGX ${closingBalance.toLocaleString()}`, margin + 35, y);
-      y += 5;
-      if (spendableBalance != null) {
+        // Header
+        doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
-        doc.text('Available to spend:', margin, y);
+        doc.setTextColor(26, 86, 50); // brand green
+        doc.text('Great Agro Coffee', margin, y);
+        y += 7;
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'normal');
-        doc.text(`UGX ${spendableBalance.toLocaleString()}`, margin + 35, y);
+        doc.setTextColor(100);
+        doc.text('Transaction Statement', margin, y);
+        y += 10;
+
+        // Separator line
+        doc.setDrawColor(200);
+        doc.line(margin, y, pageW - margin, y);
+        y += 8;
+
+        // Employee info
+        doc.setFontSize(10);
+        doc.setTextColor(50);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Employee:', margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(empName, margin + 25, y);
         y += 5;
-      }
-      doc.setFont('helvetica', 'bold');
-      doc.text('Statement Charge:', margin, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`UGX ${STATEMENT_FEE.toLocaleString()}`, margin + 38, y);
-      y += 8;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Period:', margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${periodFrom} - ${periodTo}`, margin + 25, y);
+        y += 5;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Balance at end of period:', margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`UGX ${closingBalance.toLocaleString()}`, margin + 35, y);
+        y += 5;
+        if (spendableBalance != null) {
+          doc.setFont('helvetica', 'bold');
+          doc.text('Available to spend:', margin, y);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`UGX ${spendableBalance.toLocaleString()}`, margin + 35, y);
+          y += 5;
+        }
+        doc.setFont('helvetica', 'bold');
+        doc.text('Statement Charge:', margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`UGX ${statementFee.toLocaleString()}`, margin + 38, y);
+        y += 8;
 
-      // Table header: Date | Type | Description | Debit | Credit | Balance
-      const cols = {
-        date: margin,
-        type: margin + 28,
-        desc: margin + 60,
-        debit: margin + 100,
-        credit: margin + 130,
-        bal:   pageW - margin,
-      };
-      doc.setFillColor(0, 0, 0);
-      doc.rect(margin, y - 4, pageW - 2 * margin, 7, 'F');
-      doc.setTextColor(255);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Date', cols.date, y);
-      doc.text('Type', cols.type, y);
-      doc.text('Description', cols.desc, y);
-      doc.text('Debit (UGX)',  cols.debit + 22, y, { align: 'right' });
-      doc.text('Credit (UGX)', cols.credit + 22, y, { align: 'right' });
-      doc.text('Balance (UGX)', cols.bal, y, { align: 'right' });
-      y += 6;
-
-      // Track table bounds for gridlines
-      let segmentTopY = y - 10; // top of current page's table segment
-      const colDividers = [
-        cols.type - 1,
-        cols.desc - 1,
-        cols.debit - 1,
-        cols.credit - 1,
-        cols.credit + 25,
-      ];
-      const drawRowLine = (yy: number) => {
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.1);
-        doc.line(margin, yy, pageW - margin, yy);
-      };
-      const drawVerticals = (yTop: number, yBot: number) => {
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.15);
-        // outer left/right
-        doc.line(margin, yTop, margin, yBot);
-        doc.line(pageW - margin, yTop, pageW - margin, yBot);
-        // column dividers
-        doc.setLineWidth(0.1);
-        colDividers.forEach((x) => doc.line(x, yTop, x, yBot));
-      };
-      const redrawHeaderOnNewPage = () => {
+        // Table header: Date | Type | Description | Debit | Credit | Balance
+        const cols = {
+          date: margin,
+          type: margin + 28,
+          desc: margin + 60,
+          debit: margin + 100,
+          credit: margin + 130,
+          bal:   pageW - margin,
+        };
         doc.setFillColor(0, 0, 0);
         doc.rect(margin, y - 4, pageW - 2 * margin, 7, 'F');
         doc.setTextColor(255);
@@ -473,198 +461,255 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         doc.text('Credit (UGX)', cols.credit + 22, y, { align: 'right' });
         doc.text('Balance (UGX)', cols.bal, y, { align: 'right' });
         y += 6;
-        segmentTopY = y - 10;
-        drawRowLine(y - 6);
-      };
-      drawRowLine(y - 6); // line under header
 
-      // Opening balance row (always first)
-      doc.setFillColor(220, 220, 220);
-      doc.rect(margin, y - 3.5, pageW - 2 * margin, 6, 'F');
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.text(periodFrom, cols.date, y);
-      doc.text('OPENING', cols.type, y);
-      doc.text('Balance brought forward', cols.desc, y);
-      doc.text('-', cols.debit + 22, y, { align: 'right' });
-      doc.text('-', cols.credit + 22, y, { align: 'right' });
-      doc.text(periodOpeningBalance.toLocaleString(), cols.bal, y, { align: 'right' });
-      y += 6;
-      drawRowLine(y - 3.5);
+        // Track table bounds for gridlines
+        let segmentTopY = y - 10; // top of current page's table segment
+        const colDividers = [
+          cols.type - 1,
+          cols.desc - 1,
+          cols.debit - 1,
+          cols.credit - 1,
+          cols.credit + 25,
+        ];
+        const drawRowLine = (yy: number) => {
+          doc.setDrawColor(0);
+          doc.setLineWidth(0.1);
+          doc.line(margin, yy, pageW - margin, yy);
+        };
+        const drawVerticals = (yTop: number, yBot: number) => {
+          doc.setDrawColor(0);
+          doc.setLineWidth(0.15);
+          // outer left/right
+          doc.line(margin, yTop, margin, yBot);
+          doc.line(pageW - margin, yTop, pageW - margin, yBot);
+          // column dividers
+          doc.setLineWidth(0.1);
+          colDividers.forEach((x) => doc.line(x, yTop, x, yBot));
+        };
+        const redrawHeaderOnNewPage = () => {
+          doc.setFillColor(0, 0, 0);
+          doc.rect(margin, y - 4, pageW - 2 * margin, 7, 'F');
+          doc.setTextColor(255);
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Date', cols.date, y);
+          doc.text('Type', cols.type, y);
+          doc.text('Description', cols.desc, y);
+          doc.text('Debit (UGX)',  cols.debit + 22, y, { align: 'right' });
+          doc.text('Credit (UGX)', cols.credit + 22, y, { align: 'right' });
+          doc.text('Balance (UGX)', cols.bal, y, { align: 'right' });
+          y += 6;
+          segmentTopY = y - 10;
+          drawRowLine(y - 6);
+        };
+        drawRowLine(y - 6); // line under header
 
-      // Table rows (chronological asc so running balance reads top-to-bottom)
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      transactionsAsc.forEach((tx, idx) => {
+        // Opening balance row (always first)
+        doc.setFillColor(220, 220, 220);
+        doc.rect(margin, y - 3.5, pageW - 2 * margin, 6, 'F');
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text(periodFrom, cols.date, y);
+        doc.text('OPENING', cols.type, y);
+        doc.text('Balance brought forward', cols.desc, y);
+        doc.text('-', cols.debit + 22, y, { align: 'right' });
+        doc.text('-', cols.credit + 22, y, { align: 'right' });
+        doc.text(periodOpeningBalance.toLocaleString(), cols.bal, y, { align: 'right' });
+        y += 6;
+        drawRowLine(y - 3.5);
+
+        // Table rows (chronological asc so running balance reads top-to-bottom)
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        transactionsAsc.forEach((tx, idx) => {
+          if (y > 270) {
+            // close out vertical lines for current segment, then new page
+            drawVerticals(segmentTopY, y - 3.5);
+            doc.addPage();
+            y = 20;
+            redrawHeaderOnNewPage();
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+          }
+          if (idx % 2 === 0) {
+            doc.setFillColor(240, 240, 240);
+            doc.rect(margin, y - 3.5, pageW - 2 * margin, 5.5, 'F');
+          }
+          doc.setTextColor(0);
+          const cleanType = tx.type.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|📄|📤|📥|📶|📱|💵|📋|🏆|🎂|📲|💰|🏦|🎁/gu, '').trim();
+          doc.text(tx.date.split(',')[0] || tx.date, cols.date, y);
+          doc.text(cleanType.substring(0, 16), cols.type, y);
+          doc.text((tx.description || '-').substring(0, 22), cols.desc, y);
+
+          if (tx.amount < 0) {
+            doc.setTextColor(0);
+            doc.text(Math.abs(tx.amount).toLocaleString(), cols.debit + 22, y, { align: 'right' });
+            doc.text('-', cols.credit + 22, y, { align: 'right' });
+          } else if (tx.amount > 0) {
+            doc.setTextColor(0);
+            doc.text('-', cols.debit + 22, y, { align: 'right' });
+            doc.text(tx.amount.toLocaleString(), cols.credit + 22, y, { align: 'right' });
+          } else {
+            doc.setTextColor(0);
+            doc.text('-', cols.debit + 22, y, { align: 'right' });
+            doc.text('-', cols.credit + 22, y, { align: 'right' });
+          }
+
+          doc.setTextColor(0);
+          doc.text(tx.balance != null ? tx.balance.toLocaleString() : '-', cols.bal, y, { align: 'right' });
+          y += 5.5;
+          drawRowLine(y - 3.5);
+        });
+
+        // Closing balance row
         if (y > 270) {
-          // close out vertical lines for current segment, then new page
           drawVerticals(segmentTopY, y - 3.5);
           doc.addPage();
           y = 20;
           redrawHeaderOnNewPage();
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8);
         }
-        if (idx % 2 === 0) {
-          doc.setFillColor(240, 240, 240);
-          doc.rect(margin, y - 3.5, pageW - 2 * margin, 5.5, 'F');
-        }
-        doc.setTextColor(0);
-        const cleanType = tx.type.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|📄|📤|📥|📶|📱|💵|📋|🏆|🎂|📲|💰|🏦|🎁/gu, '').trim();
-        doc.text(tx.date.split(',')[0] || tx.date, cols.date, y);
-        doc.text(cleanType.substring(0, 16), cols.type, y);
-        doc.text((tx.description || '-').substring(0, 22), cols.desc, y);
-
-        if (tx.amount < 0) {
-          doc.setTextColor(0);
-          doc.text(Math.abs(tx.amount).toLocaleString(), cols.debit + 22, y, { align: 'right' });
-          doc.text('-', cols.credit + 22, y, { align: 'right' });
-        } else if (tx.amount > 0) {
-          doc.setTextColor(0);
-          doc.text('-', cols.debit + 22, y, { align: 'right' });
-          doc.text(tx.amount.toLocaleString(), cols.credit + 22, y, { align: 'right' });
-        } else {
-          doc.setTextColor(0);
-          doc.text('-', cols.debit + 22, y, { align: 'right' });
-          doc.text('-', cols.credit + 22, y, { align: 'right' });
-        }
-
-        doc.setTextColor(0);
-        doc.text(tx.balance != null ? tx.balance.toLocaleString() : '-', cols.bal, y, { align: 'right' });
-        y += 5.5;
+        doc.setFillColor(220, 220, 220);
+        doc.rect(margin, y - 3.5, pageW - 2 * margin, 6, 'F');
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'bold');
+        doc.text(periodTo, cols.date, y);
+        doc.text('CLOSING', cols.type, y);
+        doc.text('Balance carried forward', cols.desc, y);
+        doc.text(totalDebitsPreview().toLocaleString(), cols.debit + 22, y, { align: 'right' });
+        doc.text(totalCreditsPreview().toLocaleString(), cols.credit + 22, y, { align: 'right' });
+        doc.text(closingBalance.toLocaleString(), cols.bal, y, { align: 'right' });
+        y += 6;
         drawRowLine(y - 3.5);
-      });
 
-      // Closing balance row
-      if (y > 270) {
+        // Draw vertical dividers + outer border for final page segment
         drawVerticals(segmentTopY, y - 3.5);
+
+        function totalCreditsPreview() { return transactionsAsc.reduce((s, t) => s + (t.amount > 0 ? t.amount : 0), 0); }
+        function totalDebitsPreview()  { return transactionsAsc.reduce((s, t) => s + (t.amount < 0 ? Math.abs(t.amount) : 0), 0); }
+
+        // ===== Summary Page (Stanbic-style) =====
+        const totalCredits = transactionsAsc.reduce((s, t) => s + (t.amount > 0 ? t.amount : 0), 0);
+        const totalDebits  = transactionsAsc.reduce((s, t) => s + (t.amount < 0 ? Math.abs(t.amount) : 0), 0);
+
         doc.addPage();
-        y = 20;
-        redrawHeaderOnNewPage();
-      }
-      doc.setFillColor(220, 220, 220);
-      doc.rect(margin, y - 3.5, pageW - 2 * margin, 6, 'F');
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'bold');
-      doc.text(periodTo, cols.date, y);
-      doc.text('CLOSING', cols.type, y);
-      doc.text('Balance carried forward', cols.desc, y);
-      doc.text(totalDebitsPreview().toLocaleString(), cols.debit + 22, y, { align: 'right' });
-      doc.text(totalCreditsPreview().toLocaleString(), cols.credit + 22, y, { align: 'right' });
-      doc.text(closingBalance.toLocaleString(), cols.bal, y, { align: 'right' });
-      y += 6;
-      drawRowLine(y - 3.5);
+        let sy = 20;
 
-      // Draw vertical dividers + outer border for final page segment
-      drawVerticals(segmentTopY, y - 3.5);
-
-      function totalCreditsPreview() { return transactionsAsc.reduce((s, t) => s + (t.amount > 0 ? t.amount : 0), 0); }
-      function totalDebitsPreview()  { return transactionsAsc.reduce((s, t) => s + (t.amount < 0 ? Math.abs(t.amount) : 0), 0); }
-
-      // ===== Summary Page (Stanbic-style) =====
-      const totalCredits = transactionsAsc.reduce((s, t) => s + (t.amount > 0 ? t.amount : 0), 0);
-      const totalDebits  = transactionsAsc.reduce((s, t) => s + (t.amount < 0 ? Math.abs(t.amount) : 0), 0);
-
-      doc.addPage();
-      let sy = 20;
-
-      // Header
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(26, 86, 50);
-      doc.text('Great Agro Coffee', margin, sy);
-      sy += 6;
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100);
-      doc.text(`Statement from : ${periodFrom} to ${periodTo}`, margin, sy);
-      doc.text(`Page ${doc.getNumberOfPages()} of ${doc.getNumberOfPages()}`, pageW - margin, sy, { align: 'right' });
-      sy += 8;
-
-      doc.setDrawColor(0);
-      doc.setLineWidth(0.4);
-      doc.line(margin, sy, pageW - margin, sy);
-      sy += 7;
-
-      doc.setFontSize(13);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30);
-      doc.text('STATEMENT SUMMARY', margin, sy);
-      sy += 8;
-
-      // Account details
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(50);
-      doc.text(`Account Holder : ${empName}`, margin, sy); sy += 5;
-      doc.text(`Currency       : UGX`, margin, sy); sy += 5;
-      doc.text(`Account Type   : WALLET`, margin, sy); sy += 8;
-
-      // Balance block
-      const drawRow = (label: string, value: string, bold = false) => {
-        doc.setFont('helvetica', bold ? 'bold' : 'normal');
-        doc.text(label, margin + 2, sy);
-        doc.text(value, pageW - margin - 2, sy, { align: 'right' });
+        // Header
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(26, 86, 50);
+        doc.text('Great Agro Coffee', margin, sy);
         sy += 6;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100);
+        doc.text(`Statement from : ${periodFrom} to ${periodTo}`, margin, sy);
+        doc.text(`Page ${doc.getNumberOfPages()} of ${doc.getNumberOfPages()}`, pageW - margin, sy, { align: 'right' });
+        sy += 8;
+
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.4);
+        doc.line(margin, sy, pageW - margin, sy);
+        sy += 7;
+
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30);
+        doc.text('STATEMENT SUMMARY', margin, sy);
+        sy += 8;
+
+        // Account details
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(50);
+        doc.text(`Account Holder : ${empName}`, margin, sy); sy += 5;
+        doc.text(`Currency       : UGX`, margin, sy); sy += 5;
+        doc.text(`Account Type   : WALLET`, margin, sy); sy += 8;
+
+        // Balance block
+        const drawRow = (label: string, value: string, bold = false) => {
+          doc.setFont('helvetica', bold ? 'bold' : 'normal');
+          doc.text(label, margin + 2, sy);
+          doc.text(value, pageW - margin - 2, sy, { align: 'right' });
+          sy += 6;
+        };
+
+        doc.setFillColor(245, 245, 245);
+        doc.rect(margin, sy - 4, pageW - 2 * margin, 30, 'F');
+        drawRow(`BALANCE AS AT ${periodFrom} (Opening)`, `UGX ${periodOpeningBalance.toLocaleString()}`, true);
+        drawRow('Add: Total Credits', `+${totalCredits.toLocaleString()}`);
+        drawRow('Less: Total Debits (incl. Statement Charge)', `-${totalDebits.toLocaleString()}`);
+        drawRow(`BALANCE AS AT ${periodTo} (Closing)`, `UGX ${closingBalance.toLocaleString()}`, true);
+        sy += 4;
+
+        // Summary of transactions
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setFillColor(26, 86, 50);
+        doc.setTextColor(255);
+        doc.rect(margin, sy - 4, pageW - 2 * margin, 7, 'F');
+        doc.text('Summary of transactions', margin + 2, sy);
+        sy += 8;
+        doc.setTextColor(50);
+        doc.setFontSize(10);
+        drawRow('Credits', `${totalCredits.toLocaleString()}`);
+        drawRow('Debits',  `${totalDebits.toLocaleString()} -`);
+        drawRow('Net movement', `${(totalCredits - totalDebits).toLocaleString()}`, true);
+        sy += 4;
+
+        // Fee summary
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setFillColor(26, 86, 50);
+        doc.setTextColor(255);
+        doc.rect(margin, sy - 4, pageW - 2 * margin, 7, 'F');
+        doc.text('Fee summary', margin + 2, sy);
+        sy += 8;
+        doc.setTextColor(50);
+        doc.setFontSize(10);
+        drawRow('Statement Charge', `${statementFee.toLocaleString()}`);
+        drawRow('Service Fee', `0`);
+        drawRow('VAT', `0`);
+        drawRow('Total Fees', `${statementFee.toLocaleString()}`, true);
+        sy += 6;
+
+        // Notice
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(110);
+        const notice = 'Please verify all transactions reflected on this statement and notify any discrepancies to Great Agro Coffee Operations as soon as possible. Balances may change if there are transactions still being processed.';
+        const lines = doc.splitTextToSize(notice, pageW - 2 * margin);
+        doc.text(lines, margin, sy);
+        sy += lines.length * 4 + 6;
+
+        // Footer
+        doc.setDrawColor(200);
+        doc.line(margin, sy, pageW - margin, sy);
+        sy += 5;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(150);
+        doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy h:mm a')} | For questions: operations@greatpearlcoffee.com`, margin, sy);
+
+        return doc;
       };
 
-      doc.setFillColor(245, 245, 245);
-      doc.rect(margin, sy - 4, pageW - 2 * margin, 30, 'F');
-      drawRow(`BALANCE AS AT ${periodFrom} (Opening)`, `UGX ${periodOpeningBalance.toLocaleString()}`, true);
-      drawRow('Add: Total Credits', `+${totalCredits.toLocaleString()}`);
-      drawRow('Less: Total Debits (incl. Statement Charge)', `-${totalDebits.toLocaleString()}`);
-      drawRow(`BALANCE AS AT ${periodTo} (Closing)`, `UGX ${closingBalance.toLocaleString()}`, true);
-      sy += 4;
+      const probeDoc = buildStatementDoc(0);
+      const pageCount = probeDoc.getNumberOfPages();
+      const statementFee = statementFeeForPages(pageCount);
+      const doc = buildStatementDoc(statementFee);
 
-      // Summary of transactions
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setFillColor(26, 86, 50);
-      doc.setTextColor(255);
-      doc.rect(margin, sy - 4, pageW - 2 * margin, 7, 'F');
-      doc.text('Summary of transactions', margin + 2, sy);
-      sy += 8;
-      doc.setTextColor(50);
-      doc.setFontSize(10);
-      drawRow('Credits', `${totalCredits.toLocaleString()}`);
-      drawRow('Debits',  `${totalDebits.toLocaleString()} -`);
-      drawRow('Net movement', `${(totalCredits - totalDebits).toLocaleString()}`, true);
-      sy += 4;
-
-      // Fee summary
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setFillColor(26, 86, 50);
-      doc.setTextColor(255);
-      doc.rect(margin, sy - 4, pageW - 2 * margin, 7, 'F');
-      doc.text('Fee summary', margin + 2, sy);
-      sy += 8;
-      doc.setTextColor(50);
-      doc.setFontSize(10);
-      drawRow('Statement Charge', `${STATEMENT_FEE.toLocaleString()}`);
-      drawRow('Service Fee', `0`);
-      drawRow('VAT', `0`);
-      drawRow('Total Fees', `${STATEMENT_FEE.toLocaleString()}`, true);
-      sy += 6;
-
-      // Notice
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(8);
-      doc.setTextColor(110);
-      const notice = 'Please verify all transactions reflected on this statement and notify any discrepancies to Great Agro Coffee Operations as soon as possible. Balances may change if there are transactions still being processed.';
-      const lines = doc.splitTextToSize(notice, pageW - 2 * margin);
-      doc.text(lines, margin, sy);
-      sy += lines.length * 4 + 6;
-
-      // Footer
-      doc.setDrawColor(200);
-      doc.line(margin, sy, pageW - margin, sy);
-      sy += 5;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(150);
-      doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy h:mm a')} | For questions: operations@greatpearlcoffee.com`, margin, sy);
+      // Charge the statement fee (UGX 500 per page) via SECURITY DEFINER RPC
+      const { error: feeError } = await supabase.rpc('charge_statement_fee', {
+        p_user_id: unifiedUserId,
+        p_period_from: dateFrom,
+        p_period_to: dateTo,
+        p_amount: statementFee,
+        p_pages: pageCount,
+        p_kind: 'statement',
+      });
+      if (feeError) throw feeError;
 
       // 4. Upload PDF to Supabase Storage
       await (await import('@/utils/pdfPrintStamp')).preparePdfPrint(doc, 'Wallet statement');
@@ -696,7 +741,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             currentBalance: closingBalance,
             transactions,
             pdfDownloadUrl: downloadUrl,
-            statementFee: STATEMENT_FEE,
+            statementFee: statementFee,
           },
         },
       });
@@ -704,7 +749,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       setEmailSent(true);
       toast({
         title: 'Statement Sent',
-        description: `PDF statement sent to ${user.email}. No fee charged.`,
+        description: `PDF statement sent to ${user.email}. Charged UGX ${statementFee.toLocaleString()} (${pageCount} page${pageCount === 1 ? '' : 's'} × UGX ${STATEMENT_FEE_PER_PAGE.toLocaleString()}).`,
       });
 
       fetchEntries();
@@ -860,7 +905,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           Transaction Statement
         </h3>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={printStatement} disabled={entries.length === 0}>
+          <Button variant="ghost" size="sm" onClick={printStatement} disabled={entries.length === 0 || printing}>
             <Printer className="h-4 w-4 mr-1" />
             Print
           </Button>
