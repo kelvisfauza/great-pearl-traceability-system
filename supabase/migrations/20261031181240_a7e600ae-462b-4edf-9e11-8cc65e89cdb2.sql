@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.trg_gosente_deposit_increase() FROM PUBLIC, anon, authenticated;
