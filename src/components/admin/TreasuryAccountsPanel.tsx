@@ -20,7 +20,7 @@ interface Account {
   code: string;
   name: string;
   description: string | null;
-  kind: "fund" | "liability" | "income" | "receivable";
+  kind: "fund" | "liability" | "income" | "receivable" | "holding";
   balance: number;
   low_balance_threshold: number;
   allow_negative: boolean;
@@ -56,6 +56,7 @@ interface Overview {
   yo_balance: number;
   yo_synced_at: string | null;
   gosente_balance: number;
+  bank_balance?: number;
   actual_float: number;
   drift: number;
   is_super_admin: boolean;
@@ -65,7 +66,7 @@ const fmt = (n: number | null | undefined) => `UGX ${Math.round(Number(n ?? 0)).
 
 const ICONS: Record<string, any> = {
   general: Landmark, user_wallets: Users, loans_overdrafts: HandCoins, invest_earn: PiggyBank,
-  profits: TrendingUp, loyalty_fund: Gift, operations: Truck, fees_income: Percent,
+  profits: TrendingUp, loyalty_fund: Gift, operations: Truck, fees_income: Percent, cash_at_bank: Landmark,
 };
 
 export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "accounts" | "reconciliation" }) {
@@ -90,6 +91,8 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
   const [note, setNote] = useState("");
   const [threshold, setThreshold] = useState("");
   const [busy, setBusy] = useState(false);
+  const [bankOpen, setBankOpen] = useState(false);
+  const [bankDir, setBankDir] = useState<"deposit" | "withdraw">("withdraw");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -134,7 +137,7 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
   }, []);
 
   const accounts = data?.accounts ?? [];
-  const fundable = useMemo(() => accounts.filter((a) => a.code !== "user_wallets"), [accounts]);
+  const fundable = useMemo(() => accounts.filter((a) => a.code !== "user_wallets" && a.kind !== "holding"), [accounts]);
   const byCode = useMemo(() => Object.fromEntries(accounts.map((a) => [a.code, a])), [accounts]);
 
   const openHistory = async (code: string) => {
@@ -196,7 +199,7 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
       if (err) throw err;
       if (res && res.ok === false) throw new Error(res.error);
       toast({ title: success });
-      setFundOpen(false); setMoveOpen(false); setThresholdOpen(false);
+      setFundOpen(false); setMoveOpen(false); setThresholdOpen(false); setBankOpen(false);
       setAmount(""); setNote(""); setThreshold("");
       await load();
     } catch (e: any) {
@@ -228,6 +231,7 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
             <>
               <Button size="sm" onClick={() => setFundOpen(true)}><Plus className="h-4 w-4 mr-1" />Fund account</Button>
               <Button size="sm" variant="outline" onClick={() => setMoveOpen(true)}><ArrowLeftRight className="h-4 w-4 mr-1" />Move between accounts</Button>
+              <Button size="sm" variant="outline" onClick={() => { setBankDir("withdraw"); setBankOpen(true); }}><Landmark className="h-4 w-4 mr-1" />Bank deposit / withdrawal</Button>
             </>
           )}
         </div>
@@ -238,7 +242,7 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
       )}
 
       {data && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x border-y py-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x border-y py-4">
           {(view === "accounts" ? [
             ["Allocated account total", data.expected_float],
             ["Employee wallet liability", byCode.user_wallets?.balance],
@@ -247,6 +251,7 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
           ] : [
             ["Recorded Yo float", data.yo_balance],
             ["Recorded GosentePay float", data.gosente_balance],
+            ["Cash at Bank", data.bank_balance ?? 0],
             ["Account total", data.expected_float],
             ["Provider − account difference", data.drift],
           ]).map(([label, value]) => <div key={String(label)} className="px-4 py-3 min-w-0"><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-semibold tabular-nums mt-2 break-words">{value == null ? "—" : fmt(Number(value))}</p></div>)}
@@ -297,7 +302,8 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
               <TableCell className={`text-right font-mono font-semibold whitespace-nowrap ${bal < 0 ? "text-destructive" : ""}`}>{Number(a.balance).toLocaleString()}</TableCell>
               <TableCell><Badge variant={empty || low ? "destructive" : "secondary"}>{empty ? "Empty" : low ? "Low balance" : "Open"}</Badge></TableCell>
               <TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" onClick={() => openHistory(a.code)}><History className="h-3 w-3 mr-1" />Movements</Button>
-                {data?.is_super_admin && a.code !== "user_wallets" && <><Button size="icon" variant="ghost" title={`Fund ${a.name}`} aria-label={`Fund ${a.name}`} onClick={() => { setTarget(a.code); setFundOpen(true); }}><Plus className="h-4 w-4" /></Button><Button size="icon" variant="ghost" title={`Alert level for ${a.name}`} aria-label={`Alert level for ${a.name}`} onClick={() => { setTarget(a.code); setThreshold(String(a.low_balance_threshold)); setThresholdOpen(true); }}><Settings2 className="h-4 w-4" /></Button></>}
+                {data?.is_super_admin && a.kind === "holding" && <Button size="icon" variant="ghost" title="Bank deposit / withdrawal" aria-label="Bank deposit or withdrawal" onClick={() => { setBankDir("withdraw"); setBankOpen(true); }}><ArrowLeftRight className="h-4 w-4" /></Button>}
+                {data?.is_super_admin && a.code !== "user_wallets" && a.kind !== "holding" && <><Button size="icon" variant="ghost" title={`Fund ${a.name}`} aria-label={`Fund ${a.name}`} onClick={() => { setTarget(a.code); setFundOpen(true); }}><Plus className="h-4 w-4" /></Button><Button size="icon" variant="ghost" title={`Alert level for ${a.name}`} aria-label={`Alert level for ${a.name}`} onClick={() => { setTarget(a.code); setThreshold(String(a.low_balance_threshold)); setThresholdOpen(true); }}><Settings2 className="h-4 w-4" /></Button></>}
               </div></TableCell>
             </TableRow>;
           })}
@@ -356,6 +362,29 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
             <Button variant="outline" onClick={() => setMoveOpen(false)} disabled={busy}>Cancel</Button>
             <Button disabled={busy || !amt || amt <= 0 || fromAcc === toAcc} onClick={() => runRpc("treasury_move_funds", { p_from: fromAcc, p_to: toAcc, p_amount: amt, p_description: note.trim() || null }, "Money moved")}>
               {busy ? "Moving…" : "Move"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bank dialog */}
+      <Dialog open={bankOpen} onOpenChange={(o) => !busy && setBankOpen(o)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cash at Bank — {fmt(byCode.cash_at_bank?.balance)}</DialogTitle>
+            <DialogDescription>Record money put into or taken out of the bank. A withdrawal reduces Cash at Bank.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Type</Label>
+              <Select value={bankDir} onValueChange={(v) => setBankDir(v as any)}><SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="withdraw">Bank withdrawal</SelectItem><SelectItem value="deposit">Bank deposit</SelectItem></SelectContent></Select></div>
+            <div><Label>Amount (UGX)</Label><Input type="number" min={1} value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+            <div><Label>Note</Label><Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Withdrawn to load Yo float" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBankOpen(false)} disabled={busy}>Cancel</Button>
+            <Button disabled={busy || !amt || amt <= 0} onClick={() => runRpc("treasury_bank_movement", { p_direction: bankDir, p_amount: amt, p_description: note.trim() || null }, bankDir === "withdraw" ? "Bank withdrawal recorded" : "Bank deposit recorded")}>
+              {busy ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
