@@ -1,0 +1,4 @@
+insert into public.ledger_entries (user_id, entry_type, amount, reference, source_category, metadata) values
+('48c1c62f-b587-4441-ba8d-06048582bac8','ADJUSTMENT',-50000,'REVERSAL-DUP-EOTM-OCT2026-MUHINDO','SYSTEM_AWARD', jsonb_build_object('bypass_treasury_check',true,'type','internal_correction','reverses_reference','BNS-20261101-AW3P','description','Reversal of duplicate Employee of the Month Oct 2026 claim; reward already credited automatically (EOTM-OCT2026-RANK1-MUHINDO)')),
+('1922048f-c0b9-422e-9b42-47713a75c1ca','ADJUSTMENT',-50000,'REVERSAL-DUP-EOTM-OCT2026-JOHN','SYSTEM_AWARD', jsonb_build_object('bypass_treasury_check',true,'type','internal_correction','reverses_reference','BNS-20261101-71JX','description','Reversal of duplicate Employee of the Month Oct 2026 claim; reward already credited automatically (EOTM-OCT2026-RANK2-JOHN)'))
+on conflict do nothing;

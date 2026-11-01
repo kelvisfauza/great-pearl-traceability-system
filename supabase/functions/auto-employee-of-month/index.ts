@@ -334,6 +334,7 @@ Deno.serve(async (req) => {
 
       // Credit wallet directly via ledger entry
       const authUserId = authUserMap[emp.employee_email];
+      let walletCredited = false;
       if (authUserId) {
         const ledgerRef = `EOTM-${monthNames[targetMonth].toUpperCase().slice(0, 3)}${targetYear}-RANK${rank}-${emp.employee_name.split(" ")[0].toUpperCase()}`;
         // Idempotency guard: skip if any EOTM ledger entry already exists for this user/month/year
@@ -345,6 +346,7 @@ Deno.serve(async (req) => {
           .ilike("reference", `${monthTag}%`)
           .limit(1);
         if (existing && existing.length > 0) {
+          walletCredited = true;
           console.log(`Skipping duplicate EOTM credit for ${emp.employee_name} (${monthTag})`);
         } else {
           await supabase.from("ledger_entries").insert({
@@ -358,6 +360,7 @@ Deno.serve(async (req) => {
             employee_name: emp.employee_name,
           },
         });
+          walletCredited = true;
           console.log(`Wallet credited for ${emp.employee_name}: UGX ${bonusAmount}`);
         }
       } else {
@@ -371,7 +374,9 @@ Deno.serve(async (req) => {
         employee_name: emp.employee_name,
         amount: bonusAmount,
         reason: `Employee of the Month - ${monthNames[targetMonth]} ${targetYear} (#${rank} Rank)`,
-        status: "pending",
+        // Already paid into the wallet above: record as claimed so it cannot be claimed again
+        status: walletCredited ? "claimed" : "pending",
+        claimed_at: walletCredited ? new Date().toISOString() : null,
         allocated_by: "system-auto",
       });
 
