@@ -6425,6 +6425,7 @@ export type Database = {
           created_at: string
           entry_type: string
           id: string
+          is_hidden: boolean
           metadata: Json | null
           reference: string
           source_category: string | null
@@ -6436,6 +6437,7 @@ export type Database = {
           created_at?: string
           entry_type: string
           id?: string
+          is_hidden?: boolean
           metadata?: Json | null
           reference: string
           source_category?: string | null
@@ -6447,6 +6449,7 @@ export type Database = {
           created_at?: string
           entry_type?: string
           id?: string
+          is_hidden?: boolean
           metadata?: Json | null
           reference?: string
           source_category?: string | null
