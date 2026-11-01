@@ -117,6 +117,7 @@ export const AccountButton = () => {
       .from('ledger_entries')
       .select('amount, entry_type, created_at, metadata')
       .eq('user_id', resolvedUserId)
+      .eq('is_hidden', false)
       .in('entry_type', BALANCE_ENTRY_TYPES);
 
     if (error) {

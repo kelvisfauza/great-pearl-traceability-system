@@ -277,6 +277,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
+        .eq('is_hidden', false)
         .in('entry_type', CANONICAL_WALLET_TYPES)
         .order('created_at', { ascending: false })
         .limit(2000);
@@ -315,6 +316,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
+        .eq('is_hidden', false)
         .in('entry_type', CANONICAL_WALLET_TYPES)
         .gte('created_at', periodStart)
         .lte('created_at', periodEnd)
@@ -333,6 +335,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           .from('ledger_entries')
           .select('amount, entry_type, metadata')
           .eq('user_id', unifiedUserId)
+          .eq('is_hidden', false)
           .in('entry_type', CANONICAL_WALLET_TYPES)
           .lt('created_at', periodStart)
           .order('created_at', { ascending: true })
