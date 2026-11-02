@@ -70,17 +70,20 @@ const AdminRejectedLotsReview = () => {
 
       if (error) throw error;
 
-      // Fetch associated coffee records
-      const enriched = await Promise.all((data || []).map(async (assessment) => {
-        if (assessment.store_record_id) {
-          const { data: record } = await supabase
-            .from('coffee_records')
-            .select('id, supplier_name, coffee_type, kilograms, bags')
-            .eq('id', assessment.store_record_id)
-            .single();
-          return { ...assessment, coffee_record: record || undefined };
-        }
-        return assessment;
+      // Fetch associated coffee records in one request (avoids many parallel calls timing out)
+      const ids = [...new Set((data || []).map((a: any) => a.store_record_id).filter(Boolean))];
+      const recMap: Record<string, any> = {};
+      if (ids.length) {
+        const { data: recs, error: recErr } = await supabase
+          .from('coffee_records')
+          .select('id, supplier_name, coffee_type, kilograms, bags')
+          .in('id', ids);
+        if (recErr) throw recErr;
+        (recs || []).forEach((r: any) => { recMap[r.id] = r; });
+      }
+      const enriched = (data || []).map((assessment: any) => ({
+        ...assessment,
+        coffee_record: assessment.store_record_id ? recMap[assessment.store_record_id] : undefined,
       }));
 
       setRejectedLots(enriched);
