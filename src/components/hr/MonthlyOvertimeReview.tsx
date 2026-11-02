@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 
-const MonthlyOvertimeReview = () => {
+const MonthlyOvertimeReviewList = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -442,5 +442,66 @@ const MonthlyOvertimeReview = () => {
     </div>
   );
 };
+
+const previousMonth = () => {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const RunMonthlyOvertime = () => {
+  const queryClient = useQueryClient();
+  const [month, setMonth] = useState(previousMonth());
+  const [running, setRunning] = useState(false);
+
+  const run = async () => {
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      toast.error('Choose a month first');
+      return;
+    }
+    setRunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('calculate-monthly-overtime', {
+        body: { month, recalc: true },
+      });
+      if (error) throw error;
+      if (data && (data as any).ok === false) throw new Error((data as any).error || 'Calculation failed');
+      toast.success('Overtime calculated. Approved or paid records were left unchanged.');
+      queryClient.invalidateQueries({ queryKey: ['monthly-overtime-reviews'] });
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not calculate overtime');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Run Monthly Overtime</CardTitle>
+        <CardDescription>
+          Calculate overtime from saved attendance for a month. Results wait for approval; nothing is paid automatically.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <Label htmlFor="ot-month">Month</Label>
+          <Input id="ot-month" type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-44" />
+        </div>
+        <Button onClick={run} disabled={running}>
+          <Clock className="h-4 w-4 mr-1" /> {running ? 'Calculating…' : 'Run overtime'}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+const MonthlyOvertimeReview = () => (
+  <div className="space-y-6">
+    <RunMonthlyOvertime />
+    <MonthlyOvertimeReviewList />
+  </div>
+);
 
 export default MonthlyOvertimeReview;
