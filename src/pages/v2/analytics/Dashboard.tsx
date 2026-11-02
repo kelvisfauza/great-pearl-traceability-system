@@ -2,13 +2,15 @@ import { useState } from "react";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, TrendingUp, Lightbulb, FileText } from "lucide-react";
+import { BarChart3, TrendingUp, Lightbulb, FileText, FileSignature } from "lucide-react";
 import MarketPricesTab from "@/components/v2/analytics/tabs/MarketPricesTab";
 import SupplierAnalysisTab from "@/components/v2/analytics/tabs/SupplierAnalysisTab";
 import AnalystRecommendationsTab from "@/components/v2/analytics/tabs/AnalystRecommendationsTab";
 import MarketReportsTab from "@/components/v2/analytics/tabs/MarketReportsTab";
+import RunningContractsTab from "@/components/v2/analytics/tabs/RunningContractsTab";
 
 const tabs = [
+  { id: "contracts", label: "Running Contracts", icon: FileSignature },
   { id: "prices", label: "Market Prices", icon: TrendingUp },
   { id: "analysis", label: "Supplier Analysis", icon: BarChart3 },
   { id: "recommendations", label: "Recommendations", icon: Lightbulb },
@@ -16,7 +18,7 @@ const tabs = [
 ];
 
 const AnalyticsDashboard = () => {
-  const [activeTab, setActiveTab] = useState("prices");
+  const [activeTab, setActiveTab] = useState("contracts");
 
   return (
     <div className="min-h-screen bg-background">
@@ -39,6 +41,7 @@ const AnalyticsDashboard = () => {
                   </TabsTrigger>
                 ))}
               </TabsList>
+              <TabsContent value="contracts"><RunningContractsTab /></TabsContent>
               <TabsContent value="prices"><MarketPricesTab /></TabsContent>
               <TabsContent value="analysis"><SupplierAnalysisTab /></TabsContent>
               <TabsContent value="recommendations"><AnalystRecommendationsTab /></TabsContent>
