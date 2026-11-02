@@ -1,5 +1,19 @@
 import jsPDF from 'jspdf';
 import { preparePdfPrint } from '@/utils/pdfPrintStamp';
+
+/** Open a verified PDF in a window reserved during the click and print it; falls back to download. */
+const finishSalesPdf = async (doc: any, fileName: string, printWin?: Window | null) => {
+  if (!printWin) { doc.save(fileName); return; }
+  try {
+    await preparePdfPrint(doc, fileName);
+    const url = URL.createObjectURL(doc.output('blob'));
+    printWin.location.href = url;
+    setTimeout(() => { try { printWin.focus(); printWin.print(); } catch { /* user prints from viewer */ } }, 1200);
+  } catch (e) {
+    printWin.close();
+    throw e;
+  }
+};
 import { format } from 'date-fns';
 
 export interface StoreReport {
@@ -351,7 +365,7 @@ export interface SalesTransaction {
 }
 
 // Generate single sales transaction PDF
-export const generateSalesTransactionPDF = (transaction: SalesTransaction) => {
+export const generateSalesTransactionPDF = (transaction: SalesTransaction, printWin?: Window | null) => {
   try {
     const doc = new jsPDF();
     doc.setFont('helvetica');
@@ -467,7 +481,7 @@ export const generateSalesTransactionPDF = (transaction: SalesTransaction) => {
     
     // Save
     const fileName = `sales-${transaction.customer.replace(/\s+/g, '-')}-${format(new Date(transaction.date), 'yyyy-MM-dd')}.pdf`;
-    doc.save(fileName);
+    void finishSalesPdf(doc, fileName, printWin);
   } catch (error) {
     console.error('Error generating sales PDF:', error);
     throw error;
@@ -475,7 +489,7 @@ export const generateSalesTransactionPDF = (transaction: SalesTransaction) => {
 };
 
 // Generate monthly sales summary report with statistics
-export const generateMonthlySalesSummaryPDF = (transactions: SalesTransaction[], periodName: string = 'Sales Period') => {
+export const generateMonthlySalesSummaryPDF = (transactions: SalesTransaction[], periodName: string = 'Sales Period', printWin?: Window | null) => {
   try {
     if (!transactions || transactions.length === 0) {
       throw new Error('No transactions available for report');
@@ -655,7 +669,7 @@ export const generateMonthlySalesSummaryPDF = (transactions: SalesTransaction[],
     
     // Save
     const fileName = `sales-summary-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-    doc.save(fileName);
+    void finishSalesPdf(doc, fileName, printWin);
     
     return true;
   } catch (error) {
@@ -974,7 +988,7 @@ export const generateFinanceMonthlyReportPDF = (data: FinanceMonthlyData) => {
 };
 
 // Generate multiple sales transactions PDF
-export const generateMultipleSalesPDF = (transactions: SalesTransaction[], title: string = 'Sales Transactions Report') => {
+export const generateMultipleSalesPDF = (transactions: SalesTransaction[], title: string = 'Sales Transactions Report', printWin?: Window | null) => {
   try {
     const doc = new jsPDF();
     doc.setFont('helvetica');
@@ -1062,7 +1076,7 @@ export const generateMultipleSalesPDF = (transactions: SalesTransaction[], title
     
     // Save
     const fileName = `sales-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-    doc.save(fileName);
+    void finishSalesPdf(doc, fileName, printWin);
   } catch (error) {
     console.error('Error generating sales PDF:', error);
     throw error;

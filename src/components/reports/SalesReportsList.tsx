@@ -99,7 +99,7 @@ const SalesReportsList = () => {
 
   const handlePrintReport = (transaction: any) => {
     try {
-      generateSalesTransactionPDF(transaction);
+      generateSalesTransactionPDF(transaction, window.open('', '_blank'));
       toast.success("Sales report PDF generated successfully!");
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -117,7 +117,7 @@ const SalesReportsList = () => {
       const title = quickFilter === 'previous-month' ? 'Previous Month Sales Reports' :
                     quickFilter === 'current-month' ? 'Current Month Sales Reports' :
                     `Sales Reports (${filteredTransactions.length} transactions)`;
-      generateMultipleSalesPDF(filteredTransactions, title);
+      generateMultipleSalesPDF(filteredTransactions, title, window.open('', '_blank'));
       toast.success(`Generated PDF with ${filteredTransactions.length} sales reports!`);
     } catch (error) {
       console.error('Error generating bulk PDF:', error);
@@ -135,7 +135,7 @@ const SalesReportsList = () => {
       const periodName = quickFilter === 'previous-month' ? 'Previous Month Summary' :
                          quickFilter === 'current-month' ? 'Current Month Summary' :
                          'Sales Summary Report';
-      generateMonthlySalesSummaryPDF(filteredTransactions, periodName);
+      generateMonthlySalesSummaryPDF(filteredTransactions, periodName, window.open('', '_blank'));
       toast.success("Monthly sales summary report generated!");
     } catch (error) {
       console.error('Error generating monthly summary PDF:', error);
