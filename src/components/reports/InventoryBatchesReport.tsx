@@ -26,7 +26,8 @@ const fmt = (n: number) => n.toLocaleString("en-UG", { maximumFractionDigits: 2 
 const InventoryBatchesReport = () => {
   const { toast } = useToast();
   const now = new Date();
-  const defMonth = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const defMonth = `${prev.getFullYear()}-${pad(prev.getMonth() + 1)}`;
   const [month, setMonth] = useState(defMonth);
   const [from, setFrom] = useState(monthRange(defMonth).from);
   const [to, setTo] = useState(monthRange(defMonth).to);
@@ -46,7 +47,7 @@ const InventoryBatchesReport = () => {
       for (let p = 0; ; p++) {
         const { data, error } = await supabase.from("inventory_batches")
           .select("id,batch_code,batch_date,coffee_type,status,total_kilograms,remaining_kilograms,sold_out_at")
-          .gte("batch_date", from).lte("batch_date", to)
+          .gte("batch_date", from).lte("batch_date", `${to}T23:59:59.999`)
           .order("batch_date", { ascending: true }).range(p * 1000, p * 1000 + 999);
         if (error) throw error;
         batches.push(...(data || []));
