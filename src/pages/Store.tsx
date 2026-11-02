@@ -68,6 +68,7 @@ import MissingAttachmentsPanel from "@/components/v2/store/MissingAttachmentsPan
 import StoreDispatchMonitoring from "@/components/store/StoreDispatchMonitoring";
 import SamplingOrdersTab from "@/components/v2/quality/tabs/SamplingOrdersTab";
 import StoreClearanceForms from "@/components/store/StoreClearanceForms";
+import LegacyClearanceEntry from "@/components/store/LegacyClearanceEntry";
 import SaleWeighingTickets from "@/components/store/SaleWeighingTickets";
 
 /* -------------------------------------------------------------------------- */
@@ -717,7 +718,7 @@ const Store = () => {
           <TabsContent value="sampling-orders" className="space-y-6">
             <SamplingOrdersTab />
           </TabsContent>
-          <TabsContent value="clearance" className="space-y-6"><SaleWeighingTickets /><StoreClearanceForms /></TabsContent>
+          <TabsContent value="clearance" className="space-y-6"><SaleWeighingTickets /><LegacyClearanceEntry /><StoreClearanceForms /></TabsContent>
 
           {/* ------------------------------------------------------------------ */}
           {/*                            Coffee Records                         */}
