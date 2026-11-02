@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2, Pencil, Link2, Truck, ShoppingCart, ClipboardList } from 'lucide-react';
 import StoreClearanceForms from './StoreClearanceForms';
+import LegacyClearanceEntry from './LegacyClearanceEntry';
 import AttachSaleDialog from '@/components/v2/eudr/AttachSaleDialog';
 
 import { useEUDRDocumentation } from '@/hooks/useEUDRDocumentation';
@@ -616,6 +617,7 @@ const EUDRDocumentation = () => {
         </TabsList>
 
         <TabsContent value="store-clearance" className="space-y-4">
+          <LegacyClearanceEntry />
           <StoreClearanceForms eudrView />
         </TabsContent>
 
