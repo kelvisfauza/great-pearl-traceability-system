@@ -137,6 +137,14 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   // async `instantLoading` state update and fire duplicate withdrawals.
   const submittingRef = useRef(false);
 
+  // All mobile withdrawals are approval requests (Admin -> Finance).
+  useEffect(() => {
+    if (payoutMode === 'MOBILE') setChannel('MOBILE_MONEY');
+  }, [payoutMode, open]);
+  useEffect(() => {
+    if (open && !mobileNumber && employee?.phone) setMobileNumber(employee.phone);
+  }, [open, employee?.phone]);
+
   // Wallet-only spendable (fallback when not provided)
   const walletOnly = typeof walletBalance === 'number'
     ? Math.max(0, walletBalance)
@@ -720,56 +728,11 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           {/* Step 1: Enter Amount */}
           {step === 'amount' && (
             <>
-              {/* Instant Withdrawal Option */}
-              {eligibilityLoading && (
-                <Alert>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <AlertDescription className="text-xs">
-                    Checking your instant withdrawal limit...
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {instantEligibility?.eligible && (
-                <Alert className="border-green-300 bg-green-50">
-                  <Zap className="h-4 w-4 text-green-600" />
-                  <AlertDescription>
-                    <strong className="text-green-800">⚡ Instant Withdrawal Available!</strong>
-                    <br />
-                    <span className="text-xs text-green-700">
-                      Withdraw up to <strong>UGX {Number(instantEligibility.max_instant_amount).toLocaleString()}</strong> instantly
-                      {instantPhoneDisplay
-                        ? <> to your number ({instantPhoneDisplay})</>
-                        : <> once you enter your mobile money number below</>} — no approval needed!
-                    </span>
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {instantEligibility && instantUnavailable && instantEligibility.self_deposit_balance > 0 && (
-                <Alert className="border-amber-300 bg-amber-50">
-                  <Clock className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-xs text-amber-700">
-                    <strong>Instant withdrawal cooldown:</strong> {instantEligibility.reason}
-                    {instantEligibility.next_eligible_at && (
-                      <> Next available: {new Date(instantEligibility.next_eligible_at).toLocaleString()}</>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {instantEligibility && instantUnavailable && instantEligibility.self_deposit_balance <= 0 && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Available Balance: <strong>{formatCurrency(availableAmount)}</strong>
-                    <br />
-                    <span className="text-xs text-muted-foreground">
-                      {instantEligibility.reason}
-                    </span>
-                  </AlertDescription>
-                </Alert>
-              )}
+              <Alert>
+                <AlertDescription className="text-xs">
+                  Available Balance: <strong>{formatCurrency(availableAmount)}</strong>
+                </AlertDescription>
+              </Alert>
 
               <div className="space-y-4">
                 {isWalletFrozen && (
@@ -812,20 +775,18 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   <Input
                     id="amount"
                     type="number"
-                    placeholder={payoutMode !== 'BANK' && instantUnavailable ? 'Instant withdrawal unavailable' : 'Enter withdrawal amount'}
+                    placeholder="Enter withdrawal amount"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     required
                     min="2000"
-                    max={payoutMode === 'MOBILE' && instantEligibility?.eligible ? instantMaxAmount : undefined}
                     step="1"
-                    disabled={eligibilityLoading || (payoutMode !== 'BANK' && instantUnavailable)}
                   />
                   {amount && parsedAmount < 2000 && (
                     <p className="text-sm text-destructive">Minimum withdrawal is UGX 2,000</p>
                   )}
-                  {payoutMode === 'MOBILE' && instantEligibility?.eligible && amount && parsedAmount > instantMaxAmount && (
-                    <p className="text-sm text-destructive">Amount exceeds instant withdrawal limit (UGX {instantMaxAmount.toLocaleString()})</p>
+                  {amount && parsedAmount > availableAmount && (
+                    <p className="text-sm text-destructive">Amount is more than your available balance ({formatCurrency(availableAmount)})</p>
                   )}
                   {payoutMode === 'BANK' && (
                     <p className="text-xs text-muted-foreground">
@@ -900,66 +861,24 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   </div>
                 )}
 
-                {payoutMode === 'MOBILE' && needsInstantPhoneInput && (
+                {payoutMode === 'MOBILE' && (
                   <div className="space-y-2">
-                    <Label htmlFor="instant-mobile-number">Mobile Money Number</Label>
+                    <Label htmlFor="withdraw-mobile-number">Mobile Money Number</Label>
                     <Input
-                      id="instant-mobile-number"
+                      id="withdraw-mobile-number"
                       type="tel"
                       inputMode="numeric"
                       autoComplete="tel"
                       placeholder="07XXXXXXXX or 2567XXXXXXXX"
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value)}
-                      disabled={instantLoading}
                     />
                     {mobileNumber && !isValidMobileNumber && (
                       <p className="text-sm text-destructive">Enter a valid MTN or Airtel mobile money number.</p>
                     )}
-                  </div>
-                )}
-
-                {/* Instant withdrawal hint */}
-                {payoutMode === 'MOBILE' && instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
-                  <Alert className="border-green-300 bg-green-50 py-2">
-                    <Zap className="h-3 w-3 text-green-600" />
-                    <AlertDescription className="text-xs text-green-700">
-                      This amount qualifies for <strong>instant withdrawal</strong>
-                      {instantPhoneDisplay ? <> to {instantPhoneDisplay}</> : <> once you add a mobile money number</>}!
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Tiered withdrawal service-fee notice */}
-                {payoutMode === 'MOBILE' && instantEligibility?.eligible && parsedAmount >= 500 && (() => {
-                  const fee = parsedAmount <= 60_000 ? 1_100
-                    : parsedAmount <= 500_000 ? 1_700
-                    : parsedAmount <= 1_000_000 ? 2_500
-                    : 2_900;
-                  return (
-                    <Alert className="border-amber-300 bg-amber-50 py-2">
-                      <AlertTriangle className="h-3 w-3 text-amber-600" />
-                      <AlertDescription className="text-xs text-amber-800">
-                        A <strong>UGX {fee.toLocaleString()} service fee</strong> will be charged in addition to your withdrawal.
-                        Total deducted from your wallet: <strong>UGX {(parsedAmount + fee).toLocaleString()}</strong>
-                        {' '}(UGX {parsedAmount.toLocaleString()} payout + UGX {fee.toLocaleString()} fee).
-                      </AlertDescription>
-                    </Alert>
-                  );
-                })()}
-
-                {/* Overdraft acceptance for instant withdraw */}
-                {payoutMode === 'MOBILE' && instantEligibility?.eligible && usesOverdraft && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
-                  <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 text-xs text-amber-900">
-                    <div className="flex justify-between"><span>From wallet:</span><span>UGX {walletPortion.toLocaleString()}</span></div>
-                    <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {odPortion.toLocaleString()}</span></div>
-                    <div className="flex justify-between font-semibold border-t border-amber-200 pt-1"><span>Total payout:</span><span>UGX {parsedAmount.toLocaleString()}</span></div>
-                    <div className="flex justify-between text-amber-800"><span>Upfront interest (0.5%):</span><span>UGX {upfrontInterest.toLocaleString()}</span></div>
-                    <p className="mt-1">Your wallet doesn't fully cover this. The shortfall (UGX {odPortion.toLocaleString()}) will be taken from your overdraft, and UGX {upfrontInterest.toLocaleString()} interest will be added to your outstanding balance immediately.</p>
-                    <label className="flex items-center gap-2 pt-1 cursor-pointer">
-                      <input type="checkbox" checked={overdraftAccepted} onChange={(e) => setOverdraftAccepted(e.target.checked)} className="h-4 w-4" />
-                      <span>I approve using my overdraft for this withdrawal.</span>
-                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Every withdrawal is approved by Admin, then Finance releases the payment. Finance chooses how it is paid and may pay it in parts.
+                    </p>
                   </div>
                 )}
 
@@ -980,17 +899,16 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                       )}
                     </Button>
                   )}
-                  {payoutMode === 'MOBILE' && instantEligibility?.eligible && (
+                  {payoutMode === 'MOBILE' && (
                     <Button
                       type="button"
-                      onClick={() => setShowInstantConfirm(true)}
-                      disabled={instantLoading || withdrawalStatus.disabled || isWalletFrozen || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount || (needsInstantPhoneInput && !isValidMobileNumber) || overdraftBlocked}
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => handleAmountSubmit({ preventDefault() {} } as React.FormEvent)}
+                      disabled={sendingCode || !isAmountValid}
                     >
-                      {instantLoading ? (
-                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending...</>
+                      {sendingCode ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending code...</>
                       ) : (
-                        <><Zap className="h-4 w-4 mr-1" /> Instant Withdraw</>
+                        <>Request Withdrawal</>
                       )}
                     </Button>
                   )}
