@@ -58,6 +58,17 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Policy: every withdrawal now goes Admin approval -> Finance release.
+  // Instant (no-approval) payouts are retired; reject so older clients cannot bypass approval.
+  return new Response(
+    JSON.stringify({
+      ok: false,
+      success: false,
+      error: "Instant withdrawals are no longer available. Please submit a withdrawal request — it will be approved by Admin and paid by Finance.",
+    }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+
   try {
     console.log("[instant-withdrawal] Request received");
 
