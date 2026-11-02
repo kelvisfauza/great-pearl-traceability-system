@@ -19696,7 +19696,11 @@ export type Database = {
         | "accountant"
         | "viewer"
       expense_status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "POSTED"
-      lot_finance_status: "READY_FOR_FINANCE" | "APPROVED_FOR_PAYMENT" | "PAID"
+      lot_finance_status:
+        | "READY_FOR_FINANCE"
+        | "APPROVED_FOR_PAYMENT"
+        | "PAID"
+        | "ON_HOLD"
       payment_method: "CASH" | "CHEQUE" | "BANK_TRANSFER"
       payment_status: "PENDING_ADMIN_APPROVAL" | "POSTED" | "VOID"
       treasury_category:
@@ -19926,7 +19930,12 @@ export const Constants = {
         "viewer",
       ],
       expense_status: ["PENDING_APPROVAL", "APPROVED", "REJECTED", "POSTED"],
-      lot_finance_status: ["READY_FOR_FINANCE", "APPROVED_FOR_PAYMENT", "PAID"],
+      lot_finance_status: [
+        "READY_FOR_FINANCE",
+        "APPROVED_FOR_PAYMENT",
+        "PAID",
+        "ON_HOLD",
+      ],
       payment_method: ["CASH", "CHEQUE", "BANK_TRANSFER"],
       payment_status: ["PENDING_ADMIN_APPROVAL", "POSTED", "VOID"],
       treasury_category: [
