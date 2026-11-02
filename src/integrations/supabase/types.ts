@@ -19209,6 +19209,47 @@ export type Database = {
         Returns: Json
       }
       sg_is_automation: { Args: never; Returns: boolean }
+      submit_legacy_store_clearance: {
+        Args: { p: Json }
+        Returns: {
+          approved_by: string | null
+          attachments: Json
+          clearance_date: string
+          coffee_type: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          delivery_note_number: string | null
+          destination_buyer: string | null
+          dispatch_report_id: string | null
+          driver_name: string | null
+          driver_phone: string | null
+          form_number: string | null
+          id: string
+          items: Json
+          procurement_confirmed_at: string | null
+          procurement_confirmed_by: string | null
+          procurement_status: string
+          received_by_driver: string | null
+          released_by: string | null
+          remarks: string | null
+          sale_attached_at: string | null
+          sale_attached_by: string | null
+          sale_basis: string | null
+          sale_id: string | null
+          total_bags: number
+          total_weight_kg: number
+          updated_at: string
+          vehicle_registration: string | null
+          warehouse: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "store_clearance_forms"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_per_diem_form: {
         Args: { p_number: string }
         Returns: {
