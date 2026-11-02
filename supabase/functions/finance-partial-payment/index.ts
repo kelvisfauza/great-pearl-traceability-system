@@ -5,7 +5,7 @@ import { yoPayout } from "../_shared/yo-payments.ts";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 import { mealPaymentAllowed } from "../_shared/meal-payment-rules.ts";
 
-type SourceType = "provider" | "withdrawal" | "supplier" | "expense";
+type SourceType = "provider" | "withdrawal" | "supplier" | "expense" | "wallet_op";
 // Methods that actually send money now (others only record money handed over)
 const SEND_METHODS = ["yo", "gosentepay"];
 const respond = (ok: boolean, body: Record<string, unknown> = {}) =>
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
 
     if (action !== "pay") return respond(false, { error: "Unknown action" });
     if (!isFinance) return respond(false, { error: "Only Finance can record payments" });
-    if (!["provider", "withdrawal", "supplier", "expense"].includes(sourceType) || !sourceId) return respond(false, { error: "Missing payment details" });
+    if (!["provider", "withdrawal", "supplier", "expense", "wallet_op"].includes(sourceType) || !sourceId) return respond(false, { error: "Missing payment details" });
     const amount = Math.round(Number(body?.amount));
     const method = String(body?.method || "cash").slice(0, 40);
     const reference = body?.reference ? String(body.reference).slice(0, 120) : null;
@@ -69,6 +69,7 @@ Deno.serve(async (req) => {
 
     // Load the source item from the database (never trust client totals)
     let lotId = "";
+    let walletOp: any = null;
     let title = "", total = 0, payeeName = "", payeeEmail: string | null = null, payeePhone: string | null = null, approver = "";
     if (sourceType === "provider") {
       const { data: s } = await db.from("provider_submission_requests").select("*").eq("id", sourceId).maybeSingle();
@@ -97,6 +98,20 @@ Deno.serve(async (req) => {
       total = Number(l.total_amount_ugx || 0) - Number(l.advance_recovered_ugx || 0);
       title = `Coffee Supplier Payment${l.batch_number ? ` — ${l.batch_number}` : ""}`;
       payeeName = sup?.name || "Supplier"; payeePhone = sup?.phone || null; payeeEmail = sup?.email || null; approver = l.assessed_by || "";
+    } else if (sourceType === "wallet_op") {
+      // Admin-initiated wallet withdrawal approved by Admin, awaiting Finance.
+      const { data: o } = await db.from("admin_wallet_operations").select("*").eq("id", sourceId).maybeSingle();
+      if (!o) return respond(false, { error: "Wallet operation not found" });
+      if (o.operation_type !== "withdraw") return respond(false, { error: "Only withdrawals can be paid in parts" });
+      if (o.status !== "awaiting_finance") return respond(false, { error: "This withdrawal is no longer waiting for Finance" });
+      if ((o.initiated_by_email || "").toLowerCase() === email.toLowerCase() || (o.approved_by_email || "").toLowerCase() === email.toLowerCase()) {
+        return respond(false, { error: "Separation of duties: you created or approved this withdrawal, so another Finance officer must pay it." });
+      }
+      walletOp = o;
+      total = Number(o.amount); title = "Wallet Withdrawal";
+      payeeName = o.target_name || o.target_email || "Staff member"; payeeEmail = o.target_email || null;
+      payeePhone = body?.phone ? String(body.phone) : (o.destination_phone || o.target_phone || null);
+      approver = o.approved_by_name || o.approved_by_email || "";
     } else {
       const { data: r } = await db.from("approval_requests").select("*").eq("id", sourceId).maybeSingle();
       if (!r) return respond(false, { error: "Request not found" });
@@ -130,13 +145,38 @@ Deno.serve(async (req) => {
       .eq("id", pp.id).eq("paid_amount", pp.paid_amount).select("id");
     if (!upd?.length) return respond(false, { error: "Another payment was just recorded — refresh and try again" });
 
+    // Wallet withdrawals: take this part (plus the service fee on the first part) out of the wallet first.
+    let walletDebitRefs: { ref: string; amount: number }[] = [];
+    const reverseWalletDebits = async (why: string) => {
+      for (const d of walletDebitRefs) {
+        await db.from("ledger_entries").insert({ user_id: walletOp.target_user_id, entry_type: "ADJUSTMENT", amount: d.amount, reference: `${d.ref}-REV`, source_category: "INSTANT_WITHDRAWAL", metadata: { description: `Returned: part payment did not go through (${why.slice(0, 80)})`, admin_wallet_operation_id: walletOp.id, bypass_treasury_check: true } });
+      }
+    };
+    if (walletOp) {
+      const partNo = ((await db.from("partial_payment_installments").select("id", { count: "exact", head: true }).eq("partial_payment_id", pp.id)).count || 0) + 1;
+      const fee = partNo === 1 && SEND_METHODS.includes(method) ? Number(walletOp.service_fee || 0) : 0;
+      const { data: bal } = await db.rpc("get_effective_wallet_balance", { p_user_id: walletOp.target_user_id });
+      if (Number(bal || 0) < amount + fee && !walletOp.allow_overdraft) {
+        await db.from("partial_payments").update({ paid_amount: pp.paid_amount, status: Number(pp.paid_amount) > 0 ? "part_paid" : pp.status }).eq("id", pp.id);
+        return respond(false, { error: `Wallet balance ${ugx(Number(bal || 0))} cannot cover ${ugx(amount + fee)}` });
+      }
+      const baseRef = `AWO-PART-${walletOp.id.slice(0, 8)}-${partNo}`;
+      const { error: lErr } = await db.from("ledger_entries").insert({ user_id: walletOp.target_user_id, entry_type: "WITHDRAWAL", amount, reference: baseRef, source_category: "INSTANT_WITHDRAWAL", metadata: { description: `Wallet withdrawal part ${partNo} (${method}): ${walletOp.reason || ""}`.slice(0, 250), admin_wallet_operation_id: walletOp.id, part: partNo } });
+      if (lErr) { await db.from("partial_payments").update({ paid_amount: pp.paid_amount }).eq("id", pp.id); return respond(false, { error: `Could not debit wallet: ${lErr.message}` }); }
+      walletDebitRefs.push({ ref: baseRef, amount });
+      if (fee > 0) {
+        const { error: fErr } = await db.from("ledger_entries").insert({ user_id: walletOp.target_user_id, entry_type: "WITHDRAWAL", amount: fee, reference: `${baseRef}-FEE`, source_category: "WITHDRAW_FEE", metadata: { description: "Withdrawal service fee", admin_wallet_operation_id: walletOp.id } });
+        if (!fErr) walletDebitRefs.push({ ref: `${baseRef}-FEE`, amount: fee });
+      }
+    }
+
     // Send the money now when Finance picked a live channel
     let sendRef: string | null = null;
     let sendNote = "";
     if (SEND_METHODS.includes(method)) {
       const rollback = () => db.from("partial_payments").update({ paid_amount: pp.paid_amount, status: "part_paid" }).eq("id", pp.id);
-      if (!["provider", "withdrawal"].includes(sourceType)) { await rollback(); return respond(false, { error: "Sending through Yo or GosentePay is only for meal plans, providers and staff withdrawals. Pay this by cash or bank and record it." }); }
-      if (!payeePhone) { await rollback(); return respond(false, { error: "No phone number on this request to send money to" }); }
+      if (!["provider", "withdrawal", "wallet_op"].includes(sourceType)) { await rollback(); return respond(false, { error: "Sending through Yo or GosentePay is only for meal plans, providers and staff withdrawals. Pay this by cash or bank and record it." }); }
+      if (!payeePhone) { if (walletOp) await reverseWalletDebits("no phone"); await rollback(); return respond(false, { error: "No phone number on this request to send money to" }); }
       const phone = normalizePhone(payeePhone)!;
       const n = ((await db.from("partial_payment_installments").select("id", { count: "exact", head: true }).eq("partial_payment_id", pp.id)).count || 0) + 1;
       const treasuryRef = `PART-${sourceId.slice(0, 8)}-${n}-${Date.now()}`;
@@ -164,6 +204,7 @@ Deno.serve(async (req) => {
       }
       if (!sent) {
         if (sourceType === "provider") await treasuryRelease({ account: "operations", amount, reference: treasuryRef, description: "Part payment failed — funds returned", performedBy: me?.name || email });
+        if (walletOp) await reverseWalletDebits(detail || "send failed");
         await rollback();
         return respond(false, { error: detail || "Payment did not go through" });
       }
@@ -183,6 +224,9 @@ Deno.serve(async (req) => {
         if (error) sourceWarning = error.message;
       } else if (sourceType === "withdrawal" && full) {
         const { error } = await db.from("instant_withdrawals").update({ payout_status: "success", finance_released_by: financeName, finance_released_at: now, completed_at: now }).eq("id", sourceId);
+        if (error) sourceWarning = error.message;
+      } else if (sourceType === "wallet_op" && full) {
+        const { error } = await db.from("admin_wallet_operations").update({ status: "completed", finance_released_by_email: email, finance_released_by_name: financeName, finance_released_at: now, executed_at: now, ledger_reference: `AWO-PART-${sourceId.slice(0, 8)}`, gateway_reference: reference || sendRef, execution_error: null }).eq("id", sourceId).eq("status", "awaiting_finance");
         if (error) sourceWarning = error.message;
       } else if (sourceType === "supplier") {
         const { data: l } = await db.from("finance_coffee_lots").select("amount_paid_ugx").eq("id", lotId).maybeSingle();

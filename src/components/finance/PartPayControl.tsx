@@ -11,7 +11,7 @@ import { Loader2, Coins } from 'lucide-react';
 import { waitForFunds } from '@/lib/waitForFunds';
 import { mealPaymentAllowed } from '@/lib/mealPlanRules';
 
-export type PartPaySource = 'provider' | 'withdrawal' | 'supplier' | 'expense';
+export type PartPaySource = 'provider' | 'withdrawal' | 'supplier' | 'expense' | 'wallet_op';
 
 interface Props {
   sourceType: PartPaySource;
@@ -30,7 +30,7 @@ const PartPayControl: React.FC<Props> = ({ sourceType, sourceId, totalAmount, pa
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('');
-  const canSend = sourceType === 'provider' || sourceType === 'withdrawal';
+  const canSend = sourceType === 'provider' || sourceType === 'withdrawal' || sourceType === 'wallet_op';
   const [method, setMethod] = useState(paymentChoice === 'cash' ? 'cash' : canSend ? 'yo' : 'cash');
   const [reference, setReference] = useState('');
   const [saving, setSaving] = useState(false);
@@ -124,7 +124,7 @@ const PartPayControl: React.FC<Props> = ({ sourceType, sourceId, totalAmount, pa
                 {canSend && mealPaymentAllowed(paymentChoice, 'yo') && <SelectItem value="yo">Send now — Mobile money (Yo)</SelectItem>}
                 {canSend && mealPaymentAllowed(paymentChoice, 'gosentepay') && <SelectItem value="gosentepay">Send now — GosentePay</SelectItem>}
                 {mealPaymentAllowed(paymentChoice, 'cash') && <SelectItem value="cash">Cash (already handed over)</SelectItem>}
-                {!paymentChoice && <SelectItem value="bank">Bank (already transferred)</SelectItem>}
+                {!paymentChoice && sourceType !== 'wallet_op' && <SelectItem value="bank">Bank (already transferred)</SelectItem>}
                 {!paymentChoice && <SelectItem value="mobile money">Mobile money (already sent by hand)</SelectItem>}
               </SelectContent>
             </Select>

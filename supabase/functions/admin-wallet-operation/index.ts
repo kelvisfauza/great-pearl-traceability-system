@@ -548,6 +548,10 @@ serve(async (req) => {
       if (!op) return respond(false, { error: "Operation not found" });
       if (!isAdmin && op.status !== "awaiting_finance") return respond(false, { error: "Finance can only reject operations awaiting release" });
       if (!["pending", "awaiting_finance"].includes(op.status)) return respond(false, { error: `Cannot reject a ${op.status} operation` });
+      {
+        const { data: part } = await supabase.from("partial_payments").select("paid_amount").eq("source_type", "wallet_op").eq("source_id", op.id).maybeSingle();
+        if (Number(part?.paid_amount || 0) > 0) return respond(false, { error: "Part of this withdrawal is already paid, so it cannot be rejected. Pay the balance instead." });
+      }
 
       // If a previous attempt already debited the wallet (payout then failed),
       // return that money before closing the operation.
@@ -602,6 +606,10 @@ serve(async (req) => {
         const { data: cand } = await supabase.from("admin_wallet_operations").select("*").eq("id", operation_id).maybeSingle();
         if (!cand) return respond(false, { error: "Operation not found" });
         if (cand.status !== "awaiting_finance") return respond(false, { error: `Cannot release a ${cand.status} operation` });
+        {
+          const { data: part } = await supabase.from("partial_payments").select("paid_amount").eq("source_type", "wallet_op").eq("source_id", operation_id).maybeSingle();
+          if (Number(part?.paid_amount || 0) > 0) return respond(false, { error: "Part of this withdrawal is already paid. Use \"Pay balance\" to pay the rest." });
+        }
         if (cand.initiated_by === actorId || (cand.approved_by_email || "").toLowerCase() === actorEmail.toLowerCase()) {
           return respond(false, { error: "Separation of duties: you created or approved this operation, so another Finance officer must release it." });
         }

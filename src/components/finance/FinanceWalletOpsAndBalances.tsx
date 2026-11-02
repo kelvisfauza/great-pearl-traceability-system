@@ -280,6 +280,7 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
                         <Input placeholder="Account name" value={f.account_name || ''} onChange={(e) => setForm(op.id, { account_name: e.target.value })} />
                       </div>
                     )}
+                    <PartPayControl sourceType="wallet_op" sourceId={op.id} totalAmount={Number(op.amount)} payeeName={op.target_name || op.target_email} onChanged={() => load()} />
                     <p className="text-xs text-muted-foreground">
                       {m === 'cash' ? 'Hand over the cash first — this completes the withdrawal.' : m === 'bank' ? 'Goes to admin Bank Withdrawals to pay into the account.' : 'Money is sent straight away to this number.'}
                     </p>
