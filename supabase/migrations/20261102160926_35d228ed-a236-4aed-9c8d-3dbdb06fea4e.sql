@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.block_duplicate_coffee_delivery() FROM PUBLIC, anon, authenticated;
