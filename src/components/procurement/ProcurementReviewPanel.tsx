@@ -125,6 +125,8 @@ const ProcurementReviewPanel = () => {
 
       const approvalRows: PendingRequest[] = ((reqs || []) as any[])
         .filter((r) => String(r.type || '').toLowerCase() !== 'leave')
+        // Personal wallet withdrawals go Admin -> Finance only; Procurement never reviews them.
+        .filter((r) => !/withdraw|failed payout|retry/i.test(`${r.type || ''} ${r.title || ''}`))
         .map((r) => ({ ...r, source_table: 'approval_requests' }));
 
       const providerRows: PendingRequest[] = ((providers || []) as any[]).map((r) => ({
