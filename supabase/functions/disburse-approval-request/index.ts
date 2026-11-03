@@ -97,6 +97,35 @@ serve(async (req) => {
       .select("id");
     if (!locked || locked.length === 0) return respond(false, { error: "Payout already in progress" });
 
+    // Personal wallet withdrawals: take the money from the staff wallet exactly once.
+    const isWalletWithdrawal = String(details.request_type || "").toLowerCase() === "withdrawal" ||
+      /withdrawal request/i.test(String(reqRow.type || ""));
+    const walletUserId: string = details.user_id || "";
+    const walletRef = `WD-APPROVAL-${requestId}`;
+    let walletDebited = false;
+    if (isWalletWithdrawal) {
+      if (!walletUserId) {
+        await svc.from("approval_requests").update({ payout_status: "failed", payout_error: "Withdrawal has no wallet owner" }).eq("id", requestId);
+        return respond(false, { error: "Withdrawal has no wallet owner" });
+      }
+      const { data: existing } = await svc.from("ledger_entries").select("id").eq("reference", walletRef).maybeSingle();
+      if (!existing) {
+        const { error: debitErr } = await svc.from("ledger_entries").insert({
+          user_id: walletUserId,
+          entry_type: "WITHDRAWAL",
+          amount: -amount,
+          reference: walletRef,
+          source_category: "WITHDRAWAL",
+          metadata: { description: `Withdrawal released by Finance (${reqRow.details?.ref || requestId})`, approval_request_id: requestId, released_by: actorEmail },
+        });
+        if (debitErr) {
+          await svc.from("approval_requests").update({ payout_status: "failed", payout_error: `Wallet debit failed: ${debitErr.message}` }).eq("id", requestId);
+          return respond(false, { error: `Wallet debit failed: ${debitErr.message}` });
+        }
+        walletDebited = true;
+      }
+    }
+
     let success = false;
     let finalRef = payoutRef;
     let errorMessage = "";
@@ -158,6 +187,18 @@ serve(async (req) => {
       } catch (e: any) {
         errorMessage = `Yo Payments error: ${e?.message || e}`;
       }
+    }
+
+    if (!success && walletDebited) {
+      await svc.from("ledger_entries").insert({
+        user_id: walletUserId,
+        entry_type: "DEPOSIT",
+        amount,
+        reference: `${walletRef}-REFUND-${Date.now()}`,
+        source_category: "WITHDRAWAL_REFUND",
+        metadata: { description: "Withdrawal payout failed — money returned to wallet", approval_request_id: requestId },
+      });
+      await svc.from("ledger_entries").delete().eq("reference", walletRef).eq("user_id", walletUserId);
     }
 
     if (!success) {
