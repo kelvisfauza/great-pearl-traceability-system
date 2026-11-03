@@ -142,6 +142,24 @@ const AttendanceImportApprovals = ({ onApplied }: Props) => {
         recorded_by: employee?.email || 'IT-BIOMETRIC',
       }));
 
+      // Two machine IDs can be linked to the same person; one save cannot contain the
+      // same person+day twice, so keep the row whose machine name matches the person.
+      const nameScore = (r: any) => {
+        const words = String(r.employee_name || '').toLowerCase().split(/\s+/).filter(Boolean);
+        const dev = String(r.device_name || '').toLowerCase();
+        return words.filter((w) => dev.includes(w)).length;
+      };
+      const byKey = new Map<string, { p: any; r: any }>();
+      approved.forEach((r, idx) => {
+        const key = `${r.employee_id}|${r.record_date}`;
+        const cur = byKey.get(key);
+        if (!cur || nameScore(r) > nameScore(cur.r)) byKey.set(key, { p: payload[idx], r });
+      });
+      const dupes = payload.length - byKey.size;
+      payload.length = 0;
+      byKey.forEach((v) => payload.push(v.p));
+      if (dupes) toast.warning(`${dupes} repeated person/day rows from a second machine ID were skipped`);
+
       const chunk = 200;
       let saved = 0;
       for (let i = 0; i < payload.length; i += chunk) {
