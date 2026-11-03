@@ -190,14 +190,7 @@ serve(async (req) => {
     }
 
     if (!success && walletDebited) {
-      await svc.from("ledger_entries").insert({
-        user_id: walletUserId,
-        entry_type: "DEPOSIT",
-        amount,
-        reference: `${walletRef}-REFUND-${Date.now()}`,
-        source_category: "WITHDRAWAL_REFUND",
-        metadata: { description: "Withdrawal payout failed — money returned to wallet", approval_request_id: requestId },
-      });
+      // Undo the wallet debit so Finance can retry cleanly.
       await svc.from("ledger_entries").delete().eq("reference", walletRef).eq("user_id", walletUserId);
     }
 
