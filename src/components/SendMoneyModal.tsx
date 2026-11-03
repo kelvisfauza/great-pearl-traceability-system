@@ -22,10 +22,11 @@ interface SendMoneyModalProps {
   overdraftHeadroom?: number;
   walletBalance?: number;
   overdraftOutstanding?: number;
+  onRequestWithdrawal?: () => void;
 }
 
 export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
-  open, onOpenChange, availableBalance, overdraftHeadroom = 0, walletBalance, overdraftOutstanding = 0,
+  open, onOpenChange, availableBalance, overdraftHeadroom = 0, walletBalance, overdraftOutstanding = 0, onRequestWithdrawal,
 }) => {
   const { user, employee, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -466,86 +467,16 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
               </TabsContent>
 
               <TabsContent value="mobile" className="space-y-4 mt-4">
-                <div>
-                  <Label>Mobile Money Number</Label>
-                  <Input
-                    type="tel"
-                    value={mobilePhone}
-                    onChange={e => setMobilePhone(e.target.value)}
-                    placeholder="e.g. 0770123456"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">MTN (077/078/076/079) or Airtel (070/075/074)</p>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                  <p className="font-semibold">Mobile money sends now need approval</p>
+                  <p className="text-xs mt-1">To send wallet money to a phone, submit a withdrawal request. Admin approves it, then Finance pays it to your mobile money number.</p>
                 </div>
-
-                <div>
-                  <Label>Amount (UGX)</Label>
-                  <Input
-                    type="number"
-                    value={mobileAmount}
-                    onChange={e => setMobileAmount(e.target.value)}
-                    placeholder="e.g. 10000"
-                    min={2000}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Minimum: UGX 2,000</p>
-                </div>
-
-                {parsedMobileAmount > 0 && mobilePhone && (
-                  <Card className="border-orange-300/50 bg-orange-50/50">
-                    <CardContent className="p-3 text-sm space-y-1">
-                      <div className="flex justify-between"><span>Sending via Mobile Money:</span><span className="font-semibold">UGX {parsedMobileAmount.toLocaleString()}</span></div>
-                      <div className="flex justify-between"><span>To:</span><span className="font-semibold">{mobilePhone}</span></div>
-                      {mobileServiceFee > 0 && (
-                        <div className="flex justify-between text-amber-700"><span>Service fee:</span><span>UGX {mobileServiceFee.toLocaleString()}</span></div>
-                      )}
-                      <div className="flex justify-between font-semibold border-t pt-1 mt-1"><span>Total charged to wallet:</span><span>UGX {mobileTotalDebit.toLocaleString()}</span></div>
-                      {mobileOdPortion > 0 && (
-                        <>
-                          <div className="flex justify-between text-muted-foreground"><span>From wallet:</span><span>UGX {Math.min(mobileTotalDebit, walletOnly).toLocaleString()}</span></div>
-                          <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {mobileOdPortion.toLocaleString()}</span></div>
-                          <div className="flex justify-between text-amber-700"><span>Overdraft access fee (2.75%):</span><span>UGX {mobileOdFee.toLocaleString()}</span></div>
-                          {overdraftOutstanding > 0 && (
-                            <div className="flex justify-between text-muted-foreground"><span>Previous overdraft balance:</span><span>UGX {overdraftOutstanding.toLocaleString()}</span></div>
-                          )}
-                          <div className="flex justify-between font-semibold text-red-700 border-t pt-1 mt-1"><span>New overdraft owed (shown on statement):</span><span>UGX {mobileNewOutstanding.toLocaleString()}</span></div>
-                        </>
-                      )}
-                      <div className="flex justify-between text-muted-foreground"><span>Your new balance:</span><span>UGX {Math.max(0, walletOnly - mobileTotalDebit).toLocaleString()}</span></div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {mobileOdPortion > 0 && (
-                  <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
-                    <CardContent className="p-3 text-xs space-y-2">
-                      <div className="flex items-start gap-2 text-amber-900 dark:text-amber-200">
-                        <TrendingDown className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
-                        <div>
-                          <p className="font-semibold">Overdraft will be applied: UGX {mobileOdPortion.toLocaleString()}</p>
-                          <p className="mt-0.5">Your wallet doesn't fully cover this. UGX {mobileOdPortion.toLocaleString()} will be drawn plus a 2.75% access fee of UGX {mobileOdFee.toLocaleString()}. Your total overdraft owed will become <strong>UGX {mobileNewOutstanding.toLocaleString()}</strong> (1.2% daily interest until cleared). This full amount will appear on your statement.</p>
-                        </div>
-                      </div>
-                      <label className="flex items-center gap-2 cursor-pointer text-amber-900 dark:text-amber-200">
-                        <input type="checkbox" checked={overdraftConfirmedMobile} onChange={(e) => setOverdraftConfirmedMobile(e.target.checked)} className="h-4 w-4" />
-                        <span>I approve using my overdraft for this payout.</span>
-                      </label>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
-                  <p>💡 This sends real money to the mobile money number via Yo Payments. The amount is deducted from your wallet immediately. Available Mon–Sat before 7:15 PM.</p>
-                </div>
-
                 <Button
-                  onClick={handleSendToMobile}
-                  disabled={mobileLoading || !mobilePhone || parsedMobileAmount < 2000 || mobileTotalDebit > availableBalance || mobileNeedsOdConfirm}
+                  onClick={() => { onOpenChange(false); onRequestWithdrawal?.(); }}
+                  disabled={!onRequestWithdrawal}
                   className="w-full"
                 >
-                  {mobileLoading ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending to Mobile Money...</>
-                  ) : (
-                    <><Smartphone className="mr-2 h-4 w-4" /> Send UGX {parsedMobileAmount.toLocaleString()} to Mobile</>
-                  )}
+                  <Smartphone className="mr-2 h-4 w-4" /> Request withdrawal
                 </Button>
               </TabsContent>
             </Tabs>

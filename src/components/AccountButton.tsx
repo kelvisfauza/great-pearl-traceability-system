@@ -777,7 +777,7 @@ export const AccountButton = () => {
         overdraftHeadroom={overdraftHeadroom}
       />
       <DepositModal open={showDeposit} onOpenChange={setShowDeposit} />
-      <SendMoneyModal open={showSendMoney} onOpenChange={setShowSendMoney} availableBalance={availableForWithdrawal} overdraftHeadroom={overdraftHeadroom} walletBalance={availableLoyalty} overdraftOutstanding={overdraftOutstanding} />
+      <SendMoneyModal open={showSendMoney} onOpenChange={setShowSendMoney} availableBalance={availableForWithdrawal} overdraftHeadroom={overdraftHeadroom} walletBalance={availableLoyalty} overdraftOutstanding={overdraftOutstanding} onRequestWithdrawal={() => setShowWithdrawal(true)} />
       <InvestmentModal open={showInvestment} onOpenChange={setShowInvestment} availableBalance={availableLoyalty} />
     </>
   );
