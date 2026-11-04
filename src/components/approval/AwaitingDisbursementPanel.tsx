@@ -39,7 +39,17 @@ export const AwaitingDisbursementPanel: React.FC = () => {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // Refresh so requests Finance just approved appear here for release
+    // without reloading the page.
+    const interval = setInterval(load, 15000);
+    const channel = supabase
+      .channel(`awaiting-disbursement-${Math.random().toString(36).slice(2)}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'approval_requests' }, () => load())
+      .subscribe();
+    return () => { clearInterval(interval); supabase.removeChannel(channel); };
+  }, [load]);
 
   if (!loading && rows.length === 0) return null;
 
