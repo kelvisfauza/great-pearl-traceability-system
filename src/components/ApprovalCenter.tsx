@@ -517,6 +517,7 @@ const ApprovalCenter = () => {
 
                       {/* Procurement first-stage review */}
                       {(() => {
+                        if (!requiresProcurementGate(request)) return null;
                         const review = procurementReviews[request.id];
                         if (!review) {
                           return (

@@ -80,7 +80,8 @@ export const useUnifiedApprovalRequests = () => {
             'Pending Admin Approval',
             'Pending Admin 2',
             'Finance Approved',
-            'Pending Finance',
+            // 'Pending Finance' is excluded: once Admin approves, the request
+            // belongs to Finance and must leave the Admin approval list.
           ])
           .order('created_at', { ascending: false });
         
