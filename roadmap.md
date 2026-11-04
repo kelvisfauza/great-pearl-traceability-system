@@ -1,5 +1,11 @@
 # Roadmap
 
+## Withdrawal second-approver threshold
+- [x] Raised the second-administrator rule for wallet withdrawals from above UGX 50,000 to above UGX 150,000; at or below 150,000 one Admin approves and the request goes to Finance. Non-withdrawal requests keep the 50,000 rule.
+- [x] Five rule tests passed (55k/60k/72k/150k single Admin, 150,001/350k second Admin, expense 60k still two Admins) and latest preview build clean.
+- [ ] Verify signed-in approvals screen — external Supabase session unavailable; confirm a sub-150k withdrawal shows a plain Approve button and reaches Finance on one approval.
+
+
 ## Failed Finance withdrawal wallet restoration
 - [x] Confirmed the missed rollback; restore request-scoped wallet debits on Operations refusal and provider failures, including inherited retry debits, and surface lookup/restoration failures.
 - [x] Seven isolated actual-handler tests passed and the payment function deployed; no real payout or historical wallet correction was performed.
