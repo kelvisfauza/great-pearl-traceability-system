@@ -150,6 +150,7 @@ import SystemSettings from "./pages/admin/SystemSettings";
 import SystemTransactions from "./pages/admin/SystemTransactions";
 import AdminInitiateWithdrawal from "./pages/admin/AdminInitiateWithdrawal";
 import Treasury from "./pages/admin/Treasury";
+import PayoutStatus from "./pages/admin/PayoutStatus";
 import LeaveRequests from "./pages/admin/LeaveRequests";
 import ExcelReports from "./pages/admin/ExcelReports";
 import UserStatement from "./pages/admin/UserStatement";
@@ -670,6 +671,11 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/treasury" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <Treasury />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/payout-status" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin', 'Finance']}>
+                    <PayoutStatus />
                   </ProtectedRoute>
                 } />
                 <Route path="/payment-tracker" element={
