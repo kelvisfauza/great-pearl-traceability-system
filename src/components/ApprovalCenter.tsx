@@ -382,9 +382,11 @@ const ApprovalCenter = () => {
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {FILTERS.map((f) => (
-            <Button key={f.key} size="sm" variant={filter === f.key ? 'default' : 'outline'} className="rounded-md shrink-0" onClick={() => setFilter(f.key)}>
+            <Button key={f.key} size="sm" variant={filter === f.key ? 'default' : 'outline'}
+              className={`rounded-md shrink-0 ${filter === f.key ? 'bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-md border-transparent' : ''}`}
+              onClick={() => setFilter(f.key)}>
               {f.label}
-              <span className="ml-2 rounded-full bg-background/20 px-1.5 text-xs">{counts[f.key]}</span>
+              <span className={`ml-2 rounded-full px-1.5 text-xs ${filter === f.key ? 'bg-background/25' : 'bg-primary/10 text-primary'}`}>{counts[f.key]}</span>
             </Button>
           ))}
         </div>
@@ -404,21 +406,31 @@ const ApprovalCenter = () => {
               const Icon = getTypeIcon(r.type, r.requestType);
               const active = selected?.id === r.id;
               const failed = !!r.details?.is_failed_payout;
+              const second = r.status === 'Pending Admin 2';
+              const chip = failed
+                ? 'bg-destructive/15 text-destructive'
+                : second
+                  ? 'bg-accent/25 text-accent-foreground'
+                  : active
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-primary/10 text-primary';
               return (
                 <button key={r.id} onClick={() => setSelectedId(r.id)}
-                  className={`w-full text-left flex items-center gap-3 px-4 py-3 border-b last:border-b-0 transition-colors ${active ? 'bg-primary/10' : 'hover:bg-muted/50'}`}>
-                  <div className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center ${failed ? 'bg-destructive/15 text-destructive' : active ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                  className={`w-full text-left flex items-center gap-3 px-4 py-3 border-b last:border-b-0 border-l-4 transition-colors ${
+                    failed ? 'border-l-destructive' : active ? 'border-l-primary' : second ? 'border-l-accent' : 'border-l-transparent'
+                  } ${active ? 'bg-primary/10' : failed ? 'bg-destructive/5 hover:bg-destructive/10' : 'hover:bg-muted/50'}`}>
+                  <div className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center ${chip}`}>
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium truncate">{r.requestedBy}</p>
-                      <p className="text-sm font-semibold shrink-0">{formatAmount(r.amount)}</p>
+                      <p className={`text-sm font-semibold shrink-0 ${failed ? 'text-destructive' : 'text-primary'}`}>{formatAmount(r.amount)}</p>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs text-muted-foreground truncate">{r.title}</p>
                       {failed ? <span className="text-[10px] font-semibold uppercase text-destructive">Failed</span>
-                        : r.status === 'Pending Admin 2' ? <span className="text-[10px] font-semibold uppercase text-primary">2nd admin</span>
+                        : second ? <span className="text-[10px] font-semibold uppercase text-accent-foreground bg-accent/25 rounded-full px-1.5">2nd admin</span>
                         : <span className="text-[10px] text-muted-foreground shrink-0">{r.dateRequested}</span>}
                     </div>
                   </div>
