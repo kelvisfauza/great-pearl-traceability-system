@@ -18802,6 +18802,10 @@ export type Database = {
         }
         Returns: number
       }
+      gosentepay_reverse_payout: {
+        Args: { p_reason?: string; p_reference: string }
+        Returns: number
+      }
       "great pearl": { Args: { conversation_id: string }; Returns: boolean }
       has_active_loan_obligation: {
         Args: { p_user_id: string }
