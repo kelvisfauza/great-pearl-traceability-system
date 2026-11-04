@@ -411,6 +411,16 @@ const StoreReportsList = () => {
                   value={selectedDateRange.end}
                   onChange={(e) => setSelectedDateRange(prev => ({ ...prev, end: e.target.value }))}
                 />
+                <Button
+                  variant="outline"
+                  onClick={printList}
+                  disabled={!filteredReports.length || printingList}
+                  className="whitespace-nowrap"
+                  title="Print every report shown below"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  {printingList ? 'Preparing...' : `Print list (${filteredReports.length})`}
+                </Button>
               </div>
             </div>
           </div>
