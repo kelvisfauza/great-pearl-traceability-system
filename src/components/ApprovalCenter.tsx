@@ -3,8 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import ReturnToProcurementButton from './approval/ReturnToProcurementButton';
-import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye, FileText, TrendingUp, AlertTriangle, Package, Settings, Banknote } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye, FileText, TrendingUp, AlertTriangle, Package, Settings, Banknote, Search } from 'lucide-react';
 import { useUnifiedApprovalRequests, UnifiedApprovalRequest } from '@/hooks/useUnifiedApprovalRequests';
 import { useToast } from '@/hooks/use-toast';
 import { useProcurementRecommendations } from '@/hooks/useProcurementRecommendations';
@@ -29,6 +30,8 @@ const ApprovalCenter = () => {
   const { recommendations, loading: recommendationsLoading } = useProcurementRecommendations();
   const { reviews: procurementReviews, refresh: refreshProcurementReviews } = useProcurementReviews(requests.map((r) => r.id));
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'all' | 'withdrawal' | 'second' | 'failed'>('all');
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UnifiedApprovalRequest | null>(null);
   const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
@@ -330,192 +333,130 @@ const ApprovalCenter = () => {
     );
   }
 
+  const q = search.trim().toLowerCase();
+  const counts = {
+    all: requests.length,
+    withdrawal: requests.filter((r) => isWithdrawalRequest(r.requestType, r.details)).length,
+    second: requests.filter((r) => r.status === 'Pending Admin 2').length,
+    failed: requests.filter((r) => r.details?.is_failed_payout).length,
+  };
+  const totalValue = requests.reduce((sum, r) => {
+    const n = typeof r.amount === 'string' ? parseFloat(String(r.amount).replace(/[^\d.-]/g, '')) : Number(r.amount);
+    return sum + (isNaN(n) ? 0 : n);
+  }, 0);
+  const visible = requests.filter((r) => {
+    if (filter === 'withdrawal' && !isWithdrawalRequest(r.requestType, r.details)) return false;
+    if (filter === 'second' && r.status !== 'Pending Admin 2') return false;
+    if (filter === 'failed' && !r.details?.is_failed_payout) return false;
+    if (!q) return true;
+    return [r.title, r.requestedBy, r.department, r.requestType, r.description]
+      .some((v) => String(v ?? '').toLowerCase().includes(q));
+  });
+  const FILTERS: { key: typeof filter; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'withdrawal', label: 'Withdrawals' },
+    { key: 'second', label: 'Needs 2nd admin' },
+    { key: 'failed', label: 'Failed payouts' },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Unified Approval Center</h2>
-          <p className="text-muted-foreground">
-            Review all approval requests, modifications, and procurement recommendations from one place
-          </p>
+      {/* Header */}
+      <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-background to-background p-5 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Admin</p>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Approvals</h2>
+            <p className="text-sm text-muted-foreground">Review and decide on requests waiting for you.</p>
+          </div>
+          <Button onClick={handleRefresh} variant="outline" size="sm" className="self-start sm:self-auto">
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+          </Button>
         </div>
-        <Button onClick={handleRefresh} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh All
-        </Button>
+        <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: 'Waiting', value: counts.all, icon: Clock },
+            { label: 'Total value', value: formatAmount(totalValue), icon: DollarSign },
+            { label: 'Needs 2nd admin', value: counts.second, icon: User },
+            { label: 'Failed payouts', value: counts.failed, icon: AlertTriangle },
+          ].map((s) => (
+            <div key={s.label} className="rounded-xl border bg-card p-3 sm:p-4">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-xs font-medium">{s.label}</span>
+                <s.icon className="h-4 w-4" />
+              </div>
+              <p className="mt-1 text-lg sm:text-2xl font-bold truncate">{s.value}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Procurement Recommendations Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
-            <CardTitle>Latest Procurement Recommendations</CardTitle>
-          </div>
-          <CardDescription>
-            Strategic buying recommendations from data analysts
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {recommendationsLoading ? (
-            <div className="flex items-center justify-center p-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-            </div>
-          ) : recommendations.length === 0 ? (
-            <div className="text-center text-muted-foreground py-4">
-              No procurement recommendations available
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {recommendations.slice(0, 3).map((rec, index) => (
-                <div key={rec.id || index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <h4 className="font-medium">{rec.grade}</h4>
-                        <p className="text-sm text-muted-foreground">UGX {rec.priceRange}</p>
+      {/* Search + filters */}
+      <div className="flex flex-col md:flex-row md:items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, title or department" className="pl-9 rounded-full" />
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {FILTERS.map((f) => (
+            <Button key={f.key} size="sm" variant={filter === f.key ? 'default' : 'outline'} className="rounded-full shrink-0" onClick={() => setFilter(f.key)}>
+              {f.label}
+              <span className="ml-2 rounded-full bg-background/20 px-1.5 text-xs">{counts[f.key]}</span>
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Requests */}
+      {visible.length === 0 ? (
+        <div className="rounded-2xl border border-dashed p-10 text-center">
+          <CheckCircle className="h-10 w-10 text-primary mx-auto mb-3" />
+          <h3 className="text-lg font-semibold">{requests.length === 0 ? 'All caught up' : 'Nothing matches'}</h3>
+          <p className="text-sm text-muted-foreground">{requests.length === 0 ? 'No requests are waiting for approval.' : 'Try a different search or filter.'}</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {visible.map((request) => {
+            const TypeIcon = getTypeIcon(request.type, request.requestType);
+            const awaitingProcurement = isAwaitingProcurement(request);
+            const failed = !!request.details?.is_failed_payout;
+            return (
+              <div key={request.id} className={`rounded-2xl border bg-card p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md border-l-4 ${failed ? 'border-l-destructive' : request.status === 'Pending Admin 2' ? 'border-l-accent' : 'border-l-primary'}`}>
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                      <TypeIcon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-semibold truncate">{request.title}</h3>
+                        <Badge variant="secondary" className="rounded-full">{request.type === 'modification' ? 'Modification' : request.requestType}</Badge>
+                        <Badge variant="outline" className="rounded-full capitalize">{request.priority}</Badge>
                       </div>
-                      <Badge 
-                        variant={rec.action === 'Strong Buy' ? 'default' : 
-                                rec.action === 'Buy' ? 'secondary' : 'outline'}
-                        className={rec.action === 'Strong Buy' ? 'bg-green-500' : ''}
-                      >
-                        {rec.action}
-                      </Badge>
+                      {request.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{request.description}</p>}
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" />{request.requestedBy}{request.department ? ` · ${request.department}` : ''}</span>
+                        <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{request.dateRequested}</span>
+                        <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{formatSource(request.source)}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="text-center">
-                      <div className="font-medium">{rec.confidence}%</div>
-                      <div className="text-muted-foreground">Confidence</div>
-                    </div>
-                    <div className="text-center">
-                      <div className={`font-medium ${
-                        rec.risk === 'Low' ? 'text-green-600' : 
-                        rec.risk === 'Medium' ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {rec.risk}
-                      </div>
-                      <div className="text-muted-foreground">Risk</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium">{rec.timeframe}</div>
-                      <div className="text-muted-foreground">Timeframe</div>
+                  <div className="sm:text-right shrink-0">
+                    <p className="text-xs text-muted-foreground">Amount</p>
+                    <p className="text-xl font-bold">{formatAmount(request.amount)}</p>
+                    <div className="flex sm:justify-end gap-1 mt-2">
+                      <Button variant="ghost" size="sm" onClick={() => handleViewDetailedWorkflow(request)}>
+                        <FileText className="h-4 w-4 mr-1" /> Details
+                      </Button>
+                      {(request.originalPaymentId || request.details?.paymentId) && (
+                        <Button variant="ghost" size="sm" onClick={() => handleViewWorkflow(request.originalPaymentId || request.details?.paymentId || '')}>
+                          <Eye className="h-4 w-4 mr-1" /> Workflow
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  {rec.risk === 'High' && (
-                    <AlertTriangle className="h-4 w-4 text-red-500 ml-2" />
-                  )}
                 </div>
-              ))}
-              {recommendations.length > 3 && (
-                <div className="text-center pt-2">
-                  <Badge variant="outline">
-                    +{recommendations.length - 3} more recommendations
-                  </Badge>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* All Approval Requests Section */}
-      {/* Money release moved to Finance (V1 + V2 Release Payments) */}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>All Pending Requests ({requests.length})</CardTitle>
-          <CardDescription>
-            General approvals, modification requests, and other pending items
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {requests.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Pending Requests</h3>
-              <p className="text-muted-foreground">All approval requests have been processed.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {requests.map((request) => {
-                const TypeIcon = getTypeIcon(request.type, request.requestType);
-                const procurementReview = procurementReviews[request.id];
-                const requiresProcurementReview = requiresProcurementGate(request);
-                const awaitingProcurement = isAwaitingProcurement(request);
-                return (
-                  <Card key={request.id} className="transition-all hover:shadow-md">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <TypeIcon className="h-4 w-4 text-muted-foreground" />
-                            <CardTitle className="text-lg">{request.title}</CardTitle>
-                            <Badge className={getTypeColor(request.type)}>
-                              {request.type === 'modification' ? 'Modification' : request.requestType}
-                            </Badge>
-                          </div>
-                          <CardDescription>{request.description}</CardDescription>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getPriorityColor(request.priority)}>
-                            {request.priority}
-                          </Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewDetailedWorkflow(request)}
-                          >
-                            <FileText className="h-4 w-4 mr-1" />
-                            Review Details
-                          </Button>
-                          {(request.originalPaymentId || request.details?.paymentId) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewWorkflow(request.originalPaymentId || request.details?.paymentId || '')}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              Workflow
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate" title={String(request.requestedBy ?? '')}>{request.requestedBy}</p>
-                            <p className="text-xs text-muted-foreground truncate">{request.department}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{request.dateRequested}</p>
-                            <p className="text-xs text-muted-foreground">Requested</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{formatAmount(request.amount)}</p>
-                            <p className="text-xs text-muted-foreground">Amount</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{formatSource(request.source)}</p>
-                            <p className="text-xs text-muted-foreground">Channel</p>
-                          </div>
-                        </div>
-                      </div>
-
-
+                <div className="mt-4 space-y-3 [&>div]:mb-0">
                       {/* Procurement first-stage review */}
                       {(() => {
                         if (!requiresProcurementGate(request)) return null;
@@ -606,7 +547,7 @@ const ApprovalCenter = () => {
                       {needsSecondAdminApproval(request.amount, isWithdrawalRequest(request.requestType, request.details)) && request.status !== 'Pending Admin 2' && !request.details?.is_failed_payout && (
                         <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
                           <p className="text-xs text-blue-600 dark:text-blue-400">
-                            ⚡ 3-tier approval: This request needs Finance review + 2 admin approvals (final step)
+                            Needs two administrator approvals before Finance.
                           </p>
                         </div>
                       )}
@@ -619,7 +560,7 @@ const ApprovalCenter = () => {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
                         {request.details?.is_failed_payout ? (
                           <>
                             <Button
@@ -682,14 +623,33 @@ const ApprovalCenter = () => {
                           </div>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Procurement recommendations (secondary) */}
+      {recommendations.length > 0 && !recommendationsLoading && (
+        <details className="rounded-2xl border bg-card p-4">
+          <summary className="cursor-pointer flex items-center gap-2 font-medium">
+            <TrendingUp className="h-4 w-4 text-primary" /> Procurement recommendations ({recommendations.length})
+          </summary>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {recommendations.slice(0, 3).map((rec, index) => (
+              <div key={rec.id || index} className="rounded-xl border p-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{rec.grade}</span>
+                  <Badge variant={rec.action === 'Strong Buy' ? 'default' : 'outline'} className="rounded-full">{rec.action}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">UGX {rec.priceRange}</p>
+                <p className="text-xs text-muted-foreground mt-1">{rec.confidence}% confidence · {rec.risk} risk · {rec.timeframe}</p>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
 
       <RejectionModal
         open={rejectionModalOpen}
