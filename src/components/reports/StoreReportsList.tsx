@@ -16,6 +16,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { uploadReportDocument, validateReportFile, hasAttachments } from '@/utils/reportDocuments';
 import { toast } from 'sonner';
 import { generateStoreReportPDF } from '@/utils/pdfGenerator';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { preparePdfPrint } from '@/utils/pdfPrintStamp';
 
 const StoreReportsList = () => {
   const { reports, loading, directDeleteReport, directEditReport, migrateFirebaseToSupabase } = useStoreReports();
