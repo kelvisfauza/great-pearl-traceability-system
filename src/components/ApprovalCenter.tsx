@@ -444,16 +444,17 @@ const ApprovalCenter = () => {
             const awaitingProcurement = isAwaitingProcurement(request);
             const failed = !!request.details?.is_failed_payout;
             return (
-              <div key={request.id} className="rounded-xl border bg-card p-5 sm:p-7 shadow-lg">
+              <div key={request.id} className="rounded-xl border bg-card p-5 sm:p-7 shadow-lg relative overflow-hidden">
+                <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary via-accent to-secondary" />
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground flex items-center justify-center shadow-md">
                       <TypeIcon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-semibold truncate">{request.title}</h3>
-                        <Badge variant="secondary" className="rounded-full">{request.type === 'modification' ? 'Modification' : request.requestType}</Badge>
+                        <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary border-primary/20">{request.type === 'modification' ? 'Modification' : request.requestType}</Badge>
                         <Badge variant="outline" className="rounded-full capitalize">{request.priority}</Badge>
                       </div>
                       {request.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{request.description}</p>}
@@ -464,9 +465,9 @@ const ApprovalCenter = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="sm:text-right shrink-0">
+                  <div className="sm:text-right shrink-0 rounded-lg bg-primary/5 border border-primary/15 px-3 py-2">
                     <p className="text-xs text-muted-foreground">Amount</p>
-                    <p className="text-xl font-bold">{formatAmount(request.amount)}</p>
+                    <p className="text-xl font-bold text-primary">{formatAmount(request.amount)}</p>
                     <div className="flex sm:justify-end gap-1 mt-2">
                       <Button variant="ghost" size="sm" onClick={() => handleViewDetailedWorkflow(request)}>
                         <FileText className="h-4 w-4 mr-1" /> Details
