@@ -1,5 +1,8 @@
 # Roadmap
 
+## Failed Finance withdrawal wallet restoration
+- [ ] Verify and fix wallet restoration on Operations refusal and failed retries; test the actual payment handler without sending real money.
+
 ## Banking-style Treasury workspace
 - [x] Replaced the long Treasury page with six banking views: account directory, paginated/filterable movements, deposits, existing borrower profiles, employee salary/wallet profiles and provider reconciliation.
 - [x] Reused existing loan applications/approvals, employee registration, payroll, advances, withdrawals, statements and overdraft workflows; removed duplicate legacy pool metrics, estimated investment returns and ledger replay/manual legacy adjustment controls from the page. No financial data or payment rules changed.

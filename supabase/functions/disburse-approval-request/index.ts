@@ -103,12 +103,27 @@ serve(async (req) => {
     const walletUserId: string = details.user_id || "";
     const walletRef = `WD-APPROVAL-${requestId}`;
     let walletDebited = false;
+    const restoreWallet = async (): Promise<string | null> => {
+      if (!walletDebited) return null;
+      const { error } = await svc.from("ledger_entries").delete()
+        .eq("reference", walletRef).eq("user_id", walletUserId).select("id");
+      if (error) {
+        console.error("[disburse-approval-request] Wallet restoration failed:", error);
+        return `Wallet restoration failed: ${error.message}. Finance must resolve this before retrying.`;
+      }
+      walletDebited = false;
+      return null;
+    };
     if (isWalletWithdrawal) {
       if (!walletUserId) {
         await svc.from("approval_requests").update({ payout_status: "failed", payout_error: "Withdrawal has no wallet owner" }).eq("id", requestId);
         return respond(false, { error: "Withdrawal has no wallet owner" });
       }
-      const { data: existing } = await svc.from("ledger_entries").select("id").eq("reference", walletRef).maybeSingle();
+      const { data: existing, error: lookupErr } = await svc.from("ledger_entries").select("id").eq("reference", walletRef).maybeSingle();
+      if (lookupErr) {
+        await svc.from("approval_requests").update({ payout_status: "failed", payout_error: `Wallet lookup failed: ${lookupErr.message}` }).eq("id", requestId);
+        return respond(false, { error: `Wallet lookup failed: ${lookupErr.message}` });
+      }
       if (!existing) {
         const { error: debitErr } = await svc.from("ledger_entries").insert({
           user_id: walletUserId,
@@ -122,8 +137,9 @@ serve(async (req) => {
           await svc.from("approval_requests").update({ payout_status: "failed", payout_error: `Wallet debit failed: ${debitErr.message}` }).eq("id", requestId);
           return respond(false, { error: `Wallet debit failed: ${debitErr.message}` });
         }
-        walletDebited = true;
       }
+      // A debit left by an earlier failed attempt must also be restored on failure.
+      walletDebited = true;
     }
 
     let success = false;
@@ -143,11 +159,13 @@ serve(async (req) => {
       metadata: { approval_request_id: requestId },
     });
     if (!reservedTreasury.ok) {
+      const restoreError = await restoreWallet();
+      const failure = [reservedTreasury.error || "Operations account cannot cover this payment", restoreError].filter(Boolean).join("; ");
       await svc.from("approval_requests").update({
         payout_status: "failed",
-        payout_error: reservedTreasury.error || "Operations account is empty",
+        payout_error: failure,
       }).eq("id", requestId);
-      return respond(false, { error: reservedTreasury.error || "Operations / Procurement account cannot cover this payment", payout_status: "failed" });
+      return respond(false, { error: failure, payout_status: "failed" });
     }
 
 
@@ -191,7 +209,8 @@ serve(async (req) => {
 
     if (!success && walletDebited) {
       // Undo the wallet debit so Finance can retry cleanly.
-      await svc.from("ledger_entries").delete().eq("reference", walletRef).eq("user_id", walletUserId);
+      const restoreError = await restoreWallet();
+      if (restoreError) errorMessage = `${errorMessage}; ${restoreError}`;
     }
 
     if (!success) {
