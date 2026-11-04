@@ -981,7 +981,8 @@ export const useUnifiedApprovalRequests = () => {
         // (cash / Yo Payments / GosentePay) in the Release Payment dialog.
         const isRequisitionReq = ['Cash Requisition', 'Requisition', 'Cash Requisition Form']
           .includes(String(request.requestType || ''));
-        const requiresThreeApprovals = !isSalaryAdvanceReq && currentReq.amount > 50000;
+        const isWithdrawalReq = isWithdrawalRequest(request.requestType, currentReq.details);
+        const requiresThreeApprovals = !isSalaryAdvanceReq && needsSecondAdminApproval(currentReq.amount, isWithdrawalReq);
 
         const adminName = employee?.name || employee?.email || 'Admin';
         const updateData: any = {

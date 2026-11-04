@@ -566,7 +566,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           disbursement_bank_name: channel === 'BANK' ? bankName : null,
           disbursement_account_number: channel === 'BANK' ? accountNumber : null,
           disbursement_account_name: channel === 'BANK' ? accountName : null,
-          requires_three_approvals: withdrawalAmount > 100000,
+          requires_three_approvals: withdrawalHighValueFlag(withdrawalAmount),
           details: {
             request_type: 'withdrawal',
             payment_channel: channel,
