@@ -1,5 +1,7 @@
 # Project architecture
 
+- Failed approval-request payouts restore their request-scoped wallet debit on both treasury refusal and provider failure, including debits inherited from earlier attempts; report restoration errors so an unpaid withdrawal cannot silently consume wallet funds.
+
 - Treasury account movements use direct reads under the existing administrator-only RLS policy with explicit authenticated SELECT grants; surface read failures instead of displaying a misleading empty history.
 - Organize Treasury as a tabbed operations workspace over authoritative treasury_accounts and treasury_account_entries; link or embed existing loan, payroll and wallet workflows without duplicating balances, changing approval rules or treating internal account movements as external bank transfers.
 
