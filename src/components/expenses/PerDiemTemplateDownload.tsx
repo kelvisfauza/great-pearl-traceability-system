@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -396,6 +396,10 @@ const PerDiemTemplateDownload = () => {
       toast({ title: 'Missing info', description: 'Please enter destination and purpose.', variant: 'destructive' });
       return;
     }
+    if (isSunday && !sundays?.length) {
+      toast({ title: 'No Sundays to claim', description: 'No unclaimed Sundays worked were found in this period.', variant: 'destructive' });
+      return;
+    }
     setDownloading(true);
     try {
       await generatePDF(
@@ -413,7 +417,7 @@ const PerDiemTemplateDownload = () => {
       setOpen(false);
     } catch (e) {
       console.error(e);
-      toast({ title: 'Error', description: 'Failed to generate per diem form.', variant: 'destructive' });
+      toast({ title: 'Error', description: (e as { message?: string })?.message || 'Failed to generate per diem form.', variant: 'destructive' });
     } finally {
       setDownloading(false);
     }
@@ -486,7 +490,7 @@ const PerDiemTemplateDownload = () => {
               </div>
               <div>
                 <Label>Days *</Label>
-                <Input type="number" min="0" value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} />
+                <Input type="number" min="0" readOnly={isSunday} className={isSunday ? 'bg-muted' : undefined} value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} />
               </div>
               <div>
                 <Label>Start Date</Label>
@@ -520,6 +524,16 @@ const PerDiemTemplateDownload = () => {
                 <Input type="number" min="0" value={form.other} onChange={(e) => setForm({ ...form, other: e.target.value })} />
               </div>
             </div>
+
+            {isSunday && (
+              <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
+                <p className="font-medium">Sundays worked in this period (from attendance)</p>
+                {sundayError ? <p className="text-destructive">{sundayError}</p>
+                  : sundays === null ? <p className="text-muted-foreground">Checking attendance…</p>
+                  : sundays.length === 0 ? <p className="text-muted-foreground">No unclaimed Sundays found. Sundays already submitted or awarded can't be claimed again.</p>
+                  : <p>{sundays.length} day(s): {sundays.map((d) => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })).join(', ')}</p>}
+              </div>
+            )}
 
             <div>
               <Label>Purpose / Justification *</Label>
