@@ -20,8 +20,8 @@ import { Inbox, Wallet, ClipboardList, ShieldCheck, History } from 'lucide-react
 
 const Section = ({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) => (
   <section className="space-y-3">
-    <div className="flex items-baseline justify-between gap-2 border-b pb-2">
-      <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">{title}</h3>
+    <div className="flex items-baseline justify-between gap-2 border-b border-l-4 border-l-primary pl-3 pb-2">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-primary">{title}</h3>
       <p className="text-xs text-muted-foreground hidden sm:block">{hint}</p>
     </div>
     {children}
@@ -80,13 +80,13 @@ const Approvals = () => {
         </div>
 
         <Tabs defaultValue="requests" className="space-y-5">
-          <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl border bg-card p-1">
+          <TabsList className="h-auto w-full justify-start gap-1.5 overflow-x-auto rounded-xl border bg-card p-1.5">
             {tabs.map((t) => (
               <TabsTrigger key={t.value} value={t.value}
-                className="gap-2 rounded-lg px-3 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground shrink-0">
+                className={`gap-2 rounded-lg px-3 py-2 shrink-0 transition-colors data-[state=active]:shadow-md ${t.active}`}>
                 <t.icon className="h-4 w-4" />
                 {t.label}
-                {t.badge ? <span className="rounded-full bg-muted px-1.5 text-[11px] font-semibold text-foreground">{t.badge}</span> : null}
+                {t.badge ? <span className="rounded-full bg-background/25 px-1.5 text-[11px] font-semibold">{t.badge}</span> : null}
               </TabsTrigger>
             ))}
           </TabsList>
