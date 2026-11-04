@@ -83,17 +83,24 @@ Deno.serve(async (req) => {
       const message=page.value?.[0];
       if (!message) { cursor=null; attachmentCursor=0; break; }
       const attachments=await graph('/me/messages/'+encodeURIComponent(message.id)+'/attachments?$select=id,name,contentType,size,isInline');
-      const files=attachments.value ?? [];
+      // Office scanners send the scan wrapped in an attached email (message/rfc822); unwrap its files.
+      const files:any[]=[];
+      for (const f of (attachments.value ?? [])) {
+        const wrapped=f.contentType==='message/rfc822' || f['@odata.type']==='#microsoft.graph.itemAttachment';
+        if (!wrapped) { files.push({...f,_key:message.id+':'+f.id}); continue; }
+        const outer=await graph('/me/messages/'+encodeURIComponent(message.id)+'/attachments/'+encodeURIComponent(f.id)+'?$expand=microsoft.graph.itemattachment/item($expand=microsoft.graph.message/attachments)');
+        for (const inner of (outer.item?.attachments ?? [])) files.push({...inner,_key:message.id+':'+f.id+':'+inner.id,_full:inner});
+      }
       let completed=true;
       for (let a=webhook ? 0 : attachmentCursor; a<files.length; a++) {
         const file=files[a];
-        const sourceKey=message.id+':'+file.id;
+        const sourceKey=file._key;
         const {data:existing,error:lookupError}=await db.from('quality_outlook_checked_items').select('source_key').eq('source_key',sourceKey).maybeSingle();
         if (lookupError) throw lookupError;
         if (existing) continue;
         if (!supportedAttachment(file)) { const skip=await db.from('quality_outlook_checked_items').insert({source_key:sourceKey,outcome:'unsupported'}); if(skip.error) throw skip.error; continue; }
         if (checked>=2) { completed=false; if(!webhook) attachmentCursor=a; break; }
-        const full=await graph('/me/messages/'+encodeURIComponent(message.id)+'/attachments/'+encodeURIComponent(file.id));
+        const full=file._full?.contentBytes ? file._full : await graph('/me/messages/'+encodeURIComponent(message.id)+'/attachments/'+encodeURIComponent(file.id));
         if (!full.contentBytes) throw new Error('Attachment has no downloadable content: '+file.name);
         const run=createLovableAiGatewayRunIdFetch();
         const provider=createOpenAI({apiKey:key,baseURL:'https://ai.gateway.lovable.dev/v1',headers:{'Lovable-API-Key':key,'X-Lovable-AIG-SDK':'vercel-ai-sdk'},fetch:run.fetch});
