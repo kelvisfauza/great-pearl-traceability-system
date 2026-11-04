@@ -364,35 +364,14 @@ const ApprovalCenter = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-3xl bg-primary text-primary-foreground p-6 sm:p-8 shadow-xl relative overflow-hidden">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary-foreground/10" />
-        <div className="pointer-events-none absolute right-24 -bottom-20 h-40 w-40 rounded-full bg-primary-foreground/5" />
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] opacity-70">Admin desk</p>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Approvals</h2>
-            <p className="text-sm opacity-80">Review and decide on requests waiting for you.</p>
-          </div>
-          <Button onClick={handleRefresh} variant="secondary" size="sm" className="self-start sm:self-auto rounded-full relative">
-            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-          </Button>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold text-foreground">Pending requests</h3>
+          <p className="text-xs text-muted-foreground">Select a request on the left to review and decide.</p>
         </div>
-        <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 relative">
-          {[
-            { label: 'Waiting', value: counts.all, icon: Clock },
-            { label: 'Total value', value: formatAmount(totalValue), icon: DollarSign },
-            { label: 'Needs 2nd admin', value: counts.second, icon: User },
-            { label: 'Failed payouts', value: counts.failed, icon: AlertTriangle },
-          ].map((s) => (
-            <div key={s.label} className="rounded-2xl bg-primary-foreground/10 backdrop-blur p-3 sm:p-4">
-              <div className="flex items-center justify-between opacity-75">
-                <span className="text-xs font-medium">{s.label}</span>
-                <s.icon className="h-4 w-4" />
-              </div>
-              <p className="mt-1 text-lg sm:text-2xl font-bold truncate">{s.value}</p>
-            </div>
-          ))}
-        </div>
+        <Button onClick={handleRefresh} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+        </Button>
       </div>
 
       {/* Search + filters */}
