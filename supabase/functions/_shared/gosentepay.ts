@@ -165,6 +165,23 @@ async function recordPayoutOnBalance(input: GosenteWithdrawInput, ref: string) {
   }
 }
 
+/** Put a failed payout's amount + fee back on the tracked GosentePay balance (idempotent per ref; no-op if never deducted). */
+export async function reverseGosentePayout(ref: string | null | undefined, reason = "Payout failed at provider") {
+  if (!ref) return;
+  try {
+    const url = Deno.env.get("SUPABASE_URL");
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !key) return;
+    await fetch(`${url}/rest/v1/rpc/gosentepay_reverse_payout`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_reference: sanitizeRef(ref), p_reason: reason }),
+    });
+  } catch (e) {
+    console.error("[gosentepay] balance reversal failed", e);
+  }
+}
+
 export async function gosenteStatus(ref: string) {
   return authedPost("/transaction-status", { ref });
 }
