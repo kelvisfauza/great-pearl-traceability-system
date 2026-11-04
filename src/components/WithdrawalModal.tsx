@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
 import { useSundayWithdrawals } from '@/hooks/useSundayWithdrawals';
 import { useWithdrawalLimits } from '@/hooks/useWithdrawalLimits';
+import { withdrawalHighValueFlag } from '@/lib/withdrawalApprovalRules';
 import {
   InputOTP,
   InputOTPGroup,
