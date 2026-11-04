@@ -22,9 +22,12 @@ interface Props {
   target: DisburseTarget | null;
   onClose: () => void;
   onDone?: () => void;
+  /** Runs before the payout (e.g. Finance final approval). Return false to stop. */
+  onBeforeSend?: () => Promise<boolean>;
+  confirmLabel?: string;
 }
 
-export const DisbursePaymentModal: React.FC<Props> = ({ target, onClose, onDone }) => {
+export const DisbursePaymentModal: React.FC<Props> = ({ target, onClose, onDone, onBeforeSend, confirmLabel }) => {
   const { toast } = useToast();
   const [provider, setProvider] = useState<'yo' | 'gosente' | 'cash'>('gosente');
   const [phone, setPhone] = useState('');
@@ -46,6 +49,10 @@ export const DisbursePaymentModal: React.FC<Props> = ({ target, onClose, onDone 
     }
     setSending(true);
     try {
+      if (onBeforeSend) {
+        const okToSend = await onBeforeSend();
+        if (!okToSend) return;
+      }
       const { data: sessionRes } = await supabase.auth.getSession();
       const actorEmail = sessionRes?.session?.user?.email || localStorage.getItem('userEmail') || '';
       const { data, error } = await supabase.functions.invoke('disburse-approval-request', {
@@ -92,7 +99,7 @@ export const DisbursePaymentModal: React.FC<Props> = ({ target, onClose, onDone 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-5 w-5 text-primary" />
-            Release Payment
+            {confirmLabel ? 'Approve & Pay' : 'Release Payment'}
           </DialogTitle>
         </DialogHeader>
 
@@ -153,7 +160,7 @@ export const DisbursePaymentModal: React.FC<Props> = ({ target, onClose, onDone 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={sending}>Later</Button>
           <Button onClick={handleSend} disabled={sending} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            {sending ? 'Releasing…' : provider === 'cash' ? 'Mark as Cash & Notify' : 'Release Money'}
+            {sending ? 'Releasing…' : confirmLabel ? (provider === 'cash' ? `${confirmLabel} (Cash)` : confirmLabel) : provider === 'cash' ? 'Mark as Cash & Notify' : 'Release Money'}
           </Button>
         </DialogFooter>
       </DialogContent>

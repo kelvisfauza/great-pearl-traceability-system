@@ -33,6 +33,8 @@ const PendingApprovalRequests = () => {
   const [delegateModal, setDelegateModal] = useState<{ open: boolean; reason: string; requestId: string; amount: number; title?: string }>({ open: false, reason: '', requestId: '', amount: 0 });
   const [refModal, setRefModal] = useState<{ open: boolean; requestId: string; type: string; title: string; ref: string }>({ open: false, requestId: '', type: '', title: '', ref: '' });
   const [disburseTarget, setDisburseTarget] = useState<DisburseTarget | null>(null);
+  const [pendingRef, setPendingRef] = useState<string | undefined>(undefined);
+  const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
 
   const MY_EXPENSE_TYPES = ['Cash Requisition', 'Personal Expense', 'Salary Request'];
 
@@ -43,29 +45,41 @@ const PendingApprovalRequests = () => {
       setRefModal({ open: true, requestId, type: req.type, title: req.title, ref: '' });
       return;
     }
+    if (!req) return;
+    setRefModal({ open: false, requestId: '', type: '', title: '', ref: '' });
+    // One step: choose payment method, then approve + disburse together.
+    const details = typeof req.details === 'string' ? (() => { try { return JSON.parse(req.details); } catch { return {}; } })() : (req.details || {});
+    setPendingRef(providedRef);
+    setDisburseTarget({
+      requestId: req.id,
+      title: req.title,
+      amount: Number(req.amount) || 0,
+      phone: (req as any).disbursement_phone || details?.recipient_phone || details?.phone || '',
+      recipientName: details?.recipient_name || details?.employee_name || req.requestedby_name || req.requestedby,
+    });
+  };
+
+  const approveBeforePayout = async (): Promise<boolean> => {
+    if (!disburseTarget) return false;
+    const requestId = disburseTarget.requestId;
+    if (approvedIds.has(requestId)) return true; // approved earlier, payout retry
+    const req = requests.find(r => r.id === requestId);
     setProcessing(requestId);
-    const result = await handleFinanceApproval(requestId, true, undefined, undefined, providedRef);
+    const result = await handleFinanceApproval(requestId, true, undefined, undefined, pendingRef);
+    setProcessing(null);
     if (result && typeof result === 'object' && 'blocked' in result) {
-      setDelegateModal({ open: true, reason: result.reason, requestId, amount: req?.amount || 0, title: req?.title });
+      setDisburseTarget(null);
+      setDelegateModal({ open: true, reason: (result as any).reason, requestId, amount: req?.amount || 0, title: req?.title });
+      return false;
     }
     if (result && typeof result === 'object' && ('needsRef' in result || 'invalidRef' in result)) {
-      // keep modal open so they can correct
-      setProcessing(null);
-      return;
+      setDisburseTarget(null);
+      if (req) setRefModal({ open: true, requestId, type: req.type, title: req.title, ref: pendingRef || '' });
+      return false;
     }
-    setRefModal({ open: false, requestId: '', type: '', title: '', ref: '' });
-    setProcessing(null);
-
-    if (result === true && req) {
-      const details = typeof req.details === 'string' ? (() => { try { return JSON.parse(req.details); } catch { return {}; } })() : (req.details || {});
-      setDisburseTarget({
-        requestId: req.id,
-        title: req.title,
-        amount: Number(req.amount) || 0,
-        phone: (req as any).disbursement_phone || details?.recipient_phone || details?.phone || '',
-        recipientName: details?.recipient_name || details?.employee_name || req.requestedby_name || req.requestedby,
-      });
-    }
+    if (result !== true) return false;
+    setApprovedIds(prev => new Set(prev).add(requestId));
+    return true;
   };
 
   const handleRejectClick = (requestId: string) => {
@@ -233,7 +247,7 @@ const PendingApprovalRequests = () => {
                       className="bg-emerald-600 hover:bg-emerald-700"
                     >
                       <CheckCircle className="h-4 w-4 mr-1" />
-                      {processing === request.id ? 'Processing...' : 'Approve'}
+                      {processing === request.id ? 'Processing...' : 'Approve & Pay'}
                     </Button>
                   </div>
                 </CardContent>
@@ -331,6 +345,8 @@ const PendingApprovalRequests = () => {
       <DisbursePaymentModal
         target={disburseTarget}
         onClose={() => setDisburseTarget(null)}
+        onBeforeSend={approveBeforePayout}
+        confirmLabel="Approve & Release"
       />
 
       {/* Delegation Modal */}
@@ -373,7 +389,7 @@ const PendingApprovalRequests = () => {
                 onClick={() => handleApprove(refModal.requestId, refModal.ref.trim())}
                 className="bg-emerald-600 hover:bg-emerald-700"
               >
-                {processing === refModal.requestId ? 'Verifying…' : 'Verify & Pay'}
+                {processing === refModal.requestId ? 'Verifying…' : 'Continue to payment'}
               </Button>
             </div>
           </div>
