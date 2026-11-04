@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,10 +57,14 @@ const generatePDF = async (
   employee: { name?: string; email?: string; department?: string; position?: string; phone?: string },
   data: PerDiemFormData,
 ) => {
-  const { data: issued, error: issueError } = await supabase.rpc('issue_per_diem_form', { p_data: { ...data } });
+  const { data: issued, error: issueError } = await supabase.rpc('issue_per_diem_form', { p_data: { ...data } as any });
   if (issueError) throw issueError;
   if (!issued) throw new Error('Unable to issue per diem form');
   const refNo = issued.document_number;
+  const saved = issued.form_data as Record<string, any>;
+  data = { ...data, days: String(saved.days ?? data.days), ratePerDay: String(saved.ratePerDay ?? data.ratePerDay) };
+  const sundayDates: string[] = Array.isArray(saved.sundayDates) ? saved.sundayDates : [];
+  if (sundayDates.length) data = { ...data, notes: `Sundays worked: ${sundayDates.join(', ')}${data.notes ? ` | ${data.notes}` : ''}` };
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-UG', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -361,6 +365,22 @@ const PerDiemTemplateDownload = () => {
   });
 
   const selectedWorkType = WORK_TYPES.find((w) => w.value === form.workType);
+  const isSunday = form.workType === 'sunday';
+  const [sundays, setSundays] = useState<string[] | null>(null);
+  const [sundayError, setSundayError] = useState('');
+  useEffect(() => {
+    if (!isSunday || !form.startDate || !form.endDate) { setSundays(null); return; }
+    let cancelled = false;
+    setSundayError('');
+    supabase.rpc('my_unclaimed_sunday_days' as any, { p_from: form.startDate, p_to: form.endDate }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) { setSundayError(error.message); setSundays([]); return; }
+      const list = ((data as string[]) || []);
+      setSundays(list);
+      setForm((f) => ({ ...f, days: String(list.length) }));
+    });
+    return () => { cancelled = true; };
+  }, [isSunday, form.startDate, form.endDate]);
 
   const days = parseFloat(form.days) || 0;
   const rate = parseFloat(form.ratePerDay) || 0;
@@ -374,6 +394,10 @@ const PerDiemTemplateDownload = () => {
     if (!employee) return;
     if (!form.destination || !form.purpose) {
       toast({ title: 'Missing info', description: 'Please enter destination and purpose.', variant: 'destructive' });
+      return;
+    }
+    if (isSunday && !sundays?.length) {
+      toast({ title: 'No Sundays to claim', description: 'No unclaimed Sundays worked were found in this period.', variant: 'destructive' });
       return;
     }
     setDownloading(true);
@@ -393,7 +417,7 @@ const PerDiemTemplateDownload = () => {
       setOpen(false);
     } catch (e) {
       console.error(e);
-      toast({ title: 'Error', description: 'Failed to generate per diem form.', variant: 'destructive' });
+      toast({ title: 'Error', description: (e as { message?: string })?.message || 'Failed to generate per diem form.', variant: 'destructive' });
     } finally {
       setDownloading(false);
     }
@@ -466,7 +490,7 @@ const PerDiemTemplateDownload = () => {
               </div>
               <div>
                 <Label>Days *</Label>
-                <Input type="number" min="0" value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} />
+                <Input type="number" min="0" readOnly={isSunday} className={isSunday ? 'bg-muted' : undefined} value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} />
               </div>
               <div>
                 <Label>Start Date</Label>
@@ -500,6 +524,16 @@ const PerDiemTemplateDownload = () => {
                 <Input type="number" min="0" value={form.other} onChange={(e) => setForm({ ...form, other: e.target.value })} />
               </div>
             </div>
+
+            {isSunday && (
+              <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
+                <p className="font-medium">Sundays worked in this period (from attendance)</p>
+                {sundayError ? <p className="text-destructive">{sundayError}</p>
+                  : sundays === null ? <p className="text-muted-foreground">Checking attendance…</p>
+                  : sundays.length === 0 ? <p className="text-muted-foreground">No unclaimed Sundays found. Sundays already submitted or awarded can't be claimed again.</p>
+                  : <p>{sundays.length} day(s): {sundays.map((d) => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })).join(', ')}</p>}
+              </div>
+            )}
 
             <div>
               <Label>Purpose / Justification *</Label>

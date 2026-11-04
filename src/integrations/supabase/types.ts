@@ -19018,6 +19018,10 @@ export type Database = {
       migrate_approved_assessments_to_finance: { Args: never; Returns: number }
       migrate_batch_numbers_to_new_format: { Args: never; Returns: Json }
       milling_unremitted_total: { Args: never; Returns: number }
+      my_unclaimed_sunday_days: {
+        Args: { p_from: string; p_to: string }
+        Returns: string[]
+      }
       next_batch_number: { Args: { p_date?: string }; Returns: string }
       next_dispatch_monitoring_form_number: { Args: never; Returns: string }
       next_fuel_voucher_number: { Args: never; Returns: string }
