@@ -7,6 +7,7 @@ import { useNotifications } from './useNotifications';
 import { useGlobalErrorHandler } from './useGlobalErrorHandler';
 import { useSeparationOfDuties } from './useSeparationOfDuties';
 import { sendApprovalActionEmails } from '@/utils/approvalActionEmails';
+import { isWithdrawalRequest, needsSecondAdminApproval } from '@/lib/withdrawalApprovalRules';
 
 // Tell Finance (email + text) that an admin-approved request is waiting for release. Non-blocking.
 const notifyFinancePending = (req: any, adminName: string) => {
@@ -981,7 +982,8 @@ export const useUnifiedApprovalRequests = () => {
         // (cash / Yo Payments / GosentePay) in the Release Payment dialog.
         const isRequisitionReq = ['Cash Requisition', 'Requisition', 'Cash Requisition Form']
           .includes(String(request.requestType || ''));
-        const requiresThreeApprovals = !isSalaryAdvanceReq && currentReq.amount > 50000;
+        const isWithdrawalReq = isWithdrawalRequest(request.requestType, currentReq.details);
+        const requiresThreeApprovals = !isSalaryAdvanceReq && needsSecondAdminApproval(currentReq.amount, isWithdrawalReq);
 
         const adminName = employee?.name || employee?.email || 'Admin';
         const updateData: any = {

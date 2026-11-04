@@ -18,6 +18,7 @@ import FingerprintApprovalDialog, { FingerprintApprovalTarget } from './approval
 import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
 import ApprovalCodeDialog, { ApprovalCodeTarget } from './approval/ApprovalCodeDialog';
 import { AwaitingDisbursementPanel } from './approval/AwaitingDisbursementPanel';
+import { isWithdrawalRequest, needsSecondAdminApproval } from '@/lib/withdrawalApprovalRules';
 import { useProcurementReviews } from '@/hooks/useProcurementReviews';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -602,7 +603,7 @@ const ApprovalCenter = () => {
                         </div>
                       )}
 
-                      {Number(request.amount) > 50000 && request.status !== 'Pending Admin 2' && !request.details?.is_failed_payout && (
+                      {needsSecondAdminApproval(request.amount, isWithdrawalRequest(request.requestType, request.details)) && request.status !== 'Pending Admin 2' && !request.details?.is_failed_payout && (
                         <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
                           <p className="text-xs text-blue-600 dark:text-blue-400">
                             ⚡ 3-tier approval: This request needs Finance review + 2 admin approvals (final step)
@@ -650,7 +651,7 @@ const ApprovalCenter = () => {
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
                               {request.status === 'Pending Admin 2' ? 'Approve (Admin 2)' : 
-                               Number(request.amount) > 50000 ? 'Approve (Admin 1)' : 'Approve'}
+                               needsSecondAdminApproval(request.amount, isWithdrawalRequest(request.requestType, request.details)) ? 'Approve (Admin 1)' : 'Approve'}
                             </Button>
                             <Button
                               onClick={() => handleRejection(request)}

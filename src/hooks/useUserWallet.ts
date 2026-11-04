@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { withdrawalHighValueFlag } from '@/lib/withdrawalApprovalRules';
 
 interface WalletData {
   balance: number;
@@ -249,7 +250,7 @@ export const useUserWallet = () => {
           requestedby_position: employee?.position || 'Staff',
           disbursement_method: channel === 'MOBILE_MONEY' ? 'mobile_money' : channel === 'BANK' ? 'bank_transfer' : 'cash',
           disbursement_phone: channel === 'MOBILE_MONEY' ? phoneNumber : (employee?.phone || ''),
-          requires_three_approvals: amount > 100000,
+          requires_three_approvals: withdrawalHighValueFlag(amount),
           details: {
             request_type: 'withdrawal',
             payment_channel: channel,
