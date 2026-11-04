@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { resolveYoTransactionStatus } from "../_shared/yo-status.ts";
-import { gosenteStatus, interpretGosenteTxStatus } from "../_shared/gosentepay.ts";
+import { gosenteStatus, interpretGosenteTxStatus, reverseGosentePayout } from "../_shared/gosentepay.ts";
 import { treasuryRelease } from "../_shared/treasury.ts";
 
 const corsHeaders = {
@@ -210,6 +210,40 @@ serve(async (req) => {
 
     if (totalChecked === 0) {
       console.log("[Payout Poller] No pending payouts to check");
+    }
+
+    // Every GosentePay payout recorded against the tracked balance in the last
+    // 48h is re-checked; any that bounced has its amount + fee put back, so the
+    // tracked balance keeps matching the real GosentePay wallet.
+    try {
+      const { data: deductions } = await supabase
+        .from("gosentepay_balance_log")
+        .select("reference")
+        .eq("change_type", "payout_deduction")
+        .gte("created_at", verifyCutoff)
+        .not("reference", "is", null);
+      const refs = [...new Set((deductions || []).map((d: any) => d.reference))];
+      if (refs.length) {
+        const { data: reversed } = await supabase
+          .from("gosentepay_balance_log")
+          .select("reference")
+          .eq("change_type", "payout_reversal")
+          .in("reference", refs);
+        const done = new Set((reversed || []).map((r: any) => r.reference));
+        for (const ref of refs.filter((r) => !done.has(r))) {
+          try {
+            const { body } = await gosenteStatus(ref);
+            if (interpretGosenteTxStatus(body) === "failed") {
+              await reverseGosentePayout(ref, "GosentePay payout bounced");
+              console.log(`[Payout Poller] GosentePay ${ref} bounced — balance restored`);
+            }
+          } catch (e) {
+            console.error(`[Payout Poller] GosentePay balance check ${ref} failed`, e);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[Payout Poller] GosentePay balance sweep failed", e);
     }
 
     const summary = { checked: totalChecked, completed: totalCompleted, failed: totalFailed };

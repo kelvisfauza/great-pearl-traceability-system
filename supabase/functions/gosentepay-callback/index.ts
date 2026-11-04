@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { checkIpnSecret } from "../_shared/ipn-auth.ts";
-import { interpretGosenteTxStatus } from "../_shared/gosentepay.ts";
+import { interpretGosenteTxStatus, gosenteStatus, reverseGosentePayout } from "../_shared/gosentepay.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -124,6 +124,17 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+
+    // A bounced GosentePay payout puts its amount + fee back on the tracked
+    // balance. Confirmed with GosentePay first so a forged callback can't move it.
+    if (status === "failed") {
+      try {
+        const { body } = await gosenteStatus(ref);
+        if (interpretGosenteTxStatus(body) === "failed") await reverseGosentePayout(ref, "GosentePay payout failed (callback)");
+      } catch (e) {
+        console.error("GosentePay reversal check failed", e);
+      }
+    }
 
     // Check if this is an instant withdrawal callback (INSTANT-WD-* ref)
     if (ref?.startsWith("INSTANT-WD-")) {
