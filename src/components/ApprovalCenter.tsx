@@ -18,6 +18,7 @@ import FingerprintApprovalDialog, { FingerprintApprovalTarget } from './approval
 import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
 import ApprovalCodeDialog, { ApprovalCodeTarget } from './approval/ApprovalCodeDialog';
 import { AwaitingDisbursementPanel } from './approval/AwaitingDisbursementPanel';
+import { isWithdrawalRequest, needsSecondAdminApproval } from '@/lib/withdrawalApprovalRules';
 import { useProcurementReviews } from '@/hooks/useProcurementReviews';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 

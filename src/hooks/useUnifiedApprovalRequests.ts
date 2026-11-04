@@ -7,6 +7,7 @@ import { useNotifications } from './useNotifications';
 import { useGlobalErrorHandler } from './useGlobalErrorHandler';
 import { useSeparationOfDuties } from './useSeparationOfDuties';
 import { sendApprovalActionEmails } from '@/utils/approvalActionEmails';
+import { isWithdrawalRequest, needsSecondAdminApproval } from '@/lib/withdrawalApprovalRules';
 
 // Tell Finance (email + text) that an admin-approved request is waiting for release. Non-blocking.
 const notifyFinancePending = (req: any, adminName: string) => {
