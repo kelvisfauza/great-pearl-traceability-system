@@ -31,6 +31,7 @@ const ApprovalCenter = () => {
   const { reviews: procurementReviews, refresh: refreshProcurementReviews } = useProcurementReviews(requests.map((r) => r.id));
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'withdrawal' | 'second' | 'failed'>('all');
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UnifiedApprovalRequest | null>(null);
@@ -352,6 +353,7 @@ const ApprovalCenter = () => {
     return [r.title, r.requestedBy, r.department, r.requestType, r.description]
       .some((v) => String(v ?? '').toLowerCase().includes(q));
   });
+  const selected = visible.find((r) => r.id === selectedId) || visible[0] || null;
   const FILTERS: { key: typeof filter; label: string }[] = [
     { key: 'all', label: 'All' },
     { key: 'withdrawal', label: 'Withdrawals' },
@@ -362,26 +364,28 @@ const ApprovalCenter = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-background to-background p-5 sm:p-6">
+      <div className="rounded-3xl bg-primary text-primary-foreground p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary-foreground/10" />
+        <div className="pointer-events-none absolute right-24 -bottom-20 h-40 w-40 rounded-full bg-primary-foreground/5" />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Admin</p>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Approvals</h2>
-            <p className="text-sm text-muted-foreground">Review and decide on requests waiting for you.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] opacity-70">Admin desk</p>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Approvals</h2>
+            <p className="text-sm opacity-80">Review and decide on requests waiting for you.</p>
           </div>
-          <Button onClick={handleRefresh} variant="outline" size="sm" className="self-start sm:self-auto">
+          <Button onClick={handleRefresh} variant="secondary" size="sm" className="self-start sm:self-auto rounded-full relative">
             <RefreshCw className="h-4 w-4 mr-2" /> Refresh
           </Button>
         </div>
-        <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 relative">
           {[
             { label: 'Waiting', value: counts.all, icon: Clock },
             { label: 'Total value', value: formatAmount(totalValue), icon: DollarSign },
             { label: 'Needs 2nd admin', value: counts.second, icon: User },
             { label: 'Failed payouts', value: counts.failed, icon: AlertTriangle },
           ].map((s) => (
-            <div key={s.label} className="rounded-xl border bg-card p-3 sm:p-4">
-              <div className="flex items-center justify-between text-muted-foreground">
+            <div key={s.label} className="rounded-2xl bg-primary-foreground/10 backdrop-blur p-3 sm:p-4">
+              <div className="flex items-center justify-between opacity-75">
                 <span className="text-xs font-medium">{s.label}</span>
                 <s.icon className="h-4 w-4" />
               </div>
@@ -407,21 +411,49 @@ const ApprovalCenter = () => {
         </div>
       </div>
 
-      {/* Requests */}
+      {/* Requests — inbox layout */}
       {visible.length === 0 ? (
-        <div className="rounded-2xl border border-dashed p-10 text-center">
-          <CheckCircle className="h-10 w-10 text-primary mx-auto mb-3" />
+        <div className="rounded-3xl border border-dashed bg-muted/30 p-12 text-center">
+          <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-primary/15 text-primary flex items-center justify-center"><CheckCircle className="h-7 w-7" /></div>
           <h3 className="text-lg font-semibold">{requests.length === 0 ? 'All caught up' : 'Nothing matches'}</h3>
           <p className="text-sm text-muted-foreground">{requests.length === 0 ? 'No requests are waiting for approval.' : 'Try a different search or filter.'}</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {visible.map((request) => {
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+          <div className="rounded-3xl border bg-card overflow-hidden lg:max-h-[calc(100vh-14rem)] lg:overflow-y-auto">
+            {visible.map((r) => {
+              const Icon = getTypeIcon(r.type, r.requestType);
+              const active = selected?.id === r.id;
+              const failed = !!r.details?.is_failed_payout;
+              return (
+                <button key={r.id} onClick={() => setSelectedId(r.id)}
+                  className={`w-full text-left flex items-center gap-3 px-4 py-3 border-b last:border-b-0 transition-colors ${active ? 'bg-primary/10' : 'hover:bg-muted/50'}`}>
+                  <div className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center ${failed ? 'bg-destructive/15 text-destructive' : active ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium truncate">{r.requestedBy}</p>
+                      <p className="text-sm font-semibold shrink-0">{formatAmount(r.amount)}</p>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground truncate">{r.title}</p>
+                      {failed ? <span className="text-[10px] font-semibold uppercase text-destructive">Failed</span>
+                        : r.status === 'Pending Admin 2' ? <span className="text-[10px] font-semibold uppercase text-primary">2nd admin</span>
+                        : <span className="text-[10px] text-muted-foreground shrink-0">{r.dateRequested}</span>}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <div className="min-w-0 order-first lg:order-none">
+          {(selected ? [selected] : []).map((request) => {
             const TypeIcon = getTypeIcon(request.type, request.requestType);
             const awaitingProcurement = isAwaitingProcurement(request);
             const failed = !!request.details?.is_failed_payout;
             return (
-              <div key={request.id} className={`rounded-2xl border bg-card p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md border-l-4 ${failed ? 'border-l-destructive' : request.status === 'Pending Admin 2' ? 'border-l-accent' : 'border-l-primary'}`}>
+              <div key={request.id} className="rounded-3xl border bg-card p-5 sm:p-7 shadow-lg">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -627,6 +659,7 @@ const ApprovalCenter = () => {
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
