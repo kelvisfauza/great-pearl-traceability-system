@@ -42,35 +42,38 @@ const Approvals = () => {
   const failed = requests.filter((r) => r.details?.is_failed_payout).length;
 
   const stats = [
-    { label: 'Requests waiting', value: requests.length.toLocaleString() },
-    { label: 'Value waiting', value: `UGX ${total.toLocaleString()}` },
-    { label: 'Need 2nd admin', value: secondAdmin.toLocaleString() },
-    { label: 'Failed payouts', value: failed.toLocaleString(), alert: failed > 0 },
+    { label: 'Requests waiting', value: requests.length.toLocaleString(), icon: Inbox, box: 'bg-primary/10 border-primary/30', text: 'text-primary' },
+    { label: 'Value waiting', value: `UGX ${total.toLocaleString()}`, icon: Wallet, box: 'bg-accent/15 border-accent/40', text: 'text-accent-foreground' },
+    { label: 'Need 2nd admin', value: secondAdmin.toLocaleString(), icon: ShieldCheck, box: 'bg-secondary border-secondary-foreground/20', text: 'text-secondary-foreground' },
+    { label: 'Failed payouts', value: failed.toLocaleString(), icon: History, alert: failed > 0, box: failed > 0 ? 'bg-destructive/10 border-destructive/40' : 'bg-muted border-border', text: failed > 0 ? 'text-destructive' : 'text-muted-foreground' },
   ];
 
   const tabs = [
-    { value: 'requests', label: 'Requests', icon: Inbox, badge: requests.length },
-    { value: 'payments', label: 'Payments', icon: Wallet },
-    { value: 'operations', label: 'Procurement & quality', icon: ClipboardList },
-    { value: 'security', label: 'Security', icon: ShieldCheck },
-    { value: 'history', label: 'History', icon: History },
+    { value: 'requests', label: 'Requests', icon: Inbox, badge: requests.length, active: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground' },
+    { value: 'payments', label: 'Payments', icon: Wallet, active: 'data-[state=active]:bg-accent data-[state=active]:text-accent-foreground' },
+    { value: 'operations', label: 'Procurement & quality', icon: ClipboardList, active: 'data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground' },
+    { value: 'security', label: 'Security', icon: ShieldCheck, active: 'data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground' },
+    { value: 'history', label: 'History', icon: History, active: 'data-[state=active]:bg-muted-foreground data-[state=active]:text-background' },
   ];
 
   return (
     <DashboardLayout title="Approvals" subtitle="Admin decision desk">
       <div className="space-y-6">
         {/* Page header */}
-        <div className="rounded-xl border bg-card">
-          <div className="p-5 sm:p-6 border-b">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Administration</p>
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="p-5 sm:p-6 border-b bg-gradient-to-r from-primary/15 via-accent/10 to-transparent">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Administration</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">Approval desk</h2>
             <p className="text-sm text-muted-foreground">Every item that needs an administrator's decision, grouped by type.</p>
           </div>
-          <dl className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0">
+          <dl className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4 sm:p-5">
             {stats.map((s) => (
-              <div key={s.label} className="p-4 sm:p-5">
-                <dt className="text-xs text-muted-foreground">{s.label}</dt>
-                <dd className={`mt-1 text-lg sm:text-xl font-semibold tabular-nums truncate ${s.alert ? 'text-destructive' : 'text-foreground'}`}>{s.value}</dd>
+              <div key={s.label} className={`rounded-xl border p-4 ${s.box}`}>
+                <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <s.icon className={`h-3.5 w-3.5 ${s.text}`} />
+                  {s.label}
+                </dt>
+                <dd className={`mt-1 text-lg sm:text-xl font-semibold tabular-nums truncate ${s.text}`}>{s.value}</dd>
               </div>
             ))}
           </dl>
