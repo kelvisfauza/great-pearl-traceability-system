@@ -382,9 +382,11 @@ const ApprovalCenter = () => {
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {FILTERS.map((f) => (
-            <Button key={f.key} size="sm" variant={filter === f.key ? 'default' : 'outline'} className="rounded-md shrink-0" onClick={() => setFilter(f.key)}>
+            <Button key={f.key} size="sm" variant={filter === f.key ? 'default' : 'outline'}
+              className={`rounded-md shrink-0 ${filter === f.key ? 'bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-md border-transparent' : ''}`}
+              onClick={() => setFilter(f.key)}>
               {f.label}
-              <span className="ml-2 rounded-full bg-background/20 px-1.5 text-xs">{counts[f.key]}</span>
+              <span className={`ml-2 rounded-full px-1.5 text-xs ${filter === f.key ? 'bg-background/25' : 'bg-primary/10 text-primary'}`}>{counts[f.key]}</span>
             </Button>
           ))}
         </div>
@@ -404,21 +406,31 @@ const ApprovalCenter = () => {
               const Icon = getTypeIcon(r.type, r.requestType);
               const active = selected?.id === r.id;
               const failed = !!r.details?.is_failed_payout;
+              const second = r.status === 'Pending Admin 2';
+              const chip = failed
+                ? 'bg-destructive/15 text-destructive'
+                : second
+                  ? 'bg-accent/25 text-accent-foreground'
+                  : active
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-primary/10 text-primary';
               return (
                 <button key={r.id} onClick={() => setSelectedId(r.id)}
-                  className={`w-full text-left flex items-center gap-3 px-4 py-3 border-b last:border-b-0 transition-colors ${active ? 'bg-primary/10' : 'hover:bg-muted/50'}`}>
-                  <div className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center ${failed ? 'bg-destructive/15 text-destructive' : active ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                  className={`w-full text-left flex items-center gap-3 px-4 py-3 border-b last:border-b-0 border-l-4 transition-colors ${
+                    failed ? 'border-l-destructive' : active ? 'border-l-primary' : second ? 'border-l-accent' : 'border-l-transparent'
+                  } ${active ? 'bg-primary/10' : failed ? 'bg-destructive/5 hover:bg-destructive/10' : 'hover:bg-muted/50'}`}>
+                  <div className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center ${chip}`}>
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium truncate">{r.requestedBy}</p>
-                      <p className="text-sm font-semibold shrink-0">{formatAmount(r.amount)}</p>
+                      <p className={`text-sm font-semibold shrink-0 ${failed ? 'text-destructive' : 'text-primary'}`}>{formatAmount(r.amount)}</p>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs text-muted-foreground truncate">{r.title}</p>
                       {failed ? <span className="text-[10px] font-semibold uppercase text-destructive">Failed</span>
-                        : r.status === 'Pending Admin 2' ? <span className="text-[10px] font-semibold uppercase text-primary">2nd admin</span>
+                        : second ? <span className="text-[10px] font-semibold uppercase text-accent-foreground bg-accent/25 rounded-full px-1.5">2nd admin</span>
                         : <span className="text-[10px] text-muted-foreground shrink-0">{r.dateRequested}</span>}
                     </div>
                   </div>
@@ -432,16 +444,17 @@ const ApprovalCenter = () => {
             const awaitingProcurement = isAwaitingProcurement(request);
             const failed = !!request.details?.is_failed_payout;
             return (
-              <div key={request.id} className="rounded-xl border bg-card p-5 sm:p-7 shadow-lg">
+              <div key={request.id} className="rounded-xl border bg-card p-5 sm:p-7 shadow-lg relative overflow-hidden">
+                <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-primary via-accent to-secondary" />
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground flex items-center justify-center shadow-md">
                       <TypeIcon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-semibold truncate">{request.title}</h3>
-                        <Badge variant="secondary" className="rounded-full">{request.type === 'modification' ? 'Modification' : request.requestType}</Badge>
+                        <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary border-primary/20">{request.type === 'modification' ? 'Modification' : request.requestType}</Badge>
                         <Badge variant="outline" className="rounded-full capitalize">{request.priority}</Badge>
                       </div>
                       {request.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{request.description}</p>}
@@ -452,9 +465,9 @@ const ApprovalCenter = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="sm:text-right shrink-0">
+                  <div className="sm:text-right shrink-0 rounded-lg bg-primary/5 border border-primary/15 px-3 py-2">
                     <p className="text-xs text-muted-foreground">Amount</p>
-                    <p className="text-xl font-bold">{formatAmount(request.amount)}</p>
+                    <p className="text-xl font-bold text-primary">{formatAmount(request.amount)}</p>
                     <div className="flex sm:justify-end gap-1 mt-2">
                       <Button variant="ghost" size="sm" onClick={() => handleViewDetailedWorkflow(request)}>
                         <FileText className="h-4 w-4 mr-1" /> Details
