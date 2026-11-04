@@ -16,6 +16,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { uploadReportDocument, validateReportFile, hasAttachments } from '@/utils/reportDocuments';
 import { toast } from 'sonner';
 import { generateStoreReportPDF } from '@/utils/pdfGenerator';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { preparePdfPrint } from '@/utils/pdfPrintStamp';
 
 const StoreReportsList = () => {
   const { reports, loading, directDeleteReport, directEditReport, migrateFirebaseToSupabase } = useStoreReports();
@@ -236,6 +239,78 @@ const StoreReportsList = () => {
     }
   };
 
+  const [printingList, setPrintingList] = useState(false);
+
+  // Print every report currently shown (after filters/search/date range) as one A4 PDF.
+  const printList = async () => {
+    if (!filteredReports.length) return;
+    const printWin = window.open('', '_blank');
+    setPrintingList(true);
+    try {
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const rangeLabel = selectedDateRange.start || selectedDateRange.end
+        ? `${selectedDateRange.start || 'start'} to ${selectedDateRange.end || 'today'}`
+        : 'All dates';
+
+      doc.setFontSize(14);
+      doc.text('Great Agro Coffee — Store Reports', 14, 14);
+      doc.setFontSize(9);
+      doc.text(`Period: ${rangeLabel}${searchTerm ? `   Search: ${searchTerm}` : ''}`, 14, 20);
+      doc.text(
+        `Reports: ${filteredReports.length}   Total bought: ${filteredReports.reduce((s, r) => s + (r.kilograms_bought || 0), 0).toFixed(1)} kg   ` +
+        `Total sold: ${filteredReports.reduce((s, r) => s + (r.kilograms_sold || 0), 0).toFixed(1)} kg   ` +
+        `Advances: UGX ${filteredReports.reduce((s, r) => s + (r.advances_given || 0), 0).toLocaleString()}`,
+        14, 25
+      );
+
+      autoTable(doc, {
+        startY: 29,
+        head: [['Date', 'Coffee', 'Bought (kg)', 'Sold (kg)', 'Sold to', 'Price/kg (UGX)', 'Advances (UGX)', 'Left in store (kg)', 'Input by', 'Remarks']],
+        body: filteredReports.map((r) => [
+          format(new Date(r.date), 'dd MMM yyyy'),
+          r.coffee_type,
+          (r.kilograms_bought || 0).toFixed(1),
+          (r.kilograms_sold || 0).toFixed(1),
+          r.sold_to || 'N/A',
+          r.average_buying_price ? r.average_buying_price.toLocaleString() : '',
+          (r.advances_given || 0).toLocaleString(),
+          (r.kilograms_left || 0).toFixed(1),
+          r.input_by,
+          r.comments || ''
+        ]),
+        foot: [[
+          'Total', '',
+          filteredReports.reduce((s, r) => s + (r.kilograms_bought || 0), 0).toFixed(1),
+          filteredReports.reduce((s, r) => s + (r.kilograms_sold || 0), 0).toFixed(1),
+          '', '',
+          filteredReports.reduce((s, r) => s + (r.advances_given || 0), 0).toLocaleString(),
+          filteredReports.reduce((s, r) => s + (r.kilograms_left || 0), 0).toFixed(1),
+          '', ''
+        ]],
+        styles: { fontSize: 7, cellPadding: 1.2 },
+        headStyles: { fillColor: [60, 60, 60] },
+        columnStyles: { 9: { cellWidth: 45 } },
+        margin: { bottom: 30 }
+      });
+
+      const title = `Store reports ${rangeLabel}`;
+      await preparePdfPrint(doc, title);
+      const url = URL.createObjectURL(doc.output('blob'));
+      if (printWin) {
+        printWin.location.href = url;
+        setTimeout(() => { try { printWin.focus(); printWin.print(); } catch { /* user prints from viewer */ } }, 1200);
+      } else {
+        window.open(url, '_blank');
+      }
+    } catch (error) {
+      printWin?.close();
+      console.error('Error printing store reports:', error);
+      toast.error('Could not print the list');
+    } finally {
+      setPrintingList(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -336,6 +411,16 @@ const StoreReportsList = () => {
                   value={selectedDateRange.end}
                   onChange={(e) => setSelectedDateRange(prev => ({ ...prev, end: e.target.value }))}
                 />
+                <Button
+                  variant="outline"
+                  onClick={printList}
+                  disabled={!filteredReports.length || printingList}
+                  className="whitespace-nowrap"
+                  title="Print every report shown below"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  {printingList ? 'Preparing...' : `Print list (${filteredReports.length})`}
+                </Button>
               </div>
             </div>
           </div>
