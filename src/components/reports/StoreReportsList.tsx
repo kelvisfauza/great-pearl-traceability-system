@@ -255,7 +255,7 @@ const StoreReportsList = () => {
       doc.setFontSize(14);
       doc.text('Great Agro Coffee — Store Reports', 14, 14);
       doc.setFontSize(9);
-      doc.text(`Period: ${rangeLabel}${search ? `   Search: ${search}` : ''}`, 14, 20);
+      doc.text(`Period: ${rangeLabel}${searchTerm ? `   Search: ${searchTerm}` : ''}`, 14, 20);
       doc.text(
         `Reports: ${filteredReports.length}   Total bought: ${filteredReports.reduce((s, r) => s + (r.kilograms_bought || 0), 0).toFixed(1)} kg   ` +
         `Total sold: ${filteredReports.reduce((s, r) => s + (r.kilograms_sold || 0), 0).toFixed(1)} kg   ` +
