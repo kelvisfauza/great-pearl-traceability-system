@@ -282,13 +282,15 @@ export const useFinanceApprovals = () => {
             ? `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been FULLY APPROVED by Finance. Payment will be processed shortly.`
             : `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been REJECTED by Finance. Reason: ${rejectionReason}`;
 
-          await sendApprovalRequestSMS(
-            requesterEmployee.name,
-            requesterEmployee.phone,
-            data.amount,
-            employee?.name || 'Finance',
-            data.type
-          );
+          // Send the requester an outcome message, not an "approve this" prompt.
+          await supabase.functions.invoke('send-sms', {
+            body: {
+              phone: requesterEmployee.phone,
+              message: `Dear ${requesterEmployee.name}, ${message}`,
+              userName: requesterEmployee.name,
+              messageType: approve ? 'request_approved' : 'request_rejected',
+            },
+          });
         }
       } catch (smsError) {
         console.error('SMS notification error (non-blocking):', smsError);
