@@ -57,10 +57,14 @@ const generatePDF = async (
   employee: { name?: string; email?: string; department?: string; position?: string; phone?: string },
   data: PerDiemFormData,
 ) => {
-  const { data: issued, error: issueError } = await supabase.rpc('issue_per_diem_form', { p_data: { ...data } });
+  const { data: issued, error: issueError } = await supabase.rpc('issue_per_diem_form', { p_data: { ...data } as any });
   if (issueError) throw issueError;
   if (!issued) throw new Error('Unable to issue per diem form');
   const refNo = issued.document_number;
+  const saved = issued.form_data as Record<string, any>;
+  data = { ...data, days: String(saved.days ?? data.days), ratePerDay: String(saved.ratePerDay ?? data.ratePerDay) };
+  const sundayDates: string[] = Array.isArray(saved.sundayDates) ? saved.sundayDates : [];
+  if (sundayDates.length) data = { ...data, notes: `Sundays worked: ${sundayDates.join(', ')}${data.notes ? ` | ${data.notes}` : ''}` };
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-UG', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -361,6 +365,22 @@ const PerDiemTemplateDownload = () => {
   });
 
   const selectedWorkType = WORK_TYPES.find((w) => w.value === form.workType);
+  const isSunday = form.workType === 'sunday';
+  const [sundays, setSundays] = useState<string[] | null>(null);
+  const [sundayError, setSundayError] = useState('');
+  useEffect(() => {
+    if (!isSunday || !form.startDate || !form.endDate) { setSundays(null); return; }
+    let cancelled = false;
+    setSundayError('');
+    supabase.rpc('my_unclaimed_sunday_days' as any, { p_from: form.startDate, p_to: form.endDate }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) { setSundayError(error.message); setSundays([]); return; }
+      const list = ((data as string[]) || []);
+      setSundays(list);
+      setForm((f) => ({ ...f, days: String(list.length) }));
+    });
+    return () => { cancelled = true; };
+  }, [isSunday, form.startDate, form.endDate]);
 
   const days = parseFloat(form.days) || 0;
   const rate = parseFloat(form.ratePerDay) || 0;
