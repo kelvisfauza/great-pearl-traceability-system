@@ -378,11 +378,11 @@ const ApprovalCenter = () => {
       <div className="flex flex-col md:flex-row md:items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, title or department" className="pl-9 rounded-full" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, title or department" className="pl-9" />
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {FILTERS.map((f) => (
-            <Button key={f.key} size="sm" variant={filter === f.key ? 'default' : 'outline'} className="rounded-full shrink-0" onClick={() => setFilter(f.key)}>
+            <Button key={f.key} size="sm" variant={filter === f.key ? 'default' : 'outline'} className="rounded-md shrink-0" onClick={() => setFilter(f.key)}>
               {f.label}
               <span className="ml-2 rounded-full bg-background/20 px-1.5 text-xs">{counts[f.key]}</span>
             </Button>
@@ -392,14 +392,14 @@ const ApprovalCenter = () => {
 
       {/* Requests — inbox layout */}
       {visible.length === 0 ? (
-        <div className="rounded-3xl border border-dashed bg-muted/30 p-12 text-center">
+        <div className="rounded-xl border border-dashed bg-muted/30 p-12 text-center">
           <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-primary/15 text-primary flex items-center justify-center"><CheckCircle className="h-7 w-7" /></div>
           <h3 className="text-lg font-semibold">{requests.length === 0 ? 'All caught up' : 'Nothing matches'}</h3>
           <p className="text-sm text-muted-foreground">{requests.length === 0 ? 'No requests are waiting for approval.' : 'Try a different search or filter.'}</p>
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-          <div className="rounded-3xl border bg-card overflow-hidden lg:max-h-[calc(100vh-14rem)] lg:overflow-y-auto">
+          <div className="rounded-xl border bg-card overflow-hidden lg:max-h-[calc(100vh-14rem)] lg:overflow-y-auto">
             {visible.map((r) => {
               const Icon = getTypeIcon(r.type, r.requestType);
               const active = selected?.id === r.id;
@@ -432,7 +432,7 @@ const ApprovalCenter = () => {
             const awaitingProcurement = isAwaitingProcurement(request);
             const failed = !!request.details?.is_failed_payout;
             return (
-              <div key={request.id} className="rounded-3xl border bg-card p-5 sm:p-7 shadow-lg">
+              <div key={request.id} className="rounded-xl border bg-card p-5 sm:p-7 shadow-lg">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
