@@ -357,6 +357,30 @@ export type Database = {
           },
         ]
       }
+      agent_payment_slips: {
+        Row: {
+          created_at: string
+          id: string
+          issued_at: string
+          issued_by: string
+          slip_number: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issued_at?: string
+          issued_by?: string
+          slip_number: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issued_at?: string
+          issued_by?: string
+          slip_number?: string
+        }
+        Relationships: []
+      }
       airtime_batch_items: {
         Row: {
           amount: number
@@ -18887,6 +18911,10 @@ export type Database = {
       is_user_role: { Args: never; Returns: boolean }
       is_v3_admin: { Args: { _user_id: string }; Returns: boolean }
       is_valid_grn_pay_code: { Args: { p_code: string }; Returns: boolean }
+      issue_agent_payment_slips: {
+        Args: { p_count: number }
+        Returns: string[]
+      }
       issue_per_diem_form: {
         Args: { p_data: Json }
         Returns: {
