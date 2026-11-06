@@ -1,4 +1,5 @@
 import { useState } from "react";
+import samplingBanner from "@/assets/sampling-lab-banner.jpg";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { findSimilarSamplingOrders } from "@/lib/samplingDuplicates";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -379,6 +380,28 @@ const SamplingOrdersTab = () => {
 
   return (
     <div className="space-y-6">
+      <div className="relative overflow-hidden rounded-xl border bg-card">
+        <img src={samplingBanner} alt="Coffee samples in the quality lab" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/10" />
+        <div className="relative p-5 sm:p-7 space-y-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2"><Beaker className="h-6 w-6 text-primary" /> Sampling Orders</h2>
+            <p className="text-sm text-muted-foreground max-w-md">Track every coffee sample from Store to the lab.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {[
+              ["Not yet worked on", unattended.length, "border-l-destructive"],
+              ["Today", todays.length, "border-l-primary"],
+              ["Last 7 days", (orders || []).length, "border-l-accent"],
+            ].map(([label, n, cls]) => (
+              <div key={label as string} className={`rounded-lg border border-l-4 ${cls} bg-background/90 backdrop-blur px-4 py-2 min-w-[120px] shadow-sm`}>
+                <div className="text-2xl font-bold text-foreground">{n as number}</div>
+                <div className="text-xs text-muted-foreground">{label as string}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
       {canCreate ? (
         <Card>
           <CardHeader>
