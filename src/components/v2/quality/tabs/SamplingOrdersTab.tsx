@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { findSimilarSamplingOrders } from "@/lib/samplingDuplicates";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -182,15 +184,33 @@ const SamplingOrdersTab = () => {
   const { data: orders, isLoading } = useQuery({
     queryKey: ["quality-sampling-orders"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("quality_sampling_orders" as any)
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      return (data || []) as any[];
+      const since = new Date(); since.setDate(since.getDate() - 7);
+      const [recent, open] = await Promise.all([
+        supabase.from("quality_sampling_orders" as any).select("*")
+          .gte("created_at", since.toISOString())
+          .order("created_at", { ascending: false }).limit(300),
+        supabase.from("quality_sampling_orders" as any).select("*")
+          .in("status", ["pending", "received"])
+          .order("created_at", { ascending: false }).limit(300),
+      ]);
+      if (recent.error) throw recent.error;
+      if (open.error) throw open.error;
+      const map = new Map<string, any>();
+      [...(recent.data || []), ...(open.data || [])].forEach((o: any) => map.set(o.id, o));
+      return [...map.values()].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
     },
   });
+
+  const [dupMatches, setDupMatches] = useState<any[] | null>(null);
+  const trySave = () => {
+    const matches = findSimilarSamplingOrders(form.supplier_name, orders || []);
+    if (matches.length) setDupMatches(matches);
+    else createOrder.mutate();
+  };
+
+  const todayKey = format(new Date(), "yyyy-MM-dd");
+  const unattended = (orders || []).filter((o) => o.status === "pending" || o.status === "received");
+  const todays = (orders || []).filter((o) => format(new Date(o.created_at), "yyyy-MM-dd") === todayKey);
 
   const createOrder = useMutation({
     mutationFn: async () => {
@@ -396,7 +416,7 @@ const SamplingOrdersTab = () => {
               <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
             <div className="md:col-span-2">
-              <Button onClick={() => createOrder.mutate()} disabled={createOrder.isPending}>
+              <Button onClick={trySave} disabled={createOrder.isPending}>
                 {createOrder.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Printer className="h-4 w-4 mr-2" />}
                 Save &amp; Print
               </Button>
