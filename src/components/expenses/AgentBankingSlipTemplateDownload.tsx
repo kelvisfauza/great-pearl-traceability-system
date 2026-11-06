@@ -77,14 +77,13 @@ const AgentBankingSlipTemplateDownload = () => {
         line('Supplier name:', y + 39);
         line('Amount (UGX):', y + 46, L, L + 70);
         line('Phone / ID:', y + 46, L + 76, R);
-        line('Amount in words:', y + 53);
 
         doc.setFontSize(7.5);
         const sw = (R - L - 8) / 3;
         ['Finance signature & stamp', 'Agent signature', 'Supplier signature (received)'].forEach((t, k) => {
           const x = L + k * (sw + 4);
-          doc.line(x, y + 60.5, x + sw, y + 60.5);
-          doc.text(t, x, y + 63.5);
+          doc.line(x, y + 57.5, x + sw, y + 57.5);
+          doc.text(t, x, y + 60.5);
         });
 
         if (i % PER_PAGE !== PER_PAGE - 1) {
