@@ -89,6 +89,7 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
   const [channel, setChannel] = useState("yo_payments");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [bankFee, setBankFee] = useState("");
   const [threshold, setThreshold] = useState("");
   const [busy, setBusy] = useState(false);
   const [bankOpen, setBankOpen] = useState(false);
@@ -200,7 +201,7 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
       if (res && res.ok === false) throw new Error(res.error);
       toast({ title: success });
       setFundOpen(false); setMoveOpen(false); setThresholdOpen(false); setBankOpen(false);
-      setAmount(""); setNote(""); setThreshold("");
+      setAmount(""); setNote(""); setThreshold(""); setBankFee("");
       await load();
     } catch (e: any) {
       toast({ title: "Not done", description: e.message, variant: "destructive" });
@@ -379,11 +380,13 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
               <Select value={bankDir} onValueChange={(v) => setBankDir(v as any)}><SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="withdraw">Bank withdrawal</SelectItem><SelectItem value="deposit">Bank deposit</SelectItem></SelectContent></Select></div>
             <div><Label>Amount (UGX)</Label><Input type="number" min={1} value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+            <div><Label>Bank charge (UGX)</Label><Input type="number" min={0} value={bankFee} onChange={(e) => setBankFee(e.target.value)} placeholder="0" />
+              <p className="mt-1 text-xs text-muted-foreground">Charges the bank took; also taken off Cash at Bank.</p></div>
             <div><Label>Note</Label><Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Withdrawn to load Yo float" /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBankOpen(false)} disabled={busy}>Cancel</Button>
-            <Button disabled={busy || !amt || amt <= 0} onClick={() => runRpc("treasury_bank_movement", { p_direction: bankDir, p_amount: amt, p_description: note.trim() || null }, bankDir === "withdraw" ? "Bank withdrawal recorded" : "Bank deposit recorded")}>
+            <Button disabled={busy || !amt || amt <= 0 || Number(bankFee || 0) < 0} onClick={() => runRpc("treasury_bank_movement", { p_direction: bankDir, p_amount: amt, p_description: note.trim() || null, p_fee: Number(bankFee || 0) }, bankDir === "withdraw" ? "Bank withdrawal recorded" : "Bank deposit recorded")}>
               {busy ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
