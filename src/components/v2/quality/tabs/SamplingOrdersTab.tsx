@@ -512,55 +512,91 @@ const SamplingOrdersTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Beaker className="h-5 w-5" /> Sample Orders (latest 20)</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Beaker className="h-5 w-5" /> Sample Orders</CardTitle>
           <CardDescription>Lab team: confirm the sample when it arrives (grams received), then it is marked assessed when priced.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {isLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
-          {!isLoading && (orders?.length || 0) === 0 && <p className="text-sm text-muted-foreground">No sampling orders yet.</p>}
-          {orders?.map((o) => (
-            <div key={o.id} className="flex flex-col gap-3 rounded-lg border p-3 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono font-semibold">{o.order_number}</span>
-                  <Badge variant="outline">{typeLabel(o.sample_type)}</Badge>
-                  {statusBadge(o)}
-                  {o.linked_batch_number && <Badge variant="outline">Batch {o.linked_batch_number}</Badge>}
-                </div>
-                <p className="text-sm">{o.supplier_name}</p>
-                <p className="text-xs text-muted-foreground">
-                  To lab: {format(new Date(o.delivery_time), "dd MMM yyyy, HH:mm")} · Sampled by {o.sampled_by}
-                </p>
-                {o.received_at && (
-                  <p className="text-xs text-muted-foreground">
-                    Received {o.received_grams} g by {o.received_by} at {format(new Date(o.received_at), "dd MMM, HH:mm")}
-                    {o.moisture_percent != null ? ` · Moisture ${o.moisture_percent}%` : ""}
-                    {o.received_observation ? ` · ${o.received_observation}` : ""}
-                  </p>
-                )}
-                {o.status === "assessed" && o.assessed_by && (
-                  <p className="text-xs text-muted-foreground">Assessed by {o.assessed_by}{o.assessed_at ? ` at ${format(new Date(o.assessed_at), "dd MMM, HH:mm")}` : ""}</p>
-                )}
+          {!isLoading && (
+            <Tabs defaultValue="unattended">
+              <div className="overflow-x-auto">
+                <TabsList className="inline-flex w-max">
+                  <TabsTrigger value="unattended">Not yet worked on ({unattended.length})</TabsTrigger>
+                  <TabsTrigger value="today">Today ({todays.length})</TabsTrigger>
+                  <TabsTrigger value="recent">Last 7 days ({(orders || []).length})</TabsTrigger>
+                </TabsList>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => printSamplingOrder(o)}>
-                  <Printer className="h-4 w-4 mr-1" /> Print
-                </Button>
-                {o.status === "pending" && (
-                  <Button size="sm" onClick={() => { setReceipt({ grams: "", observation: "", moisture: "" }); setReviewOrder(o); }}>
-                    <Beaker className="h-4 w-4 mr-1" /> Receive sample
-                  </Button>
-                )}
-                {o.status === "received" && (
-                  <Button size="sm" variant="secondary" onClick={() => markAssessed.mutate(o.id)} disabled={markAssessed.isPending}>
-                    <CheckCircle2 className="h-4 w-4 mr-1" /> Mark assessed
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
+              {([["unattended", unattended, "Every sample has been worked on."], ["today", todays, "No sampling orders today yet."], ["recent", orders || [], "No sampling orders yet."]] as const).map(([key, list, empty]) => (
+                <TabsContent key={key} value={key} className="space-y-3">
+                  {list.length === 0 && <p className="text-sm text-muted-foreground">{empty}</p>}
+                  {list.map((o: any) => (
+                      <div key={o.id} className="flex flex-col gap-3 rounded-lg border p-3 md:flex-row md:items-center md:justify-between">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono font-semibold">{o.order_number}</span>
+                            <Badge variant="outline">{typeLabel(o.sample_type)}</Badge>
+                            {statusBadge(o)}
+                            {o.linked_batch_number && <Badge variant="outline">Batch {o.linked_batch_number}</Badge>}
+                          </div>
+                          <p className="text-sm">{o.supplier_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            To lab: {format(new Date(o.delivery_time), "dd MMM yyyy, HH:mm")} · Sampled by {o.sampled_by}
+                          </p>
+                          {o.received_at && (
+                            <p className="text-xs text-muted-foreground">
+                              Received {o.received_grams} g by {o.received_by} at {format(new Date(o.received_at), "dd MMM, HH:mm")}
+                              {o.moisture_percent != null ? ` · Moisture ${o.moisture_percent}%` : ""}
+                              {o.received_observation ? ` · ${o.received_observation}` : ""}
+                            </p>
+                          )}
+                          {o.status === "assessed" && o.assessed_by && (
+                            <p className="text-xs text-muted-foreground">Assessed by {o.assessed_by}{o.assessed_at ? ` at ${format(new Date(o.assessed_at), "dd MMM, HH:mm")}` : ""}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => printSamplingOrder(o)}>
+                            <Printer className="h-4 w-4 mr-1" /> Print
+                          </Button>
+                          {o.status === "pending" && (
+                            <Button size="sm" onClick={() => { setReceipt({ grams: "", observation: "", moisture: "" }); setReviewOrder(o); }}>
+                              <Beaker className="h-4 w-4 mr-1" /> Receive sample
+                            </Button>
+                          )}
+                          {o.status === "received" && (
+                            <Button size="sm" variant="secondary" onClick={() => markAssessed.mutate(o.id)} disabled={markAssessed.isPending}>
+                              <CheckCircle2 className="h-4 w-4 mr-1" /> Mark assessed
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+              ))}
+                </TabsContent>
+              ))}
+            </Tabs>
+          )}
         </CardContent>
       </Card>
+      <Dialog open={!!dupMatches} onOpenChange={(open) => !open && setDupMatches(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>This supplier may already have a sampling order</DialogTitle>
+            <DialogDescription>These recent orders have the same or a similar supplier name. Check before saving another one.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {dupMatches?.map((o) => (
+              <div key={o.id} className="rounded-md border p-2 text-sm">
+                <div className="flex flex-wrap items-center gap-2"><span className="font-mono font-semibold">{o.order_number}</span>{statusBadge(o)}<Badge variant="outline">{typeLabel(o.sample_type)}</Badge></div>
+                <p>{o.supplier_name}</p>
+                <p className="text-xs text-muted-foreground">{format(new Date(o.created_at), "dd MMM yyyy, HH:mm")} · by {o.created_by_name || o.created_by_email || o.sampled_by}</p>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDupMatches(null)}>Cancel</Button>
+            <Button onClick={() => { setDupMatches(null); createOrder.mutate(); }}>It's a new sample — save anyway</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={!!reviewOrder} onOpenChange={(open) => !open && setReviewOrder(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
