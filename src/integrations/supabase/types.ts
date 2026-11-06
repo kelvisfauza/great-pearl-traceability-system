@@ -19375,7 +19375,12 @@ export type Database = {
         Returns: number
       }
       treasury_bank_movement: {
-        Args: { p_amount: number; p_description?: string; p_direction: string }
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_direction: string
+          p_fee?: number
+        }
         Returns: Json
       }
       treasury_external_payout: {
