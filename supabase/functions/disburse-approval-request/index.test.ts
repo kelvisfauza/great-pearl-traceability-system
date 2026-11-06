@@ -63,11 +63,10 @@ async function release(options: { existing?: boolean; reserveOk?: boolean; delet
 }
 
 describe("Finance withdrawal failure restoration", () => {
-  it("restores UGX 72,000 when Operations cannot cover the release without contacting a provider", async () => {
-    const result = await release();
-    assert.equal(result.debit, 0);
-    assert.equal(result.providerCalls, 0);
-    assert.equal(result.body.payout_status, "failed");
+  it("does not draw the Operations account for a wallet withdrawal (no double count)", async () => {
+    const result = await release({ cash: true, reserveOk: false });
+    assert.equal(result.debit, -72000);
+    assert.equal(result.reversals, 0);
   });
   it("restores a debit inherited from an earlier failed treasury attempt", async () => {
     const result = await release({ existing: true });
@@ -78,7 +77,7 @@ describe("Finance withdrawal failure restoration", () => {
     const result = await release({ existing: true, reserveOk: true });
     assert.equal(result.debit, 0);
     assert.equal(result.providerCalls, 1);
-    assert.equal(result.reversals, 1);
+    assert.equal(result.reversals, 0);
   });
   it("restores a newly inserted debit on provider failure", async () => {
     const result = await release({ reserveOk: true });
