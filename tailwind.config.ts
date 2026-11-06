@@ -99,6 +99,10 @@ export default {
 					'5': 'hsl(var(--chart-5))'
 				}
 			},
+			fontFamily: {
+				sans: ['Fira Sans', 'system-ui', 'sans-serif'],
+				display: ['DM Serif Display', 'Georgia', 'serif']
+			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
@@ -156,7 +160,7 @@ export default {
 						boxShadow: '0 0 20px rgba(0,0,0,0.1)'
 					},
 					'50%': {
-						boxShadow: '0 0 30px rgba(59, 130, 246, 0.3)'
+						boxShadow: '0 0 30px hsl(43 52% 54% / 0.45)'
 					}
 				}
 			},
