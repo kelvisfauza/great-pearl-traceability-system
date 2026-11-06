@@ -148,7 +148,9 @@ serve(async (req) => {
 
     // Treasury pool: the money must come out of Operations before it is released
     const treasuryRef = `AR-${requestId}`;
-    const reservedTreasury = await treasuryReserve({
+    // Wallet withdrawals already leave the system through the staff-wallet debit
+    // above; drawing Operations too would count the same money leaving twice.
+    const reservedTreasury = isWalletWithdrawal ? { ok: true as const, error: undefined } : await treasuryReserve({
       account: "operations",
       amount,
       reference: treasuryRef,
@@ -213,7 +215,7 @@ serve(async (req) => {
       if (restoreError) errorMessage = `${errorMessage}; ${restoreError}`;
     }
 
-    if (!success) {
+    if (!success && !isWalletWithdrawal) {
       await treasuryRelease({
         account: "operations",
         amount,
