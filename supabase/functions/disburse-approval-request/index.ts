@@ -198,7 +198,10 @@ serve(async (req) => {
           narrative: `${reqRow.type}: ${reqRow.title}`.slice(0, 120),
           privateRef: payoutRef,
         });
-        if (res.success) {
+        const pendingAuth = /StatusCode:\s*-22/.test(String(res.statusMessage || res.errorMessage || ""));
+        if (res.success || pendingAuth) {
+          // -22 = Yo accepted it and is waiting for authorisation in the Yo portal.
+          // The money will leave once authorised, so keep the wallet debit and never resubmit.
           success = true;
           finalRef = res.transactionRef || payoutRef;
         } else {
