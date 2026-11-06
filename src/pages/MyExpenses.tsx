@@ -36,6 +36,7 @@ import StoreCoffeeClearanceTemplateDownload from '@/components/expenses/StoreCof
 import StoreReleaseQualityCheckTemplateDownload from '@/components/expenses/StoreReleaseQualityCheckTemplateDownload';
 import SupplierAdvanceAgreementTemplateDownload from '@/components/expenses/SupplierAdvanceAgreementTemplateDownload';
 import WeeklyMealSignSheetTemplateDownload from '@/components/expenses/WeeklyMealSignSheetTemplateDownload';
+import AgentBankingSlipTemplateDownload from '@/components/expenses/AgentBankingSlipTemplateDownload';
 
 import FuelOrderModal from '@/components/finance/FuelOrderModal';
 
@@ -631,6 +632,7 @@ const MyExpenses = () => {
             <StoreReleaseQualityCheckTemplateDownload />
             <SupplierAdvanceAgreementTemplateDownload />
             <WeeklyMealSignSheetTemplateDownload />
+            <AgentBankingSlipTemplateDownload />
 
 
           </TabsContent>
