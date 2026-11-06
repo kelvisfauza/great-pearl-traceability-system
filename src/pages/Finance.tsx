@@ -216,7 +216,7 @@ const Finance = () => {
                   )}
                 >
                   <div className={cn('mb-2.5 inline-flex h-9 w-9 items-center justify-center rounded-xl', s.tone)}>
-                    <Icon className="h-4.5 w-4.5" />
+                    <Icon className="h-[18px] w-[18px]" />
                   </div>
                   <div className="font-semibold text-sm leading-tight">{s.label}</div>
                   <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
