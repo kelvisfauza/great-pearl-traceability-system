@@ -15,6 +15,7 @@ async function release(options: { existing?: boolean; reserveOk?: boolean; delet
   let reversals = 0;
   const updates: any[] = [];
   const svc = {
+    rpc: async () => ({ data: 1700, error: null }),
     auth: { getUser: async () => ({ data: { user: { email: "finance@example.test" } } }) },
     functions: { invoke: async () => ({}) },
     from(table: string) {
@@ -88,6 +89,8 @@ describe("Finance withdrawal failure restoration", () => {
     const result = await release({ reserveOk: true, cash: true });
     assert.equal(result.debit, -72000);
     assert.equal(result.body.payout_status, "cash_disbursed");
+    assert.equal(result.body.service_fee, 1700);
+    assert.equal(result.body.total_deducted, 73700);
     assert.equal(result.reversals, 0);
   });
   it("reports restoration failure instead of silently claiming wallet money was returned", async () => {

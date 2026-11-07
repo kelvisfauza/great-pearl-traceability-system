@@ -56,7 +56,9 @@ Deno.serve(async (req) => {
       if (!emp.phone) return json({ ok: false, error: "Employee has no phone number on file" });
       const { data: bal } = await admin.rpc("get_user_balance_safe", { user_email: emp.email });
       const available = Number((bal as any)?.[0]?.available_balance ?? (bal as any)?.available_balance ?? (bal as any)?.[0]?.wallet_balance ?? 0);
-      if (available < amount) return json({ ok: false, error: `Insufficient wallet balance (UGX ${available.toLocaleString()})` });
+      const { data: fee, error: feeError } = await admin.rpc("withdrawal_service_charge", { p_amount: amount });
+      if (feeError) return json({ ok: false, error: "Could not calculate withdrawal charge" });
+      if (available < amount + Number(fee || 0)) return json({ ok: false, error: `Insufficient wallet balance for withdrawal and charge (UGX ${available.toLocaleString()})` });
 
       const code = String(Math.floor(1000 + Math.random() * 9000));
       const targetId = `${emp.email.toLowerCase()}:${amount}`;
@@ -116,7 +118,9 @@ Deno.serve(async (req) => {
 
       const { data: bal } = await admin.rpc("get_user_balance_safe", { user_email: emp.email });
       const available = Number((bal as any)?.[0]?.available_balance ?? (bal as any)?.available_balance ?? (bal as any)?.[0]?.wallet_balance ?? 0);
-      if (available < amount) return json({ ok: false, error: `Insufficient wallet balance (UGX ${available.toLocaleString()})` });
+      const { data: fee, error: feeError } = await admin.rpc("withdrawal_service_charge", { p_amount: amount });
+      if (feeError) return json({ ok: false, error: "Could not calculate withdrawal charge" });
+      if (available < amount + Number(fee || 0)) return json({ ok: false, error: `Insufficient wallet balance for withdrawal and charge (UGX ${available.toLocaleString()})` });
 
       const reference = `FIN-WD-${row.id.substring(0, 8).toUpperCase()}`;
       const methodLabel = method === "cash" ? "cash" : method === "gosentepay" ? "GosentePay" : "Yo Payments";

@@ -634,7 +634,7 @@ serve(async (req) => {
             if (!claimed) return respond(false, { error: "Request status changed; refresh and retry." });
             const { error: bErr } = await supabase.from("bank_deposit_requests").insert({
               user_id: cand.target_user_id, employee_email: cand.target_email, employee_name: cand.target_name || cand.target_email,
-              amount: Number(cand.amount), fee: 0, total_deducted: Number(cand.amount),
+              amount: Number(cand.amount), fee: computeWithdrawFee(Number(cand.amount)), total_deducted: Number(cand.amount) + computeWithdrawFee(Number(cand.amount)),
               bank_name: String(bank_name).trim(), branch: branch ? String(branch).trim() : null,
               account_number: String(account_number).trim(), account_name: String(account_name).trim(),
               reference: bankRef, status: "pending_admin",
