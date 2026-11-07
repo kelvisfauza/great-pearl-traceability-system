@@ -1,5 +1,9 @@
 # Roadmap
 
+## Restore withdrawal charges
+- [ ] Charge existing tiered service fees on all current withdrawal channels, separately from provider costs, and restore charges on failed payouts.
+- [ ] Test fee tiers, successful deductions, retries and failure restoration; deploy affected payment handlers.
+
 ## Withdrawal second-approver threshold
 - [x] Raised the second-administrator rule for wallet withdrawals from above UGX 50,000 to above UGX 150,000; at or below 150,000 one Admin approves and the request goes to Finance. Non-withdrawal requests keep the 50,000 rule.
 - [x] Five rule tests passed (55k/60k/72k/150k single Admin, 150,001/350k second Admin, expense 60k still two Admins) and latest preview build clean.
