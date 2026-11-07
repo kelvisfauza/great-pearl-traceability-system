@@ -154,7 +154,12 @@ Deno.serve(async (req) => {
     };
     if (walletOp) {
       const partNo = ((await db.from("partial_payment_installments").select("id", { count: "exact", head: true }).eq("partial_payment_id", pp.id)).count || 0) + 1;
-      const fee = partNo === 1 && SEND_METHODS.includes(method) ? Number(walletOp.service_fee || 0) : 0;
+      const { data: configuredFee, error: feeLookupError } = await db.rpc("withdrawal_service_charge", { p_amount: Number(walletOp.amount) });
+      if (feeLookupError) {
+        await db.from("partial_payments").update({ paid_amount: pp.paid_amount, status: pp.status }).eq("id", pp.id);
+        return respond(false, { error: "Could not calculate withdrawal charge" });
+      }
+      const fee = partNo === 1 ? Number(configuredFee || 0) : 0;
       const { data: bal } = await db.rpc("get_effective_wallet_balance", { p_user_id: walletOp.target_user_id });
       if (Number(bal || 0) < amount + fee && !walletOp.allow_overdraft) {
         await db.from("partial_payments").update({ paid_amount: pp.paid_amount, status: Number(pp.paid_amount) > 0 ? "part_paid" : pp.status }).eq("id", pp.id);

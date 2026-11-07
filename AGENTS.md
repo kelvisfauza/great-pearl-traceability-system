@@ -1,5 +1,7 @@
 # Project architecture
 
+- Staff approval-request withdrawal principal inserts atomically issue a separate tiered fee through the ledger trigger; deleting a failed request-scoped debit reverses its exact treasury entries and linked fee, preventing partial charges and double Operations draws. All withdrawal channels share the service-charge tiers; provider costs remain separate.
+
 - Failed approval-request payouts restore their request-scoped wallet debit on both treasury refusal and provider failure, including debits inherited from earlier attempts; report restoration errors so an unpaid withdrawal cannot silently consume wallet funds.
 
 - Treasury account movements use direct reads under the existing administrator-only RLS policy with explicit authenticated SELECT grants; surface read failures instead of displaying a misleading empty history.

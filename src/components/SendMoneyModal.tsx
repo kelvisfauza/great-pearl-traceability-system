@@ -14,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
 import { AlertTriangle } from 'lucide-react';
+import { withdrawalServiceCharge } from '@/lib/withdrawalServiceCharge';
 
 interface SendMoneyModalProps {
   open: boolean;
@@ -83,18 +84,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   const employeeNewOutstanding = overdraftOutstanding + employeeOdPortion + employeeOdFee;
   const employeeNeedsOdConfirm = employeeOdPortion > 0 && !overdraftConfirmed;
 
-  // Tiered service fee — mirrors supabase/functions/instant-withdrawal.
-  // Applies ONLY to GosentePay payouts (amounts under UGX 65,000).
-  // Yo Payments sends (>= UGX 65,000) are fee-free.
-  const computeWithdrawFee = (a: number): number => {
-    if (a < 500) return 0;
-    if (a >= 65_000) return 0;
-    if (a <= 60_000) return 1_100;
-    if (a <= 500_000) return 1_700;
-    if (a <= 1_000_000) return 2_500;
-    return 2_900;
-  };
-  const mobileServiceFee = computeWithdrawFee(parsedMobileAmount);
+  const mobileServiceFee = withdrawalServiceCharge(parsedMobileAmount);
   const mobileTotalDebit = parsedMobileAmount + mobileServiceFee;
   const mobileOdPortion = Math.max(0, Math.min(mobileTotalDebit, availableBalance) - walletOnly);
   const mobileOdFee = Math.round(mobileOdPortion * OD_FEE_RATE);

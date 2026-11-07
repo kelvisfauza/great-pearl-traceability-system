@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { withdrawalHighValueFlag } from '@/lib/withdrawalApprovalRules';
+import { withdrawalServiceCharge } from '@/lib/withdrawalServiceCharge';
 
 interface WalletData {
   balance: number;
@@ -21,6 +22,7 @@ interface WithdrawalRequest {
   channel?: string;
   created_at: string;
   approval_stage?: string;
+  service_fee?: number;
   source?: 'wallet' | 'approval';
 }
 
@@ -125,6 +127,7 @@ export const useUserWallet = () => {
           return {
             id: w.id,
             amount: Number(w.amount) || 0,
+            service_fee: Number(details?.service_fee ?? withdrawalServiceCharge(Number(w.amount))),
             phone_number: w.disbursement_phone || 'N/A',
             status: w.status || 'pending',
             request_ref: details?.ref || details?.withdrawal_id || w.id,
@@ -141,7 +144,7 @@ export const useUserWallet = () => {
 
         const frozenPending = allWithdrawals
           .filter(isPendingWithdrawal)
-          .reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
+          .reduce((sum, w) => sum + (Number(w.amount) || 0) + (w.service_fee || 0), 0);
 
         wallet = {
           ...wallet,
@@ -191,7 +194,8 @@ export const useUserWallet = () => {
 
     if (!walletOwnerEmail || !walletData) return;
 
-    if (amount > walletData.availableToRequest) {
+    const serviceFee = withdrawalServiceCharge(amount);
+    if (amount + serviceFee > walletData.availableToRequest) {
       toast({
         title: "Insufficient Available Balance",
         description: `You can only request UGX ${walletData.availableToRequest.toLocaleString()}. This prevents double-spending while you have pending withdrawals.`,
@@ -216,7 +220,7 @@ export const useUserWallet = () => {
 
       // Server-side balance validation to prevent overdrawing
       const { data: isValid, error: validationError } = await supabase
-        .rpc('validate_withdrawal_balance', { p_user_id: unifiedUserId, p_amount: amount });
+        .rpc('validate_withdrawal_balance', { p_user_id: unifiedUserId, p_amount: amount + serviceFee });
 
       if (validationError || !isValid) {
         toast({
@@ -253,6 +257,8 @@ export const useUserWallet = () => {
           requires_three_approvals: withdrawalHighValueFlag(amount),
           details: {
             request_type: 'withdrawal',
+            service_fee: serviceFee,
+            total_deducted: amount + serviceFee,
             payment_channel: channel,
             user_id: unifiedUserId,
             employee_id: employee?.id || null,

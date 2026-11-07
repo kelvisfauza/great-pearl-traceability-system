@@ -450,7 +450,7 @@ serve(async (req) => {
         if (!payout_provider || !["gosentepay", "yo", "cash"].includes(payout_provider)) {
           return respond(false, { error: "payout_provider required (gosentepay|yo|cash)" });
         }
-        if (payout_provider !== "cash") serviceFee = computeWithdrawFee(numAmount);
+        serviceFee = computeWithdrawFee(numAmount);
       }
 
       // If OTP mode, phone is required so we can SMS the code.
@@ -646,8 +646,8 @@ serve(async (req) => {
             return respond(true, { message: "Sent to admin for bank payment", reference: bankRef, bank: true });
           }
           methodPatch.payout_provider = method;
-          if (method === "cash") methodPatch.service_fee = 0;
-          else {
+          methodPatch.service_fee = computeWithdrawFee(Number(cand.amount));
+          if (method !== "cash") {
             const ph = String(body.destination_phone || cand.destination_phone || "").trim();
             if (!ph) return respond(false, { error: "Mobile money number required" });
             methodPatch.destination_phone = ph;
