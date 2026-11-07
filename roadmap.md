@@ -1,8 +1,9 @@
 # Roadmap
 
 ## Restore withdrawal charges
-- [ ] Charge existing tiered service fees on all current withdrawal channels, separately from provider costs, and restore charges on failed payouts.
-- [ ] Test fee tiers, successful deductions, retries and failure restoration; deploy affected payment handlers.
+- [x] Restore tiered charges to approval-request Yo/Gosente/cash withdrawals; preserve bank charges and charge admin cash/bank withdrawals and first admin-wallet installments. Immediate failed approval payouts restore exact wallet and treasury movements.
+- [x] Sixteen fee/handler tests passed; rollback-only database check verified UGX 30,000 + 1,100 charge and exact wallet/treasury restoration with no test rows retained; payment handlers deployed and latest build clean.
+- [ ] Verify authenticated Finance withdrawal through the real UI — external Supabase has no managed test session; no live money sent. Legacy instant/approval partial-payment accounting requires a separate complete flow check.
 
 ## Withdrawal second-approver threshold
 - [x] Raised the second-administrator rule for wallet withdrawals from above UGX 50,000 to above UGX 150,000; at or below 150,000 one Admin approves and the request goes to Finance. Non-withdrawal requests keep the 50,000 rule.
