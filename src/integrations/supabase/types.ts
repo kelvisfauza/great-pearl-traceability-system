@@ -19724,6 +19724,7 @@ export type Database = {
         Args: { _code: string; _id: string }
         Returns: Json
       }
+      withdrawal_service_charge: { Args: { p_amount: number }; Returns: number }
     }
     Enums: {
       app_role:

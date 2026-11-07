@@ -21,7 +21,6 @@ serve(async (req) => {
 
   try {
     const url = Deno.env.get("SUPABASE_URL")!;
-    const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
     const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const svc = createClient(url, svcKey);
@@ -47,7 +46,7 @@ serve(async (req) => {
       const allowed = !!emp && emp.disabled !== true &&
         (role.includes("admin") || role.includes("finance") || role.includes("manager"));
       if (!allowed) return respond(false, { error: "Not authorised to release payments" });
-      actorEmail = emp!.email as string;
+      actorEmail = emp?.email || "";
     }
 
     const requestId: string = body?.request_id;
@@ -102,6 +101,7 @@ serve(async (req) => {
       /withdrawal request/i.test(String(reqRow.type || ""));
     const walletUserId: string = details.user_id || "";
     const walletRef = `WD-APPROVAL-${requestId}`;
+    let serviceFee = 0;
     let walletDebited = false;
     const restoreWallet = async (): Promise<string | null> => {
       if (!walletDebited) return null;
@@ -115,6 +115,12 @@ serve(async (req) => {
       return null;
     };
     if (isWalletWithdrawal) {
+      const { data: fee, error: feeError } = await svc.rpc("withdrawal_service_charge", { p_amount: amount });
+      if (feeError) {
+        await svc.from("approval_requests").update({ payout_status: "failed", payout_error: "Could not calculate withdrawal charge" }).eq("id", requestId);
+        return respond(false, { error: "Could not calculate withdrawal charge" });
+      }
+      serviceFee = Number(fee || 0);
       if (!walletUserId) {
         await svc.from("approval_requests").update({ payout_status: "failed", payout_error: "Withdrawal has no wallet owner" }).eq("id", requestId);
         return respond(false, { error: "Withdrawal has no wallet owner" });
@@ -229,13 +235,15 @@ serve(async (req) => {
     }
 
     await svc.from("approval_requests").update({
+      ...(isWalletWithdrawal ? { details: { ...details, service_fee: serviceFee, total_deducted: success ? amount + serviceFee : 0 } } : {}),
       payout_status: success ? (provider === "cash" ? "cash_disbursed" : "sent") : "failed",
       payout_ref: success ? finalRef : null,
       payout_error: success ? null : errorMessage,
       payout_completed_at: success ? new Date().toISOString() : null,
     }).eq("id", requestId);
 
-    // Notify the recipient by SMS
+    // Notify the recipient by SMS, distinguishing principal from the charge.
+    const chargeNote = isWalletWithdrawal && success ? ` Service charge UGX ${serviceFee.toLocaleString()}; total wallet deduction UGX ${(amount + serviceFee).toLocaleString()}.` : "";
     if (phone) {
       const msg = success
         ? provider === "cash"
@@ -246,7 +254,7 @@ serve(async (req) => {
         await svc.functions.invoke("send-sms", {
           body: {
             phone,
-            message: msg,
+            message: msg + chargeNote,
             userName: recipientName,
             messageType: "disbursement",
             requestId,
@@ -259,7 +267,7 @@ serve(async (req) => {
     }
 
     if (!success) return respond(false, { error: errorMessage, payout_status: "failed" });
-    return respond(true, { payout_status: provider === "cash" ? "cash_disbursed" : "sent", payout_ref: finalRef, phone });
+    return respond(true, { payout_status: provider === "cash" ? "cash_disbursed" : "sent", payout_ref: finalRef, phone, service_fee: serviceFee, total_deducted: isWalletWithdrawal ? amount + serviceFee : 0 });
   } catch (e: any) {
     console.error("[disburse-approval-request] error:", e);
     return respond(false, { error: e?.message || String(e) });

@@ -18,6 +18,7 @@ import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
 import { useSundayWithdrawals } from '@/hooks/useSundayWithdrawals';
 import { useWithdrawalLimits } from '@/hooks/useWithdrawalLimits';
 import { withdrawalHighValueFlag } from '@/lib/withdrawalApprovalRules';
+import { withdrawalServiceCharge } from '@/lib/withdrawalServiceCharge';
 import {
   InputOTP,
   InputOTPGroup,
@@ -484,7 +485,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     }
 
     const withdrawalAmount = parseFloat(amount);
-    if (withdrawalAmount > availableAmount || withdrawalAmount < 2000) return;
+    if (withdrawalAmount + withdrawalServiceCharge(withdrawalAmount) > availableAmount || withdrawalAmount < 2000) return;
 
     // For cash, enforce round amounts (multiples of 500)
     if (channel === 'CASH' && withdrawalAmount % 500 !== 0) {
@@ -626,12 +627,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
   const parsedAmount = amount ? parseFloat(amount) : 0;
 
-  const getServiceFee = (amt: number) =>
-    amt < 500 ? 0
-      : amt <= 60_000 ? 1_100
-      : amt <= 500_000 ? 1_700
-      : amt <= 1_000_000 ? 2_500
-      : 2_900;
+  const getServiceFee = withdrawalServiceCharge;
 
   const bankFee = getServiceFee(parsedAmount);
   const bankTotal = parsedAmount + bankFee;
@@ -703,7 +699,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const needsInstantPhoneInput = Boolean(instantEligibility?.eligible && !storedInstantPhone);
   const isValidMobileNumber = isUgandanMobileNumber(cleanMobile);
   const isDisbursementValid = channel === 'CASH' || (channel === 'MOBILE_MONEY' && isValidMobileNumber) || (channel === 'BANK' && bankName && accountNumber && accountName);
-  const isAmountValid = amount && parsedAmount <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && !isWalletFrozen && isDisbursementValid;
+  const isAmountValid = amount && bankTotal <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && !isWalletFrozen && isDisbursementValid;
 
   // Overdraft portion for instant withdrawal
   const odPortion = Math.max(0, parsedAmount - walletOnly);
@@ -864,6 +860,13 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
                 {payoutMode === 'MOBILE' && (
                   <div className="space-y-2">
+                    {parsedAmount >= 2000 && (
+                      <div className="border-y py-3 text-sm space-y-2">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Service charge</span><span>UGX {bankFee.toLocaleString()}</span></div>
+                        <div className="flex justify-between font-semibold"><span>Total wallet deduction</span><span>UGX {bankTotal.toLocaleString()}</span></div>
+                        {bankTotal > availableAmount && <p className="text-destructive">Insufficient balance for the amount and service charge.</p>}
+                      </div>
+                    )}
                     <Label htmlFor="withdraw-mobile-number">Mobile Money Number</Label>
                     <Input
                       id="withdraw-mobile-number"

@@ -387,7 +387,7 @@ serve(async (req) => {
     // Admin-configured provider settings (Admin > System Settings > Providers)
     const providerCfg = await loadProviderSettings(supabase);
     const routeGosente = providerCfg.gosente.enabled && numAmount < providerCfg.gosente.routing_threshold;
-    const feeForOdCheck = routeGosente ? feeFromTiers(numAmount, providerCfg.gosente.fee_tiers) : (Number(providerCfg.yo.service_fee) || 0);
+    const feeForOdCheck = feeFromTiers(numAmount, providerCfg.gosente.fee_tiers);
     const overdraftPortion = Math.max(0, (numAmount + feeForOdCheck) - walletBalance);
     const walletPortion = numAmount - overdraftPortion;
     const isOverdraftDraw = overdraftPortion > 0;

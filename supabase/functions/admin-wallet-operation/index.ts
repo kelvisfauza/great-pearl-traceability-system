@@ -450,7 +450,7 @@ serve(async (req) => {
         if (!payout_provider || !["gosentepay", "yo", "cash"].includes(payout_provider)) {
           return respond(false, { error: "payout_provider required (gosentepay|yo|cash)" });
         }
-        if (payout_provider !== "cash") serviceFee = computeWithdrawFee(numAmount);
+        serviceFee = computeWithdrawFee(numAmount);
       }
 
       // If OTP mode, phone is required so we can SMS the code.
@@ -634,7 +634,7 @@ serve(async (req) => {
             if (!claimed) return respond(false, { error: "Request status changed; refresh and retry." });
             const { error: bErr } = await supabase.from("bank_deposit_requests").insert({
               user_id: cand.target_user_id, employee_email: cand.target_email, employee_name: cand.target_name || cand.target_email,
-              amount: Number(cand.amount), fee: 0, total_deducted: Number(cand.amount),
+              amount: Number(cand.amount), fee: computeWithdrawFee(Number(cand.amount)), total_deducted: Number(cand.amount) + computeWithdrawFee(Number(cand.amount)),
               bank_name: String(bank_name).trim(), branch: branch ? String(branch).trim() : null,
               account_number: String(account_number).trim(), account_name: String(account_name).trim(),
               reference: bankRef, status: "pending_admin",
@@ -646,8 +646,8 @@ serve(async (req) => {
             return respond(true, { message: "Sent to admin for bank payment", reference: bankRef, bank: true });
           }
           methodPatch.payout_provider = method;
-          if (method === "cash") methodPatch.service_fee = 0;
-          else {
+          methodPatch.service_fee = computeWithdrawFee(Number(cand.amount));
+          if (method !== "cash") {
             const ph = String(body.destination_phone || cand.destination_phone || "").trim();
             if (!ph) return respond(false, { error: "Mobile money number required" });
             methodPatch.destination_phone = ph;
