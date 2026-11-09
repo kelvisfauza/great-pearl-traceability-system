@@ -55,6 +55,8 @@ const buildAdminCalculatorInputs = (assessment: PendingAssessment, refPrice?: nu
       pods: assessment.pods,
       husks: assessment.husks,
       fm: assessment.fm,
+      stones: (assessment as any).stones,
+      below12: (assessment as any).below12,
     },
     assessment.coffee_record?.coffee_type,
     refPrice,

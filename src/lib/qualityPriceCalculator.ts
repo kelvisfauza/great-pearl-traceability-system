@@ -49,6 +49,8 @@ export interface AssessmentReadings {
   pods?: number | null;
   husks?: number | null;
   fm?: number | null;
+  stones?: number | null;
+  below12?: number | null;
   robusta_in_arabica?: number | null;
   less12?: number | null;
 }
@@ -69,10 +71,10 @@ export const buildCalculatorInputs = (
     moisture: String(readings.moisture ?? ''),
     gp1: String(readings.group1_defects ?? 0),
     gp2: String(readings.group2_defects ?? 0),
-    less12: String(readings.less12 ?? 0),
+    less12: String(readings.less12 ?? readings.below12 ?? 0),
     pods: String(pods),
     husks: String(husks),
-    stones: String(derivedStones),
+    stones: String(readings.stones ?? derivedStones),
     robustaInArabica: String(readings.robusta_in_arabica ?? 0),
     discretion: isArabica ? '500' : '0',
   };
