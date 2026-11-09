@@ -73,19 +73,18 @@ export const useQualityControl = () => {
       
       // Page through all records (PostgREST caps each request at 1000 rows)
       const PAGE = 1000;
-      const MAX_PAGES = 10;
-      const allRecords: any[] = [];
-      for (let page = 0; page < MAX_PAGES; page++) {
-        const { data: chunk, error } = await supabase
-          .from('coffee_records')
+      const { count } = await supabase.from('coffee_records').select('id', { count: 'exact', head: true })
+        .not('status', 'in', '("sales","inventory")');
+      const pages = Math.min(10, Math.max(1, Math.ceil((count || 0) / PAGE)));
+      const results = await Promise.all(Array.from({ length: pages }, (_, page) =>
+        supabase.from('coffee_records')
           .select('id, date, kilograms, bags, supplier_id, supplier_name, coffee_type, batch_number, status, created_at, updated_at')
           .not('status', 'in', '("sales","inventory")')
-          .order('created_at', { ascending: false })
-          .range(page * PAGE, page * PAGE + PAGE - 1);
-        if (error) throw error;
-        allRecords.push(...(chunk || []));
-        if (!chunk || chunk.length < PAGE) break;
-      }
+          .order('created_at', { ascending: false }).order('id')
+          .range(page * PAGE, page * PAGE + PAGE - 1)));
+      const firstErr = results.find(r => r.error)?.error;
+      if (firstErr) throw firstErr;
+      const allRecords: any[] = results.flatMap(r => r.data || []);
 
       // Deduplicate by batch_number - keep the most recent one
       const batchMap = new Map();
@@ -146,99 +145,81 @@ export const useQualityControl = () => {
     }
   }, []);
 
+  // Attach delivery and supplier details to assessments (parallel lookups, map-based matching).
+  const enrichAssessments = async (rows: any[]) => {
+    if (!rows.length) return [];
+    const ids = [...new Set(rows.map(qa => qa.store_record_id).filter(Boolean))] as string[];
+    const batches = [...new Set(rows.filter(qa => !qa.store_record_id && qa.batch_number).map(qa => qa.batch_number))] as string[];
+    const CHUNK = 200;
+    const reqs: any[] = [];
+    for (let i = 0; i < ids.length; i += CHUNK)
+      reqs.push(supabase.from('coffee_records').select('id, supplier_id, supplier_name, coffee_type, kilograms, batch_number').in('id', ids.slice(i, i + CHUNK)));
+    for (let i = 0; i < batches.length; i += CHUNK)
+      reqs.push(supabase.from('coffee_records').select('id, supplier_id, supplier_name, coffee_type, kilograms, batch_number').in('batch_number', batches.slice(i, i + CHUNK)));
+    const res = await Promise.all(reqs);
+    const coffeeRecords = res.flatMap((r: any) => r.data || []);
+    const byId = new Map(coffeeRecords.map((r: any) => [r.id, r]));
+    const byBatch = new Map(coffeeRecords.map((r: any) => [r.batch_number, r]));
+
+    const supplierIds = [...new Set(coffeeRecords.map((r: any) => r.supplier_id).filter(Boolean))] as string[];
+    const suppliersById = new Map<string, SupplierRef>();
+    const sres = await Promise.all(
+      Array.from({ length: Math.ceil(supplierIds.length / CHUNK) }, (_, i) =>
+        supabase.from('suppliers').select('id, name, code').in('id', supplierIds.slice(i * CHUNK, i * CHUNK + CHUNK)))
+    );
+    sres.forEach((r: any) => (r.data || []).forEach((sp: any) => suppliersById.set(sp.id, { id: sp.id, name: sp.name, code: sp.code })));
+
+    return rows.map(assessment => {
+      const coffeeRecord: any = byId.get(assessment.store_record_id) || (assessment.batch_number ? byBatch.get(assessment.batch_number) : undefined);
+      const supplier = coffeeRecord?.supplier_id ? suppliersById.get(coffeeRecord.supplier_id) : null;
+      const { displayName, code } = formatSupplierDisplay({ supplier, fallbackName: coffeeRecord?.supplier_name, includeCode: false });
+      return {
+        ...assessment,
+        supplier_name: displayName,
+        supplier_id: coffeeRecord?.supplier_id || null,
+        supplier_code: code,
+        coffee_type: coffeeRecord?.coffee_type || 'Unknown',
+        kilograms: coffeeRecord?.kilograms || 0,
+        batch_number: coffeeRecord?.batch_number || assessment.batch_number,
+      };
+    });
+  };
+
   const loadQualityAssessments = useCallback(async () => {
     try {
-      console.log('Loading quality assessments from Supabase...');
-      
-      const QA_PAGE = 1000;
-      const QA_MAX_PAGES = 10;
-      const supabaseQualityData: any[] = [];
-      for (let page = 0; page < QA_MAX_PAGES; page++) {
-        const { data: chunk, error: qualityError } = await supabase
-          .from('quality_assessments')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .range(page * QA_PAGE, page * QA_PAGE + QA_PAGE - 1);
-        if (qualityError) {
-          console.error('Error fetching quality assessments from Supabase:', qualityError);
-          break;
+      // Step 1 (seconds): newest 200 assessments, shown immediately.
+      const { data: recent, error: recentErr } = await supabase
+        .from('quality_assessments').select('*')
+        .order('created_at', { ascending: false }).limit(200);
+      if (recentErr) throw recentErr;
+      const recentEnriched = await enrichAssessments(recent || []);
+      setQualityAssessments(prev => {
+        const ids = new Set(recentEnriched.map((r: any) => r.id));
+        return [...recentEnriched, ...prev.filter((r: any) => !ids.has(r.id))];
+      });
+
+      // Step 2 (background): all older assessments in parallel pages; the page does not wait for this.
+      (async () => {
+        try {
+          const { count } = await supabase.from('quality_assessments').select('id', { count: 'exact', head: true });
+          const pages = Math.max(1, Math.ceil((count || 0) / 1000));
+          const results = await Promise.all(Array.from({ length: pages }, (_, i) =>
+            supabase.from('quality_assessments').select('*')
+              .order('created_at', { ascending: false }).order('id')
+              .range(i * 1000, i * 1000 + 999)));
+          if (results.some(r => r.error)) return;
+          const seen = new Set<string>();
+          const all = results.flatMap(r => r.data || []).filter((r: any) => !seen.has(r.id) && seen.add(r.id));
+          const enriched = await enrichAssessments(all);
+          enriched.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          setQualityAssessments(enriched);
+        } catch (e) {
+          console.error('Background assessment load failed:', e);
         }
-        supabaseQualityData.push(...(chunk || []));
-        if (!chunk || chunk.length < QA_PAGE) break;
-      }
-
-      let enrichedSupabaseData = [];
-      if (supabaseQualityData && supabaseQualityData.length > 0) {
-        const storeRecordIds = [...new Set(supabaseQualityData.map(qa => qa.store_record_id).filter(Boolean))];
-
-        // Fetch coffee records in chunks (a single .in() with thousands of IDs exceeds PostgREST's URL limit and fails silently)
-        const coffeeRecords: any[] = [];
-        const CR_CHUNK = 200;
-        for (let i = 0; i < storeRecordIds.length; i += CR_CHUNK) {
-          const { data: recordsById, error: crError } = await supabase
-            .from('coffee_records')
-            .select('id, supplier_id, supplier_name, coffee_type, kilograms, batch_number')
-            .in('id', storeRecordIds.slice(i, i + CR_CHUNK));
-          if (crError) {
-            console.error('Error fetching coffee records chunk:', crError);
-            continue;
-          }
-          coffeeRecords.push(...(recordsById || []));
-        }
-
-        // Resolve suppliers for these coffee records
-        const supplierIds = Array.from(
-          new Set((coffeeRecords || []).map(r => r.supplier_id).filter(Boolean))
-        ) as string[];
-
-        const suppliersById = new Map<string, SupplierRef>();
-        if (supplierIds.length > 0) {
-          const { data: suppliersData } = await supabase
-            .from('suppliers')
-            .select('id, name, code')
-            .in('id', supplierIds);
-          (suppliersData || []).forEach((s: any) => {
-            suppliersById.set(s.id, { id: s.id, name: s.name, code: s.code });
-          });
-        }
-
-        enrichedSupabaseData = supabaseQualityData.map(assessment => {
-          // Try to find by store_record_id first, then fall back to batch_number
-          let coffeeRecord = coffeeRecords?.find(record => record.id === assessment.store_record_id);
-          if (!coffeeRecord && assessment.batch_number) {
-            coffeeRecord = coffeeRecords?.find(record => record.batch_number === assessment.batch_number);
-          }
-
-          const supplier = coffeeRecord?.supplier_id ? suppliersById.get(coffeeRecord.supplier_id) : null;
-          const { displayName, code } = formatSupplierDisplay({
-            supplier,
-            fallbackName: coffeeRecord?.supplier_name,
-            includeCode: false,
-          });
-
-          return {
-            ...assessment,
-            supplier_name: displayName,
-            supplier_id: coffeeRecord?.supplier_id || null,
-            supplier_code: code,
-            coffee_type: coffeeRecord?.coffee_type || 'Unknown',
-            kilograms: coffeeRecord?.kilograms || 0,
-            batch_number: coffeeRecord?.batch_number || assessment.batch_number
-          };
-        });
-      }
-
-      const combinedData = enrichedSupabaseData.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-
-      console.log('Loaded quality assessments:', combinedData.length);
-      
-      setQualityAssessments(combinedData);
-      return combinedData;
+      })();
+      return recentEnriched;
     } catch (error) {
       console.error('Error loading quality assessments:', error);
-      setQualityAssessments([]);
       throw error;
     }
   }, []);
