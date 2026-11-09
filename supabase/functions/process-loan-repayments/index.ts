@@ -132,74 +132,92 @@ Deno.serve(async (req) => {
         }
 
         // ═══════════════════════════════════════════════════
-        // STEP 2: Deduct from GUARANTOR's wallet
+        // STEP 2: Deduct from GUARANTOR(s)' wallets
         // ═══════════════════════════════════════════════════
-        // Business loans carry TWO guarantors — recover from each in turn
+        // Two guarantors share the shortfall equally (50/50). If
+        // one cannot cover their half, the other covers the rest
+        // so the installment is still recovered in full.
         const guarantorList = [
           { email: guarantorEmail, name: loan.guarantor_name, phone: loan.guarantor_phone, slot: 1 },
           { email: loan.guarantor2_email, name: loan.guarantor2_name, phone: loan.guarantor2_phone, slot: 2 },
         ].filter((g) => !!g.email)
 
-        for (const g of guarantorList) {
-          if (remainingAmount <= 0) break
-          console.log(`  ⚠️ Borrower insufficient, recovering from guarantor ${g.slot}: ${g.email}`)
+        if (remainingAmount > 0 && guarantorList.length > 0) {
+          const shortfall = remainingAmount
+          console.log(`  ⚠️ Borrower short by UGX ${shortfall} — splitting across ${guarantorList.length} guarantor(s)`)
 
-          const { data: guarantorUserId } = await supabase.rpc('get_unified_user_id', { input_email: g.email })
-          if (!guarantorUserId) continue
-
-          const { data: gBalRaw } = await supabase
-            .rpc('get_spendable_wallet_balance', { p_user_id: guarantorUserId })
-          const guarantorBalance = Math.max(0, Number(gBalRaw || 0))
-          console.log(`  Guarantor ${g.slot} spendable wallet balance: UGX ${guarantorBalance}`)
-          if (guarantorBalance <= 0) continue
-
-          const taken = Math.min(guarantorBalance, remainingAmount)
-          const { error: gIns } = await supabase.from('ledger_entries').insert({
-            user_id: guarantorUserId,
-            entry_type: 'ADJUSTMENT',
-            amount: -taken,
-            reference: `LOAN-GUARANTOR-${loan.id}-${repayment.installment_number}${g.slot === 2 ? '-G2' : ''}`,
-            metadata: {
-              loan_id: loan.id,
-              installment: repayment.installment_number,
-              borrower: borrowerEmail,
-              source: 'guarantor',
-              guarantor_slot: g.slot,
-              bypass_treasury_check: true,
-              description: `Guarantor recovery for ${loan.employee_name}'s loan`
+          const wallets: GuarantorWallet[] = []
+          for (const g of guarantorList) {
+            const { data: guarantorUserId } = await supabase.rpc('get_unified_user_id', { input_email: g.email })
+            if (!guarantorUserId) {
+              console.warn(`  ⚠️ Guarantor ${g.slot} has no system account: ${g.email}`)
+              continue
             }
-          })
-          if (gIns) {
-            console.error(`  ❌ FAILED to write guarantor ledger entry:`, gIns)
-            throw new Error(`Guarantor deduction insert failed: ${gIns.message}`)
+            const { data: gBalRaw } = await supabase
+              .rpc('get_spendable_wallet_balance', { p_user_id: guarantorUserId })
+            const guarantorBalance = Math.max(0, Number(gBalRaw || 0))
+            console.log(`  Guarantor ${g.slot} spendable wallet balance: UGX ${guarantorBalance}`)
+            wallets.push({
+              slot: g.slot,
+              email: String(g.email),
+              name: String(g.name || ''),
+              phone: String(g.phone || ''),
+              userId: String(guarantorUserId),
+              balance: guarantorBalance,
+            })
           }
-          deductedFromGuarantor += taken
-          remainingAmount -= taken
-          deductionSources.push(`Guarantor ${g.slot}: UGX ${taken.toLocaleString()}`)
-          console.log(`  ✅ Deducted UGX ${taken} from guarantor ${g.slot}`)
 
-          await supabase.functions.invoke('send-sms', {
-            body: {
-              phone: g.phone,
-              message: `Dear ${g.name}, UGX ${taken.toLocaleString()} has been deducted from your account to cover ${loan.employee_name}'s loan repayment (installment ${repayment.installment_number}). Borrower had insufficient funds. - Great Pearl Coffee`,
-              userName: g.name,
-              messageType: 'guarantor_recovery'
+          for (const g of splitGuarantorRecovery(shortfall, wallets)) {
+            if (g.taken <= 0) continue
+
+            const { error: gIns } = await supabase.from('ledger_entries').insert({
+              user_id: g.userId,
+              entry_type: 'ADJUSTMENT',
+              amount: -g.taken,
+              reference: `LOAN-GUARANTOR-${loan.id}-${repayment.installment_number}${g.slot === 2 ? '-G2' : ''}`,
+              metadata: {
+                loan_id: loan.id,
+                installment: repayment.installment_number,
+                borrower: borrowerEmail,
+                source: 'guarantor',
+                guarantor_slot: g.slot,
+                guarantor_equal_share: Math.ceil(shortfall / guarantorList.length),
+                bypass_treasury_check: true,
+                description: `Guarantor recovery for ${loan.employee_name}'s loan`
+              }
+            })
+            if (gIns) {
+              console.error(`  ❌ FAILED to write guarantor ledger entry:`, gIns)
+              throw new Error(`Guarantor deduction insert failed: ${gIns.message}`)
             }
-          })
+            deductedFromGuarantor += g.taken
+            remainingAmount -= g.taken
+            deductionSources.push(`Guarantor ${g.slot}: UGX ${g.taken.toLocaleString()}`)
+            console.log(`  ✅ Deducted UGX ${g.taken} from guarantor ${g.slot}`)
 
-          await supabase.functions.invoke('send-transactional-email', {
-            body: {
-              templateName: 'guarantor-recovery',
-              recipientEmail: g.email,
-              idempotencyKey: `guarantor-recovery-${loan.id}-${repayment.installment_number}-g${g.slot}`,
-              templateData: {
-                guarantorName: g.name,
-                borrowerName: loan.employee_name,
-                amountDeducted: taken.toLocaleString(),
-                installmentNumber: String(repayment.installment_number),
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: g.phone,
+                message: `Dear ${g.name}, UGX ${g.taken.toLocaleString()} has been deducted from your account to cover ${loan.employee_name}'s loan repayment (installment ${repayment.installment_number}). Borrower had insufficient funds. - Great Pearl Coffee`,
+                userName: g.name,
+                messageType: 'guarantor_recovery'
+              }
+            })
+
+            await supabase.functions.invoke('send-transactional-email', {
+              body: {
+                templateName: 'guarantor-recovery',
+                recipientEmail: g.email,
+                idempotencyKey: `guarantor-recovery-${loan.id}-${repayment.installment_number}-g${g.slot}`,
+                templateData: {
+                  guarantorName: g.name,
+                  borrowerName: loan.employee_name,
+                  amountDeducted: g.taken.toLocaleString(),
+                  installmentNumber: String(repayment.installment_number),
+                },
               },
-            },
-          })
+            })
+          }
         }
 
         // ═══════════════════════════════════════════════════
@@ -509,6 +527,58 @@ Deno.serve(async (req) => {
     })
   }
 })
+
+// ═══════════════════════════════════════════════════════════
+// GUARANTOR SPLIT — two guarantors share an unpaid installment
+// equally. Each named guarantor is asked for an equal half of
+// the shortfall; whoever can pay more covers what the other
+// could not, so the installment is still recovered in full.
+// ═══════════════════════════════════════════════════════════
+export interface GuarantorWallet {
+  slot: number
+  email: string
+  name: string
+  phone: string
+  userId: string
+  balance: number
+}
+
+export const splitGuarantorRecovery = (
+  shortfall: number,
+  guarantors: GuarantorWallet[],
+): Array<GuarantorWallet & { taken: number }> => {
+  const owed = Math.max(0, Math.round(shortfall || 0))
+  if (guarantors.length === 0) return guarantors.map((g) => ({ ...g, taken: 0 }))
+  if (owed <= 0) return guarantors.map((g) => ({ ...g, taken: 0 }))
+
+  // Equal share is computed over the NAMED guarantors, so a
+  // guarantor with an empty wallet never halves the other's load.
+  const equalShare = Math.ceil(owed / guarantors.length)
+  const taken = guarantors.map(() => 0)
+  let running = 0
+
+  // Pass 1 — each guarantor covers up to their equal share.
+  guarantors.forEach((g, i) => {
+    const cap = Math.min(equalShare, owed - running)
+    const amount = Math.max(0, Math.min(g.balance, cap))
+    taken[i] = amount
+    running += amount
+  })
+
+  // Pass 2 — anyone who can still pay covers what the others could not.
+  let leftover = owed - running
+  guarantors.forEach((g, i) => {
+    if (leftover <= 0) return
+    const spare = g.balance - taken[i]
+    if (spare <= 0) return
+    const extra = Math.min(spare, leftover)
+    taken[i] += extra
+    running += extra
+    leftover -= extra
+  })
+
+  return guarantors.map((g, i) => ({ ...g, taken: taken[i] }))
+}
 
 // 5% penalty on any amount recovered from a guarantor, charged to the borrower.
 export const GUARANTOR_PENALTY_RATE = 0.05
