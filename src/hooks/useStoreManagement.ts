@@ -47,10 +47,22 @@ export const useStoreManagement = () => {
       }
       console.log('Fetching store records from Supabase...');
       
-      const { data: supabaseRecords, error } = await supabase
-        .from('coffee_records')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // The server returns at most 1000 rows per request, so read every page
+      // (older deliveries were silently cut off). Only needed columns are fetched.
+      const PAGE = 1000;
+      const cols = 'id, supplier_name, coffee_type, bags, kilograms, date, batch_number, status, grn_printed_at, grn_printed_by, created_by, created_at';
+      const { count } = await supabase.from('coffee_records').select('id', { count: 'exact', head: true });
+      const pages = Math.max(1, Math.ceil((count || 0) / PAGE));
+      const results = await Promise.all(
+        Array.from({ length: pages }, (_, i) =>
+          supabase.from('coffee_records').select(cols)
+            .order('created_at', { ascending: false }).order('id')
+            .range(i * PAGE, i * PAGE + PAGE - 1)
+        )
+      );
+      const error = results.find(r => r.error)?.error;
+      const seen = new Set<string>();
+      const supabaseRecords = results.flatMap(r => (r.data as any[]) || []).filter((r: any) => !seen.has(r.id) && seen.add(r.id));
 
       if (error) {
         console.error('Error fetching coffee records:', error);
@@ -75,16 +87,16 @@ export const useStoreManagement = () => {
       }));
       
       // Get quality assessments status
-      const { data: qualityAssessments } = await supabase
-        .from('quality_assessments')
-        .select('batch_number, status')
-        .in('batch_number', transformedRecords.map(r => r.batchNumber).filter(Boolean));
-      
-      // Get payment records status
-      const { data: paymentRecords } = await (supabase
-        .from('supplier_payments') as any)
-        .select('batch_number, status')
-        .in('batch_number', transformedRecords.map((r: any) => r.batchNumber).filter(Boolean));
+      // Look up in small chunks, in parallel: one huge list breaks the request.
+      const batchNos = Array.from(new Set(transformedRecords.map(r => r.batchNumber).filter(Boolean)));
+      const chunks: string[][] = [];
+      for (let i = 0; i < batchNos.length; i += 150) chunks.push(batchNos.slice(i, i + 150));
+      const [qaRes, payRes] = await Promise.all([
+        Promise.all(chunks.map(c => supabase.from('quality_assessments').select('batch_number, status').in('batch_number', c))),
+        Promise.all(chunks.map(c => (supabase.from('supplier_payments') as any).select('batch_number, status').in('batch_number', c))),
+      ]);
+      const qualityAssessments = qaRes.flatMap((r: any) => r.data || []) as any[];
+      const paymentRecords = payRes.flatMap((r: any) => r.data || []) as any[];
       
       // Create lookup maps
       const qualityStatusMap = new Map(qualityAssessments?.map(qa => [qa.batch_number, qa.status]));
