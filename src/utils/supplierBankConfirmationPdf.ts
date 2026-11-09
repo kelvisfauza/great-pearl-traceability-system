@@ -4,7 +4,7 @@ import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY
 // Business-name certificate supplied for this letter; not the parent/company incorporation record.
 export const SUPPLIER_LETTER_REGISTRATION = 'Business Name Registration No. 8003082157051';
 
-export function buildSupplierBankConfirmationPdf(logo: string) {
+export function buildSupplierBankConfirmationPdf(logo: string, signature: string) {
   const doc = new jsPDF({ format: 'a4', unit: 'mm' });
   doc.setProperties({ title: 'Supplier Advance Confirmation - Bwambale James', author: COMPANY_NAME });
   doc.addImage(logo, 'PNG', 18, 15, 24, 24);
@@ -46,9 +46,15 @@ export function buildSupplierBankConfirmationPdf(logo: string) {
   y += 7;
   doc.setFont('helvetica', 'bold');
   doc.text('For and on behalf of Great Agro Coffee', 18, y);
-  y += 10;
+  y += 5;
+  const signatureProperties = doc.getImageProperties(signature);
+  const signatureHeight = 18;
+  const signatureWidth = Math.min(45, signatureHeight * signatureProperties.width / signatureProperties.height);
+  doc.addImage(signature, 'PNG', 18, y, signatureWidth, signatureHeight);
+  y += signatureHeight + 5;
+  doc.text('Kusa Fauza', 18, y);
+  y += 6;
   doc.setFont('helvetica', 'normal');
-  doc.text(['Name: __________________________________', 'Designation: ______________________________', 'Signature: _________________________________', 'Telephone: ________________________________'], 18, y, { lineHeightFactor: 1.7 });
-  doc.text('Company stamp', 146, y + 8);
+  doc.text(['Operations Manager', 'Telephone: 0781121639'], 18, y, { lineHeightFactor: 1.5 });
   return doc;
 }
