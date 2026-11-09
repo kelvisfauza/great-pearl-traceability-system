@@ -135,7 +135,7 @@ export const usePresenceList = () => {
     fetchUsers();
 
     // Poll every 5 seconds for near-realtime online user updates
-    const interval = setInterval(fetchUsers, 5000);
+    const interval = setInterval(fetchUsers, 30000);
 
     // Also subscribe to realtime changes on user_presence for instant updates
     const channel = supabase
