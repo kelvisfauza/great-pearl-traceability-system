@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -35,12 +35,16 @@ export const useStoreManagement = () => {
   const [storeRecords, setStoreRecords] = useState<StoreRecord[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
+  const fetchingRef = useRef(false);
   const { toast } = useToast();
   const { getActiveContractForSupplier } = useSupplierContracts();
   const { createAnnouncement } = useNotifications();
   const { employee } = useAuth();
 
   const fetchStoreData = async (silent = false) => {
+    // Skip background refreshes while a load is still running, so slow loads never pile up.
+    if (silent && fetchingRef.current) return;
+    fetchingRef.current = true;
     try {
       if (!silent) {
         setLoading(true);
@@ -87,46 +91,38 @@ export const useStoreManagement = () => {
       }));
       
       // Get quality assessments status
-      // Look up in small chunks, in parallel: one huge list breaks the request.
-      const batchNos = Array.from(new Set(transformedRecords.map(r => r.batchNumber).filter(Boolean)));
-      const chunks: string[][] = [];
-      for (let i = 0; i < batchNos.length; i += 150) chunks.push(batchNos.slice(i, i + 150));
-      const [qaRes, payRes] = await Promise.all([
-        Promise.all(chunks.map(c => supabase.from('quality_assessments').select('batch_number, status').in('batch_number', c))),
-        Promise.all(chunks.map(c => (supabase.from('supplier_payments') as any).select('batch_number, status').in('batch_number', c))),
-      ]);
-      const qualityAssessments = qaRes.flatMap((r: any) => r.data || []) as any[];
-      const paymentRecords = payRes.flatMap((r: any) => r.data || []) as any[];
-      
-      // Create lookup maps
-      const qualityStatusMap = new Map(qualityAssessments?.map(qa => [qa.batch_number, qa.status]));
-      const paymentStatusMap = new Map((paymentRecords as any[])?.map(pr => [pr.batch_number, pr.status]));
-      
-      // Determine the most accurate status for each record
+      // Show the deliveries straight away; refine statuses with Quality results next.
+      setStoreRecords(transformedRecords);
+      if (!silent) setLoading(false);
+
+      // Quality statuses: read in a few large pages (one tiny request per delivery group was very slow).
+      const qaRows: any[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data: qa, error: qaErr } = await supabase
+          .from('quality_assessments')
+          .select('batch_number, status')
+          .order('id')
+          .range(from, from + 999);
+        if (qaErr) throw qaErr;
+        qaRows.push(...(qa || []));
+        if (!qa || qa.length < 1000) break;
+      }
+      const qualityStatusMap = new Map(qaRows.map(qa => [qa.batch_number, qa.status]));
+
       const finalRecords = transformedRecords.map(record => {
         let finalStatus = record.status;
-        
-        // Priority order: rejected > paid > submitted_to_finance > assessed > current
         const qualityStatus = qualityStatusMap.get(record.batchNumber);
-        const paymentStatus = paymentStatusMap.get(record.batchNumber);
-        
         if (record.status === 'rejected' || qualityStatus === 'rejected') {
           finalStatus = 'rejected';
-        } else if (paymentStatus === 'Paid' || paymentStatus === 'paid' || paymentStatus === 'completed') {
-          finalStatus = 'paid';
         } else if (qualityStatus === 'submitted_to_finance') {
           finalStatus = 'submitted_to_finance';
         } else if (qualityStatus === 'assessed') {
           finalStatus = 'assessed';
         }
-        
-        return {
-          ...record,
-          status: finalStatus
-        };
+        return { ...record, status: finalStatus };
       });
 
-      console.log('✅ Loaded records with updated statuses:', finalRecords.map(r => ({ batch: r.batchNumber, status: r.status })));
+      setStoreRecords(finalRecords);
       setStoreRecords(finalRecords);
     } catch (error) {
       console.error('Error fetching store data:', error);
@@ -139,6 +135,7 @@ export const useStoreManagement = () => {
       }
       setStoreRecords([]);
     } finally {
+      fetchingRef.current = false;
       if (!silent) {
         setLoading(false);
       }
@@ -610,10 +607,10 @@ export const useStoreManagement = () => {
     fetchStoreData();
     fetchSuppliers();
     
-    // Auto-refresh every 10 seconds to catch status updates (silent background refresh)
+    // Auto-refresh every 60 seconds to catch status updates (silent background refresh)
     const refreshInterval = setInterval(() => {
       fetchStoreData(true); // Pass true for silent refresh
-    }, 10000);
+    }, 60000);
     
     return () => clearInterval(refreshInterval);
   }, []);
