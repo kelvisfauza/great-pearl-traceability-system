@@ -1,5 +1,10 @@
 # Roadmap
 
+## Meal-plan approval visibility
+- [x] Confirmed today's UGX 30,000 meal plan is pending with an approved Procurement review; authenticated table access and Fauza's administrator role are valid.
+- [x] Move meal-plan/provider submissions to the default Admin Requests tab and report loading failures instead of showing an empty queue; approval and payment rules unchanged.
+- [ ] Verify real signed-in administrator view — external Supabase has no managed browser session.
+
 ## Restore withdrawal charges
 - [x] Restore tiered charges to approval-request Yo/Gosente/cash withdrawals; preserve bank charges and charge admin cash/bank withdrawals and first admin-wallet installments. Immediate failed approval payouts restore exact wallet and treasury movements.
 - [x] Sixteen fee/handler tests passed; rollback-only database check verified UGX 30,000 + 1,100 charge and exact wallet/treasury restoration with no test rows retained; payment handlers deployed and latest build clean.
