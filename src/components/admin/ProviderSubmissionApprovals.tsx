@@ -34,7 +34,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
   const [fpTarget, setFpTarget] = useState<FingerprintApprovalTarget | null>(null);
   const [codeTarget, setCodeTarget] = useState<ApprovalCodeTarget | null>(null);
 
-  const { data: submissions = [], isLoading } = useQuery({
+  const { data: submissions = [], isLoading, error: submissionsError, refetch } = useQuery({
     queryKey: ['provider-submissions-pending'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -163,7 +163,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
       <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Inbox className="w-5 h-5 text-primary" />
-          <CardTitle>Self-Submitted Provider Requests</CardTitle>
+          <CardTitle>Meal Plans & Provider Requests</CardTitle>
           {submissions.length > 0 && (
             <Badge variant="secondary">{submissions.length} pending</Badge>
           )}
@@ -185,9 +185,14 @@ const ProviderSubmissionApprovals: React.FC = () => {
           <div className="flex items-center justify-center py-6 text-muted-foreground">
             <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading...
           </div>
+        ) : submissionsError ? (
+          <div role="alert" className="space-y-2 py-4 text-sm text-destructive">
+            <p>Unable to load meal plans and provider requests. Please try again.</p>
+            <Button size="sm" variant="outline" onClick={() => refetch()}>Retry</Button>
+          </div>
         ) : submissions.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">
-            No pending self-submitted requests. Share the link above with providers.
+            No meal plans or provider requests awaiting approval.
           </p>
         ) : (
           <div className="space-y-3">

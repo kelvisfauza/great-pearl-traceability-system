@@ -91,7 +91,8 @@ const Approvals = () => {
             ))}
           </TabsList>
 
-          <TabsContent value="requests" className="mt-0">
+          <TabsContent value="requests" className="mt-0 space-y-5">
+            <ProviderSubmissionApprovals />
             <ApprovalCenter />
           </TabsContent>
 
@@ -103,7 +104,6 @@ const Approvals = () => {
               <BankDepositApprovals />
             </Section>
             <Section title="Service providers" hint="Provider payments and self-submitted requests">
-              <ProviderSubmissionApprovals />
               <ServiceProviderPayments />
             </Section>
             <Section title="Meals and per diem" hint="Meal plans and support staff per diem">
