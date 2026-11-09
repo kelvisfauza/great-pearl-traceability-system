@@ -133,7 +133,7 @@ export const useStoreManagement = () => {
           variant: "destructive"
         });
       }
-      setStoreRecords([]);
+      // Keep the deliveries already on screen if only the status refinement failed.
     } finally {
       fetchingRef.current = false;
       if (!silent) {
