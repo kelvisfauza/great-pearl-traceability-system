@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { printSamplingOrder } from '@/components/v2/quality/tabs/SamplingOrdersTab';
 import { RefreshCw, Mail, Eye, Loader2, Download, Save } from 'lucide-react';
 
 const labels: Record<string,string> = {pending:'Awaiting review',reviewed:'Reviewed',needs_correction:'Needs correction'};
@@ -47,6 +48,22 @@ export default function QualityAnalysisPostings() {
   const candidates=useQuery({queryKey:['quality-posting-candidates',selected?.id],enabled:!!selected,queryFn:async()=>{
     const res=await (supabase as any).rpc('quality_posting_candidates',{p_id:selected.id});if(res.error)throw res.error;return res.data;
   }});
+  const quickCreate=async()=>{
+    if(!selected||deliveryId==='none')return;
+    const d=candidates.data?.deliveries?.find((x:any)=>x.id===deliveryId);
+    const w=window.open('','_blank','width=800,height=1000');
+    setBusy(true);setError('');
+    try{
+      const when=new Date(d?.date||selected.analysis_date||selected.received_at).toISOString();
+      const by=(employee as any)?.name||employee?.email||'';
+      const ins=await (supabase as any).from('quality_sampling_orders').insert({supplier_name:d?.supplier_name||selected.supplier_name||'Unknown',sample_type:'delivery',delivery_time:when,sampled_by:by,created_by_email:employee?.email||'',created_by_name:(employee as any)?.name||null,status:'assessed',received_at:when,received_by:by,assessed_by:by,assessed_at:when,linked_batch_number:d?.batch_number||selected.batch_number||null,linked_store_record_id:deliveryId,notes:`Created from quality posting ${selected.form_number||selected.subject||''}`.trim()}).select().single();
+      if(ins.error)throw ins.error;
+      const res=await (supabase as any).rpc('link_quality_posting',{p_id:selected.id,p_order_id:ins.data.id,p_delivery_id:deliveryId});
+      if(res.error)throw res.error;
+      printSamplingOrder(ins.data, w);
+      setSelected(null);await refresh();
+    }catch(e:any){w?.close();setError(e.message);}finally{setBusy(false);}
+  };
   const link=async()=>{
     if(!selected)return;setBusy(true);setError('');
     try{const res=await (supabase as any).rpc('link_quality_posting',{p_id:selected.id,p_order_id:orderId==='none'?null:orderId,p_delivery_id:deliveryId==='none'?null:deliveryId});if(res.error)throw res.error;setSelected(null);await refresh();}
@@ -115,7 +132,7 @@ export default function QualityAnalysisPostings() {
       {candidates.error && <Alert variant="destructive"><AlertDescription>{(candidates.error as Error).message}</AlertDescription></Alert>}
       <p className="text-sm">Sampling reference: {selected.sampling_order_number || 'Not recorded'} · {selected.link_method || 'Not linked'}</p>
       {canLink ? <><Select value={orderId} onValueChange={v=>{setOrderId(v);const order=candidates.data?.orders?.find((o:any)=>o.id===v);setDeliveryId(order?.linked_store_record_id || 'none');}}><SelectTrigger aria-label="Linked sampling order"><SelectValue placeholder="Sampling order"/></SelectTrigger><SelectContent><SelectItem value="none">No sampling order</SelectItem>{selected.linked_sampling_order_id && !candidates.data?.orders?.some((o:any)=>o.id===selected.linked_sampling_order_id) && <SelectItem value={selected.linked_sampling_order_id}>Current order · {selected.linked_sampling_order_id}</SelectItem>}{candidates.data?.orders?.map((o:any)=><SelectItem key={o.id} value={o.id}>{o.order_number} · {o.supplier_name} · {new Date(o.delivery_time).toLocaleDateString()} · {o.reason}</SelectItem>)}</SelectContent></Select>
-      <Select value={deliveryId} onValueChange={setDeliveryId}><SelectTrigger aria-label="Linked delivery"><SelectValue placeholder="Delivery"/></SelectTrigger><SelectContent><SelectItem value="none">No delivery</SelectItem>{deliveryId!=='none' && !candidates.data?.deliveries?.some((d:any)=>d.id===deliveryId) && <SelectItem value={deliveryId}>Linked delivery · {deliveryId}</SelectItem>}{candidates.data?.deliveries?.map((d:any)=><SelectItem key={d.id} value={d.id}>{d.batch_number} · {d.supplier_name} · {d.date} · {d.kilograms} kg · {d.reason}</SelectItem>)}</SelectContent></Select><Button variant="outline" disabled={busy || candidates.isLoading} onClick={link}><Save className="mr-2 h-4 w-4"/>Confirm links</Button></> : <p className="text-sm break-words">Order: {selected.linked_sampling_order_id || 'Not linked'} · Delivery: {selected.linked_delivery_id || 'Not linked'}</p>}
+      <Select value={deliveryId} onValueChange={setDeliveryId}><SelectTrigger aria-label="Linked delivery"><SelectValue placeholder="Delivery"/></SelectTrigger><SelectContent><SelectItem value="none">No delivery</SelectItem>{deliveryId!=='none' && !candidates.data?.deliveries?.some((d:any)=>d.id===deliveryId) && <SelectItem value={deliveryId}>Linked delivery · {deliveryId}</SelectItem>}{candidates.data?.deliveries?.map((d:any)=><SelectItem key={d.id} value={d.id}>{d.batch_number} · {d.supplier_name} · {d.date} · {d.kilograms} kg · {d.reason}</SelectItem>)}</SelectContent></Select><Button variant="outline" disabled={busy || candidates.isLoading} onClick={link}><Save className="mr-2 h-4 w-4"/>Confirm links</Button>{orderId==='none' && deliveryId!=='none' && <Button variant="secondary" disabled={busy || candidates.isLoading} onClick={quickCreate}>Quick create sampling order & print</Button>}</> : <p className="text-sm break-words">Order: {selected.linked_sampling_order_id || 'Not linked'} · Delivery: {selected.linked_delivery_id || 'Not linked'}</p>}
       </div>
       {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
       {fileUrl && <><Button asChild variant="outline"><a href={fileUrl} target="_blank" rel="noopener noreferrer"><Download className="mr-2 h-4 w-4"/>{selected.filename}</a></Button>{selected.mime_type.startsWith('image/')?<img src={fileUrl} alt="Quality analysis form" className="max-h-[50vh] w-full object-contain"/>:<iframe src={fileUrl} title="Quality analysis attachment" className="w-full h-[50vh] border rounded-md"/>}</>}
