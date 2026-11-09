@@ -151,7 +151,6 @@ import SystemTransactions from "./pages/admin/SystemTransactions";
 import AdminInitiateWithdrawal from "./pages/admin/AdminInitiateWithdrawal";
 import Treasury from "./pages/admin/Treasury";
 import PayoutStatus from "./pages/admin/PayoutStatus";
-import BatchCreation from "./pages/admin/BatchCreation";
 import LeaveRequests from "./pages/admin/LeaveRequests";
 import ExcelReports from "./pages/admin/ExcelReports";
 import UserStatement from "./pages/admin/UserStatement";
@@ -672,11 +671,6 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/treasury" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <Treasury />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/batch-creation" element={
-                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
-                    <BatchCreation />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/payout-status" element={

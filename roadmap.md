@@ -1,5 +1,9 @@
 # Roadmap
 
+## Restore original batching
+- [ ] Restore automatic daily stock linkage, including discretion purchases, without rebuilding existing batches or changing payments/sales.
+- [ ] Remove manual Batch Creation navigation and disable its creation action; validate restored stock linkage.
+
 ## Loans in Admin Approvals
 - [x] Add pending loan reviews to Admin Requests using the existing review/revision/payment workflow; fresh saved-loan checks and a private transition trigger block self/guarantor approval, missing required guarantees and unsigned terms.
 - [x] Eleven loan/withdrawal rules tests passed; private trigger installed without caller execution grants and preview build clean; browser reached the location-permission screen.
