@@ -14,7 +14,7 @@ import { UserPlus, Search, FileText, Phone, Send, Eye, Pencil, Trash2, Upload, E
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 
-const STATUSES = ["Received", "Pending", "Reviewed", "Interview Scheduled", "Interviewed", "Shortlisted", "Accepted", "Rejected"] as const;
+const STATUSES = ["Received", "Pending", "Reviewed", "Interview Scheduled", "Interviewed", "Shortlisted", "Submit Documents", "Accepted", "Rejected"] as const;
 
 // CV links are stored as signed URLs which eventually expire.
 // Re-sign from the storage path so HR always gets a working link.
@@ -45,6 +45,7 @@ const statusColors: Record<string, string> = {
   "Interview Scheduled": "bg-purple-100 text-purple-800",
   Interviewed: "bg-indigo-100 text-indigo-800",
   Shortlisted: "bg-cyan-100 text-cyan-800",
+  "Submit Documents": "bg-amber-100 text-amber-800",
   Accepted: "bg-green-100 text-green-800",
   Rejected: "bg-red-100 text-red-800",
 };
@@ -62,6 +63,8 @@ const STATUS_SMS_MESSAGES: Record<string, (name: string, ref: string, extra?: st
     `Dear ${name}, thank you for attending the interview for your application (Ref: ${ref}). We will communicate the outcome shortly. Great Agro Coffee.`,
   Shortlisted: (name, ref) =>
     `Dear ${name}, congratulations! You have been SHORTLISTED for the position you applied for (Ref: ${ref}). Further details will follow. Great Agro Coffee.`,
+  "Submit Documents": (name, ref, extra) =>
+    `Dear ${name}, regarding your application (Ref: ${ref}), please bring your PHYSICAL DOCUMENTS (academic certificates, national ID, CV and recommendation letters) to our Head Office${extra ? " " + extra : ""}. Great Agro Coffee.`,
   Accepted: (name, ref) =>
     `Dear ${name}, we are pleased to inform you that your application (Ref: ${ref}) has been ACCEPTED. Welcome to Great Agro Coffee! We will contact you with onboarding details.`,
   Rejected: (name, ref) =>
@@ -79,6 +82,14 @@ const JobApplicationsManager = () => {
   const [newStatus, setNewStatus] = useState("");
   const [statusNote, setStatusNote] = useState("");
   const [statusEmail, setStatusEmail] = useState("");
+  const [docsDate, setDocsDate] = useState("");
+  const msgExtra = () => {
+    if (newStatus === "Submit Documents") {
+      const d = docsDate ? `on ${format(new Date(docsDate + "T00:00:00"), "EEEE, d MMMM yyyy")}` : "";
+      return [d, statusNote].filter(Boolean).join(". ") || undefined;
+    }
+    return statusNote || undefined;
+  };
   const [uploading, setUploading] = useState(false);
 
   // Form state
@@ -217,6 +228,7 @@ const JobApplicationsManager = () => {
   const updateStatusMutation = useMutation({
     mutationFn: async () => {
       if (!selectedApp || !newStatus) return;
+      if (newStatus === "Submit Documents" && !docsDate) throw new Error("Choose the date to bring documents");
 
       const updateData: any = { status: newStatus, notes: statusNote || selectedApp.notes };
       if (statusEmail && statusEmail !== (selectedApp.email || '')) {
@@ -234,7 +246,7 @@ const JobApplicationsManager = () => {
       // Send SMS for status update
       const msgFn = STATUS_SMS_MESSAGES[newStatus];
       if (msgFn) {
-        const smsMessage = msgFn(selectedApp.applicant_name, selectedApp.ref_code, statusNote || undefined);
+        const smsMessage = msgFn(selectedApp.applicant_name, selectedApp.ref_code, msgExtra());
         try {
           await sendSms(selectedApp.phone, smsMessage, selectedApp.applicant_name);
           toast.success("Status SMS sent to applicant");
@@ -244,7 +256,7 @@ const JobApplicationsManager = () => {
       }
 
       // Send email for status update
-      await sendStatusEmail(appWithEmail, newStatus, statusNote || undefined);
+      await sendStatusEmail(appWithEmail, newStatus, msgExtra());
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["job-applications"] });
@@ -253,6 +265,7 @@ const JobApplicationsManager = () => {
       setNewStatus("");
       setStatusNote("");
       setStatusEmail("");
+      setDocsDate("");
       toast.success("Application status updated");
     },
     onError: (e: any) => toast.error("Failed to update: " + e.message),
@@ -480,6 +493,12 @@ const JobApplicationsManager = () => {
                   Status update email will be sent if provided.
                 </p>
               </div>
+              {newStatus === "Submit Documents" && (
+                <div>
+                  <Label>Date to bring documents to Head Office</Label>
+                  <Input type="date" value={docsDate} onChange={(e) => setDocsDate(e.target.value)} />
+                </div>
+              )}
               <div>
                 <Label>Notes / Interview Details</Label>
                 <Textarea value={statusNote} onChange={(e) => setStatusNote(e.target.value)} placeholder="e.g. Interview on Monday 10am at office..." rows={3} />
@@ -489,7 +508,7 @@ const JobApplicationsManager = () => {
               </div>
               <div className="bg-muted/50 rounded-md p-3 text-xs">
                 <p className="font-medium mb-1 flex items-center gap-1"><Send className="h-3 w-3" />SMS Preview:</p>
-                <p>{STATUS_SMS_MESSAGES[newStatus]?.(selectedApp.applicant_name, selectedApp.ref_code, statusNote || undefined)}</p>
+                <p>{STATUS_SMS_MESSAGES[newStatus]?.(selectedApp.applicant_name, selectedApp.ref_code, msgExtra())}</p>
               </div>
               <Button
                 className="w-full"
