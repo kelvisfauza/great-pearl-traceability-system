@@ -1,5 +1,9 @@
 # Roadmap
 
+## Coffee calculator rejection limits
+- [ ] Apply moisture 18%, Group 1 14%, Group 2 28%, Less 12 4%, and pods/husks/stones 4% each without combined 6% rejection; preserve deductions and saved assessments.
+- [ ] Check all calculator and assessment paths and run concrete limit/boundary regressions.
+
 ## Discretion-approved coffee stock
 - [x] Correct future discretion purchases to enter stock atomically on approval; preserve rejected assessments and Finance state, serialize delivery/day linkage, and remove the separate client delivery update.
 - [x] Audited repair of all 16 missing deliveries / 16,012 kg; each has matching linked stock, rejected quality preserved, no missing discretion sources remain, and Finance/sales/treasury snapshots stayed unchanged within the repair transaction.
