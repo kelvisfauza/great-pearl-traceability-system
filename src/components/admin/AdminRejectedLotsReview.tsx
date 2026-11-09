@@ -148,8 +148,8 @@ const AdminRejectedLotsReview = () => {
 
     setProcessing(true);
     try {
-      // 1. Update quality_assessments with discretion buy info
-      const { error: assessError } = await supabase
+      // Approval atomically saves the Finance lot, delivery flag and stock source.
+      const { data: savedAssessment, error: assessError } = await supabase
         .from('quality_assessments')
         .update({
           admin_discretion_buy: true,
@@ -159,19 +159,12 @@ const AdminRejectedLotsReview = () => {
           admin_discretion_notes: discretionNotes || `Admin discretion buy at UGX ${price.toLocaleString()}/kg`,
           final_price: price,
         })
-        .eq('id', selectedLot.id);
+        .eq('id', selectedLot.id)
+        .select('id')
+        .single();
 
       if (assessError) throw assessError;
-
-      // 2. Mark coffee_record as discretion_bought (status stays QUALITY_REJECTED)
-      if (selectedLot.store_record_id) {
-        const { error: recordError } = await supabase
-          .from('coffee_records')
-          .update({ discretion_bought: true })
-          .eq('id', selectedLot.store_record_id);
-
-        if (recordError) throw recordError;
-      }
+      if (!savedAssessment) throw new Error('The discretion purchase was not saved. Please retry.');
 
       // 3. Prepare GRN data
       if (selectedLot.coffee_record) {

@@ -1,5 +1,7 @@
 # Project architecture
 
+- Discretion purchases atomically promote the saved delivery to inventory through the quality trigger while retaining its rejected assessment and Finance payment state; serialize stock-source creation per delivery and batch day so retries do not double stock or rebuild sales allocations.
+
 - Keep supplier bank confirmation PDF content in a dedicated builder, using the supplied business-name certificate independently of company incorporation branding; prepare shared issuance verification before offering the browser download.
 
 - Display pending provider submissions (including meal plans) in the default Admin Requests tab using the existing approval component; retain Procurement gating and surface read failures rather than showing a false empty queue.
