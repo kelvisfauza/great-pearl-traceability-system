@@ -1,5 +1,7 @@
 # Project architecture
 
+- Embed the pending loan queue in Admin Requests through QuickLoans approvalDesk mode to reuse the existing review/revision/payment workflow; enforce borrower/guarantor conflicts and signed guarantor/borrower prerequisites at the loan transition boundary, preserving separate service-driven appeals and historical loans.
+
 - Keep coffee rejection decisions in coffeeRejectionRules shared by pricing calculators, assessment gating and training; preserve independent price deduction formulas and saved historical decisions when limits change.
 
 - Discretion purchases atomically promote the saved delivery to inventory through the quality trigger while retaining its rejected assessment and Finance payment state; serialize stock-source creation per delivery and batch day so retries do not double stock or rebuild sales allocations.
