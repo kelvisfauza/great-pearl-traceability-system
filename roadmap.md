@@ -1,8 +1,9 @@
 # Roadmap
 
 ## Restore original batching
-- [ ] Restore automatic daily stock linkage, including discretion purchases, without rebuilding existing batches or changing payments/sales.
-- [ ] Remove manual Batch Creation navigation and disable its creation action; validate restored stock linkage.
+- [x] Restore automatic daily stock linkage, including discretion purchases, without rebuilding existing batches or changing payments/sales.
+- [x] Remove manual Batch Creation navigation and disable its creation action; rollback-only live tests passed for 237 kg automatic linkage, daily grouping, retry safety, discretion purchases and unchanged sales/payments; preview build clean.
+- [ ] Verify signed-in Quality approval through the UI — external Supabase has no managed test session; automatic delivery-to-stock flow verified in rollback-only database tests instead.
 
 ## Loans in Admin Approvals
 - [x] Add pending loan reviews to Admin Requests using the existing review/revision/payment workflow; fresh saved-loan checks and a private transition trigger block self/guarantor approval, missing required guarantees and unsigned terms.
