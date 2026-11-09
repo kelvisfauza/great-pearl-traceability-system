@@ -1,8 +1,9 @@
 # Roadmap
 
 ## Coffee calculator rejection limits
-- [ ] Apply moisture 18%, Group 1 14%, Group 2 28%, Less 12 4%, and pods/husks/stones 4% each without combined 6% rejection; preserve deductions and saved assessments.
-- [ ] Check all calculator and assessment paths and run concrete limit/boundary regressions.
+- [x] Apply shared moisture 18%, Group 1 14%, Group 2 28%, Less 12 4%, and pods/husks/stones 4% each to Arabica/Robusta, admin and milling calculators, V2 assessment gating and training; remove combined 6% rejection, preserve price deductions and saved decisions.
+- [x] All 33 concrete limit/boundary, combined-FM, price-deduction and saved-quality tests passed; latest preview build clean.
+- [ ] Verify signed-in calculator saving through the real UI — external Supabase has no managed browser session; no historical assessments changed.
 
 ## Discretion-approved coffee stock
 - [x] Correct future discretion purchases to enter stock atomically on approval; preserve rejected assessments and Finance state, serialize delivery/day linkage, and remove the separate client delivery update.
