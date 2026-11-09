@@ -13,12 +13,14 @@ const STATUSES = ['pending', 'reviewed', 'needs_correction'] as const;
 export async function fetchQualityPostingCounts(): Promise<QualityPostingCounts> {
   const [total, pending, reviewed, needs_correction] = await Promise.all([
     (supabase as any).from('quality_analysis_postings').select('id', { count: 'exact', head: true }),
-    ...(STATUSES.map((status) =>
-      (supabase as any)
+    ...(STATUSES.map((status) => {
+      let q = (supabase as any)
         .from('quality_analysis_postings')
         .select('id', { count: 'exact', head: true })
-        .eq('status', status)
-    ) as any[]),
+        .eq('status', status);
+      if (status === 'pending') q = q.is('linked_delivery_id', null);
+      return q;
+    }) as any[]),
   ]);
 
   for (const res of [total, pending, reviewed, needs_correction]) {
