@@ -474,7 +474,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
       </div>` : ''}
 
       <div class="penalty-note">
-        <strong>⚠ Late Payment Policy:</strong> 20% penalty per week overdue, max 2 weeks (40%). Missed installments block new loan requests. Recovery: Wallet → Salary → Guarantor.
+        <strong>⚠ Late Payment Policy:</strong> 20% penalty per week overdue, max 2 weeks (40%). Missed installments block new loan requests. Recovery: Wallet → Salary → Guarantors (shared equally between them).
       </div>
 
       <div class="signatures">
