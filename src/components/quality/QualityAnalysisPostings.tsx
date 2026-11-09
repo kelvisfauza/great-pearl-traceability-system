@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +28,21 @@ export default function QualityAnalysisPostings() {
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState('');
   const [orderId,setOrderId] = useState('none');
+  const [reviewers,setReviewers] = useState<Record<string,string>>({});
+  const presenceRef = useRef<any>(null);
+  const myName = employee?.name || employee?.email || 'Someone';
+  const myKey = (employee?.email || 'anon').toLowerCase();
+  useEffect(()=>{
+    const ch = supabase.channel('quality-postings-review',{config:{presence:{key:myKey}}});
+    ch.on('presence',{event:'sync'},()=>{
+      const state:any = ch.presenceState(); const map:Record<string,string> = {};
+      Object.entries(state).forEach(([key,metas]:any)=>{ if(key===myKey) return; (metas||[]).forEach((m:any)=>{ if(m.posting_id) map[m.posting_id]=m.name; }); });
+      setReviewers(map);
+    }).subscribe();
+    presenceRef.current = ch;
+    return ()=>{ supabase.removeChannel(ch); };
+  },[myKey]);
+  useEffect(()=>{ const ch=presenceRef.current; if(!ch) return; ch.track({posting_id: selected?.id || null, name: myName}).catch(()=>{}); },[selected?.id,myName]);
   const [deliveryId,setDeliveryId] = useState('none');
   const candidates=useQuery({queryKey:['quality-posting-candidates',selected?.id],enabled:!!selected,queryFn:async()=>{
     const res=await (supabase as any).rpc('quality_posting_candidates',{p_id:selected.id});if(res.error)throw res.error;return res.data;
@@ -91,11 +106,11 @@ export default function QualityAnalysisPostings() {
       <TableCell><div>{item.form_number || 'Number not recorded'}</div><div className="text-sm text-muted-foreground max-w-64 break-words">{item.subject}</div></TableCell>
       <TableCell>{item.supplier_name || 'Not recorded'}<div className="text-sm text-muted-foreground">{item.batch_number || 'Batch not recorded'}</div><Badge variant="outline">{item.link_method ? (item.link_method==='admin_confirmed'?'Links confirmed':'Exact reference linked') : 'Unlinked'}</Badge></TableCell>
       <TableCell><Badge variant={item.status==='needs_correction'?'destructive':'secondary'}>{labels[item.status] ?? item.status}</Badge></TableCell>
-      <TableCell><Button size="sm" variant="outline" onClick={()=>open(item)}><Eye className="mr-2 h-4 w-4"/>Review</Button></TableCell>
+      <TableCell><Button size="sm" variant="outline" onClick={()=>{ if(reviewers[item.id] && !window.confirm(`${reviewers[item.id]} is already reviewing this posting. Open it anyway?`)) return; open(item); }}><Eye className="mr-2 h-4 w-4"/>Review</Button>{reviewers[item.id] && <div className="mt-1"><Badge variant="destructive">Being reviewed by {reviewers[item.id]}</Badge></div>}</TableCell>
     </TableRow>)}</TableBody></Table></div>
     <div className="flex justify-between items-center gap-3"><span className="text-sm text-muted-foreground">{rows.data?.count ?? 0} postings · Page {page+1}</span><div className="flex gap-2"><Button size="sm" variant="outline" disabled={page===0} onClick={()=>setPage(p=>p-1)}>Previous</Button><Button size="sm" variant="outline" disabled={(page+1)*25 >= (rows.data?.count ?? 0)} onClick={()=>setPage(p=>p+1)}>Next</Button></div></div>
     <Dialog open={!!selected} onOpenChange={v=>{if(!v)setSelected(null);}}><DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>Quality Analysis Posting</DialogTitle></DialogHeader>
-      {selected && <><div className="space-y-1 break-words"><p className="font-medium">{selected.subject}</p><p className="text-sm text-muted-foreground">{selected.sender_name} · {selected.sender_email}</p><p className="text-sm">Form: {selected.form_number || 'Not recorded'} · Analysis date: {selected.analysis_date || 'Not recorded'}</p></div>
+      {selected && <>{reviewers[selected.id] && <Alert variant="destructive"><AlertDescription>{reviewers[selected.id]} is also reviewing this posting right now.</AlertDescription></Alert>}<div className="space-y-1 break-words"><p className="font-medium">{selected.subject}</p><p className="text-sm text-muted-foreground">{selected.sender_name} · {selected.sender_email}</p><p className="text-sm">Form: {selected.form_number || 'Not recorded'} · Analysis date: {selected.analysis_date || 'Not recorded'}</p></div>
       <div className="space-y-3 border-t pt-3"><h3 className="font-semibold">Sampling order & delivery</h3>
       {candidates.error && <Alert variant="destructive"><AlertDescription>{(candidates.error as Error).message}</AlertDescription></Alert>}
       <p className="text-sm">Sampling reference: {selected.sampling_order_number || 'Not recorded'} · {selected.link_method || 'Not linked'}</p>
