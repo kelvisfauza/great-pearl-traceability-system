@@ -135,7 +135,7 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis, 
         </div>
         {analysis.is_rejected && (
           <p style={{ margin: '4px 0 0 0', fontSize: '9px', color: '#dc2626' }}>
-            FM exceeds 6% threshold - Sample does not meet quality requirements
+            Sample does not meet the recorded quality requirements
           </p>
         )}
       </div>

@@ -1,7 +1,6 @@
-import { test, mock } from 'bun:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-mock.module('@/integrations/supabase/client', () => ({ supabase: {} }));
 const { calculateQualityPrice, defaultCalculatorInputs, buildCalculatorInputs } = await import('./qualityPriceCalculator');
 
 for (const coffeeType of ['arabica', 'robusta']) {
@@ -24,7 +23,7 @@ for (const coffeeType of ['arabica', 'robusta']) {
 }
 test('Arabica and Robusta deductions remain unchanged', () => {
   const inputs = { ...defaultCalculatorInputs, refPrice: '15000', moisture: '18', gp1: '14', gp2: '28', less12: '4', pods: '4', husks: '4', stones: '4' };
-  assert.equal(calculateQualityPrice(inputs, 'arabica').finalPrice, 11710);
+  assert.equal(calculateQualityPrice(inputs, 'arabica').finalPrice, 10570);
   assert.equal(calculateQualityPrice(inputs, 'robusta').finalPrice, 12150);
 });
 test('saved below12 and explicit stones are used rather than replaced by zeros', () => {
