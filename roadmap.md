@@ -1,5 +1,9 @@
 # Roadmap
 
+## Supplier bank confirmation letter
+- [ ] Add the Bwambale James UGX 20,000,000 supplier-advance letter for Equity Bank Kasese Branch to Company Forms, using the supplied business-name registration certificate.
+- [ ] Check the one-page PDF layout and download preparation; signed-in issuance requires an external Supabase session.
+
 ## Meal-plan approval visibility
 - [x] Confirmed today's UGX 30,000 meal plan is pending with an approved Procurement review; authenticated table access and Fauza's administrator role are valid.
 - [x] Move meal-plan/provider submissions to the default Admin Requests tab and report loading failures instead of showing an empty queue; approval and payment rules unchanged.

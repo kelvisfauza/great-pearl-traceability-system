@@ -37,6 +37,7 @@ import StoreReleaseQualityCheckTemplateDownload from '@/components/expenses/Stor
 import SupplierAdvanceAgreementTemplateDownload from '@/components/expenses/SupplierAdvanceAgreementTemplateDownload';
 import WeeklyMealSignSheetTemplateDownload from '@/components/expenses/WeeklyMealSignSheetTemplateDownload';
 import AgentBankingSlipTemplateDownload from '@/components/expenses/AgentBankingSlipTemplateDownload';
+import SupplierBankConfirmationDownload from '@/components/expenses/SupplierBankConfirmationDownload';
 
 import FuelOrderModal from '@/components/finance/FuelOrderModal';
 
@@ -618,6 +619,7 @@ const MyExpenses = () => {
 
           {/* Download Templates Tab */}
           <TabsContent value="templates" className="space-y-6">
+            <SupplierBankConfirmationDownload />
             <CompanyHeaderSheetDownload />
             <YedaHeaderSheetDownload />
             <PerDiemTemplateDownload />
