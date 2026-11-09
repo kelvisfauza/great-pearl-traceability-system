@@ -452,7 +452,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
         </div>` : ''}
         <div class="recovery-note">
           <strong>🔄 Recovery Plan:</strong> ${isWeekly ? 'Weekly' : 'Monthly'} installments of UGX ${installmentAmount.toLocaleString()} (${numInstallments} ${isWeekly ? 'weeks' : 'months'}). 
-          Default recovery order: Borrower wallet → Salary → First guarantor (${loan.guarantor_name})${loan.guarantor2_name ? ` → Second guarantor (${loan.guarantor2_name}) for any balance still unpaid` : ''}.
+          Default recovery order: Borrower wallet → Salary → then the two guarantors share any shortfall equally (50/50): First guarantor (${loan.guarantor_name})${loan.guarantor2_name ? ` and Second guarantor (${loan.guarantor2_name})` : ''}. If one guarantor cannot cover their half, the other covers the remainder so the installment is recovered in full.
         </div>
       </div>
 
@@ -474,14 +474,15 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
       </div>` : ''}
 
       <div class="penalty-note">
-        <strong>⚠ Late Payment Policy:</strong> 20% penalty per week overdue, max 2 weeks (40%). Missed installments block new loan requests. Recovery: Wallet → Salary → Guarantor.
+        <strong>⚠ Late Payment Policy:</strong> 20% penalty per week overdue, max 2 weeks (40%). Missed installments block new loan requests. Recovery: Wallet → Salary → Guarantors (shared equally between them).
       </div>
 
       <div class="signatures">
         <div><div class="sig-line"></div><strong>Reviewed By</strong><br/>Administrator</div>
         <div><div class="sig-line"></div><strong>Approved By</strong><br/>Finance Manager</div>
         <div><div class="sig-line"></div><strong>Borrower</strong><br/>${loan.employee_name}</div>
-        <div><div class="sig-line"></div><strong>Guarantor</strong><br/>${loan.guarantor_name || '—'}</div>
+        <div><div class="sig-line"></div><strong>First Guarantor</strong><br/>${loan.guarantor_name || '—'}</div>
+        ${loan.guarantor2_name ? `<div><div class="sig-line"></div><strong>Second Guarantor</strong><br/>${loan.guarantor2_name}</div>` : ''}
       </div>
 
       <div class="footer">
@@ -921,7 +922,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
 
                   <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
                     <strong>Recovery Plan:</strong> {isWeekly ? 'Weekly' : isBullet ? 'Bullet' : 'Monthly'} installments of UGX {installmentAmount.toLocaleString()} ({numInstallments} {isWeekly ? 'weeks' : isBullet ? 'payment' : 'months'}). 
-                    Default recovery order: Borrower wallet → Salary → First guarantor ({loan.guarantor_name}){loan.guarantor2_name ? ` → Second guarantor (${loan.guarantor2_name}) for any balance still unpaid` : ''}.
+                    Default recovery order: Borrower wallet → Salary → then the two guarantors share any shortfall equally (50/50): First guarantor ({loan.guarantor_name}){loan.guarantor2_name ? ` and Second guarantor (${loan.guarantor2_name})` : ''}. If one cannot cover their half, the other covers the remainder.
                   </div>
                 </CardContent>
               </Card>

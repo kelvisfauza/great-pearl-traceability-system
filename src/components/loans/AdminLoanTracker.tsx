@@ -896,7 +896,7 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
                       <p className="text-muted-foreground text-sm">No guarantor information available</p>
                     )}
                     <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
-                      <strong>Recovery Plan:</strong> {isWeekly ? 'Weekly' : isBullet ? 'Bullet' : 'Monthly'} deductions. Default recovery: Wallet → Salary → Guarantor ({selectedBorrower.guarantor_name || 'N/A'}).
+                      <strong>Recovery Plan:</strong> {isWeekly ? 'Weekly' : isBullet ? 'Bullet' : 'Monthly'} deductions. Default recovery: Wallet → Salary → guarantors sharing any shortfall equally ({selectedBorrower.guarantor_name || 'N/A'}${selectedBorrower.guarantor2_name ? ` and ${selectedBorrower.guarantor2_name}` : ''}).
                     </div>
                   </CardContent>
                 </Card>
