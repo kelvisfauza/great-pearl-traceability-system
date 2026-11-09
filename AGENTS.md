@@ -4,7 +4,7 @@
 
 - Keep coffee rejection decisions in coffeeRejectionRules shared by pricing calculators, assessment gating and training; preserve independent price deduction formulas and saved historical decisions when limits change.
 
-- Stock batches are created only by administrators through admin_create_inventory_batch from Store-verified deliveries whose counted weight and bags match the record; Quality acceptance and discretion purchases mark coffee inventory-ready without auto-linking, and supplier payments stay independent of batching.
+- Inventory-ready deliveries link atomically and idempotently to daily coffee-type batches through ensure_inventory_batch_source_for_record, including discretion purchases; preserve existing sources and sales allocations without full rebuilds, and keep supplier payments independent of batching.
 
 - Keep supplier bank confirmation PDF content in a dedicated builder, using the supplied business-name certificate independently of company incorporation branding; prepare shared issuance verification before offering the browser download.
 
