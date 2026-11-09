@@ -196,7 +196,7 @@ const LoanRepaymentSlip = ({ open, onClose, loanData, repayments }: LoanRepaymen
           </div>
 
           <div className="mt-3 p-2 bg-yellow-50 border border-yellow-300 rounded text-xs text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-700 dark:text-yellow-300">
-            <strong>⚠ Late Payment Penalty:</strong> 20% of installment per week overdue, max 2 weeks (40%). Recovery order: Wallet → Salary → Guarantor. Missed installments block new loan requests.
+            <strong>⚠ Late Payment Penalty:</strong> 20% of installment per week overdue, max 2 weeks (40%). Recovery order: Wallet → Salary → Guarantors (shared equally between them). Missed installments block new loan requests.
           </div>
           {isLongTerm && (
             <div className="mt-2 p-2 bg-blue-50 border border-blue-300 rounded text-xs text-blue-800 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-300">

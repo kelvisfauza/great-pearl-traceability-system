@@ -2237,7 +2237,7 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
 
       <div class="penalty-note">
         <strong>⚠ Terms & Conditions:</strong> Late payments incur a 20% penalty per overdue week (max 2 weeks / 40%). 
-        Recovery order: Wallet → Salary → Guarantor. Missed installments block new loan requests.
+        Recovery order: Wallet → Salary → Guarantors (shared equally between them). Missed installments block new loan requests.
         ${loan.loan_type === 'long_term' ? '<br/><strong>💡 Early Repayment:</strong> Long-term loans charge interest daily. Pay early via MoMo to save on interest.' : ''}
       </div>
 

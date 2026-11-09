@@ -108,7 +108,7 @@ const LoanPolicySettings = () => {
               <p className="font-medium">Security &amp; recovery policy enforced by the evaluation</p>
               <p>• Any guarantor with a default, overdue loan, defaulted guarantee, prior recovery hit or no salary → capacity 0 and the facility is denied.</p>
               <p>• Above the high-value threshold, guarantors must be fully clean and provide the required cover, otherwise the offer is trimmed back to the threshold.</p>
-              <p>• Recovery order on arrears: borrower wallet → guarantor 1 wallet → guarantor 2 wallet, with overdraft creation where needed.</p>
+              <p>• Recovery order on arrears: borrower wallet → the two guarantors share the shortfall equally (guarantor 1 and guarantor 2), with overdraft creation where needed; whoever can pay more covers what the other could not.</p>
               <p>• Signed terms &amp; conditions with wallet-deduction authority are required before disbursement.</p>
             </div>
 
