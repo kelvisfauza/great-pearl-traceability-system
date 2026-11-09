@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { coffeeRejectionReason } from '@/lib/coffeeRejectionRules';
 import { RefreshCw, Loader2, Save, Printer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -194,8 +195,8 @@ const QualityPriceCalculator = () => {
       - robustaInArabica; // Robusta contamination reduces D14
 
     let outturn: number | string;
-    // Rejection conditions: Less12 > 3%, Robusta in Arabica > 3%, or GP1 > 12%
-    if (less12 > 3 || robustaInArabica > 3 || gp1 > 12) {
+    // Rejection conditions: Less12 > 4%, Robusta in Arabica > 3%, or GP1 > 14%
+    if (coffeeRejectionReason({ moisture, gp1, gp2, less12, pods, husks, stones, robustaInArabica })) {
       outturn = 'REJECT';
     } else {
       outturn = 100
@@ -216,8 +217,8 @@ const QualityPriceCalculator = () => {
     const d14HighBonus = (cleanD14 > 82) ? (cleanD14 - 82) * 50 : 0;
 
     let outturnPrice: number | string | null = null;
-    // Added: Robusta in Arabica > 3% and GP1 > 12% rejection thresholds
-    const rejectOutturnPrice = (moisture > 16.5) || (gp1 > 12) || (gp2 > 25) || (less12 > 3) || (fm > 6) || (robustaInArabica > 3);
+    // Added: Robusta in Arabica > 3% and GP1 > 14% rejection thresholds
+    const rejectOutturnPrice = coffeeRejectionReason({ moisture, gp1, gp2, less12, pods, husks, stones, robustaInArabica }) !== null;
     
     if (refPrice <= 0 || isNaN(refPrice)) {
       outturnPrice = null;
@@ -232,8 +233,8 @@ const QualityPriceCalculator = () => {
     }
 
     let finalPrice: number | string | null = null;
-    // Added: Robusta in Arabica > 3% and GP1 > 12% rejection thresholds
-    const rejectFinal = (moisture > 16.5) || (gp1 > 12) || (gp2 > 25) || (less12 > 3) || (fm > 6) || (pods > 6) || (husks > 6) || (stones > 6) || (robustaInArabica > 3);
+    // Added: Robusta in Arabica > 3% and GP1 > 14% rejection thresholds
+    const rejectFinal = coffeeRejectionReason({ moisture, gp1, gp2, less12, pods, husks, stones, robustaInArabica }) !== null;
     
     if (refPrice <= 0 || isNaN(refPrice)) {
       finalPrice = null;
@@ -249,12 +250,8 @@ const QualityPriceCalculator = () => {
     }
 
     let qualityNote = '';
-    if (robustaInArabica > 3) qualityNote = `Rejected: Robusta in Arabica exceeds 3% (${robustaInArabica.toFixed(1)}%)`;
-    else if (gp1 > 12) qualityNote = `Rejected: GP1 defects exceed 12% (${gp1.toFixed(1)}%)`;
-    else if (moisture > 16.5) qualityNote = `Rejected: Moisture above tolerance by ${(moisture - 16.5).toFixed(1)}%`;
-    else if (gp2 > 25) qualityNote = `Rejected: GP2 defects above tolerance by ${(gp2 - 25).toFixed(1)}%`;
-    else if (less12 > 3) qualityNote = `Rejected: Less‑12 above tolerance by ${(less12 - 3).toFixed(1)}%`;
-    else if (fm > 6) qualityNote = `Rejected: Foreign Matter above tolerance by ${(fm - 6).toFixed(1)}%`;
+    const rejectionReason = coffeeRejectionReason({ moisture, gp1, gp2, less12, pods, husks, stones, robustaInArabica });
+    if (rejectionReason) qualityNote = `Rejected: ${rejectionReason}`;
     else {
       qualityNote = ((gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && pods === 0 && husks === 0 && stones === 0 && robustaInArabica === 0)
         ? 'Bonus: Premium Price Applied'
@@ -609,7 +606,7 @@ const QualityPriceCalculator = () => {
                 <div>
                   <Label htmlFor="gp1" className="flex items-center gap-1">
                     GP 1 DEFECT (%)
-                    <span className="text-xs text-muted-foreground">(max 12%)</span>
+                    <span className="text-xs text-muted-foreground">(max 14%)</span>
                   </Label>
                   <Input
                     id="gp1"
@@ -618,10 +615,10 @@ const QualityPriceCalculator = () => {
                     onChange={(e) => handleInputChange('gp1', e.target.value)}
                     step="0.1"
                     min="0"
-                    className={parseFloat(state.gp1) > 12 ? 'border-destructive' : ''}
+                    className={parseFloat(state.gp1) > 14 ? 'border-destructive' : ''}
                   />
-                  {parseFloat(state.gp1) > 12 && (
-                    <p className="text-xs text-destructive mt-1">Exceeds 12% - coffee will be REJECTED</p>
+                  {parseFloat(state.gp1) > 14 && (
+                    <p className="text-xs text-destructive mt-1">Exceeds 14% - coffee will be REJECTED</p>
                   )}
                 </div>
 

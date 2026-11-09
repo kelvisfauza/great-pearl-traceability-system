@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, GraduationCap, Play, CheckCircle, XCircle } from "lucide-react";
+import { coffeeRejectionReason } from '@/lib/coffeeRejectionRules';
 
 // Generate a random simulation batch
 const generateSimulation = () => {
@@ -27,11 +28,10 @@ const generateSimulation = () => {
   };
   const totalDefects = defects.group1 + defects.group2 + defects.pods + defects.husks + defects.fm;
   
-  // Business rules
-  let correctDecision: 'Accept' | 'Reject' = 'Accept';
-  if (moisture > 19) correctDecision = 'Reject';
-  if (totalDefects > 7) correctDecision = 'Reject';
-  if (type === 'Arabica' && defects.group1 > 12) correctDecision = 'Reject';
+  const correctDecision: 'Accept' | 'Reject' = coffeeRejectionReason({
+    moisture, gp1: defects.group1, gp2: defects.group2, less12: 0,
+    pods: defects.pods, husks: defects.husks, stones: defects.fm,
+  }, type === 'Arabica') ? 'Reject' : 'Accept';
 
   // Price calc (simplified)
   let correctPrice = 0;

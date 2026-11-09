@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { coffeeRejectionReason } from '@/lib/coffeeRejectionRules';
 import { RefreshCw, Loader2, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -74,7 +75,7 @@ const RobustaPriceCalculator = () => {
   const printRef = useRef<HTMLDivElement>(null);
 
   const TARGET_MOISTURE = 15; // Fixed target moisture
-  const FM_REJECTION_THRESHOLD = 6; // FM above 6% = rejection
+
 
   const [state, setState] = useState<RobustaState>({
     refPrice: '',
@@ -152,7 +153,7 @@ const RobustaPriceCalculator = () => {
 
     // Calculate total FM (pods + husks + stones)
     const totalFM = pods + husks + stones;
-    const isRejected = totalFM > FM_REJECTION_THRESHOLD;
+    const isRejected = coffeeRejectionReason({ moisture, gp1: g1Defects, gp2: g2Defects, less12, pods, husks, stones }, false) !== null;
 
     // Calculate total defects and outturn (G1, G2, Less12, and FM affect outturn)
     const totalDefects = g1Defects + g2Defects + less12 + totalFM;
@@ -205,6 +206,8 @@ const RobustaPriceCalculator = () => {
       discretion: '0'
     });
   };
+
+  const rejectionReason = coffeeRejectionReason({ moisture: parseValue(state.moisture), gp1: parseValue(state.g1Defects), gp2: parseValue(state.g2Defects), less12: parseValue(state.less12), pods: parseValue(state.pods), husks: parseValue(state.husks), stones: parseValue(state.stones) }, false);
 
   const fmt = (n: number) => isFinite(n) ? n.toLocaleString('en-UG', { maximumFractionDigits: 1 }) : '—';
   const fmtCurrency = (n: number) => isFinite(n) ? n.toLocaleString('en-UG', { maximumFractionDigits: 0 }) : '—';
@@ -259,7 +262,7 @@ const RobustaPriceCalculator = () => {
         outturn_price: 0,
         final_price: results.actualPricePerKg,
         quality_note: results.isRejected 
-          ? `REJECTED: FM ${fmt(results.totalFM)}% exceeds 6% threshold`
+          ? `REJECTED: ${rejectionReason}`
           : `Deduction/kg: UGX ${fmtCurrency(results.deductionPerKg)}, Total Deduction: ${fmt(results.totalDeductionPercent)}%`,
         is_rejected: results.isRejected,
         created_by: employee?.name || 'Unknown',
@@ -569,7 +572,7 @@ const RobustaPriceCalculator = () => {
               </div>
               {results.isRejected && (
                 <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                  FM exceeds 6% threshold
+                  {rejectionReason}
                 </p>
               )}
             </div>
@@ -628,7 +631,7 @@ const RobustaPriceCalculator = () => {
             </p>
             {results.isRejected && (
               <p className="text-sm font-medium text-red-600 mt-2">
-                FM {fmt(results.totalFM)}% exceeds 6% maximum threshold
+                {rejectionReason}
               </p>
             )}
           </div>

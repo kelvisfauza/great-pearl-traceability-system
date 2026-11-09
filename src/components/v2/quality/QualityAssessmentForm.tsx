@@ -17,6 +17,7 @@ import { notifyTeams } from "@/lib/teamsNotify";
 import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
 import { useQualityRole } from "@/hooks/useQualityRole";
 import { snapshotFromReadings } from "@/lib/qualityPriceCalculator";
+import { coffeeRejectionReason } from '@/lib/coffeeRejectionRules';
 
 interface QualityAssessmentFormProps {
   lot: any;
@@ -69,9 +70,18 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   const robustaPercentage = watch('robusta_in_arabica_percentage');
   const g1Percentage = watch('group1_percentage');
   
-  // Auto-reject conditions: Robusta in Arabica > 3% OR G1 defects > 12%
   const isArabica = lot.coffee_type?.toLowerCase().includes('arabica');
-  const shouldAutoReject = isArabica && (robustaPercentage > 3 || g1Percentage > 12);
+  const rejectionReason = coffeeRejectionReason({
+    moisture: Number(watch('moisture_content')) || 0,
+    gp1: Number(g1Percentage) || 0,
+    gp2: Number(watch('group2_percentage')) || 0,
+    less12: 0,
+    pods: Number(watch('pods_percentage')) || 0,
+    husks: Number(watch('husks_percentage')) || 0,
+    stones: Math.max(0, (Number(watch('fm_percentage')) || 0) - (Number(watch('pods_percentage')) || 0) - (Number(watch('husks_percentage')) || 0)),
+    robustaInArabica: Number(robustaPercentage) || 0,
+  }, isArabica);
+  const shouldAutoReject = rejectionReason !== null;
 
   const submitForPricing = useMutation({
     mutationFn: async (data: AssessmentForm) => {
@@ -378,14 +388,12 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       </div>
 
       {/* Auto-rejection warning for Arabica */}
-      {isArabica && shouldAutoReject && (
+      {shouldAutoReject && (
         <Alert variant="destructive">
           <XCircle className="h-4 w-4" />
           <AlertDescription>
             <strong>Auto-Rejection:</strong> This lot will be rejected because{' '}
-            {robustaPercentage > 3 && `Robusta in Arabica exceeds 3% (${robustaPercentage}%)`}
-            {robustaPercentage > 3 && g1Percentage > 12 && ' and '}
-            {g1Percentage > 12 && `G1 defects exceed 12% (${g1Percentage}%)`}
+            {rejectionReason}
           </AlertDescription>
         </Alert>
       )}
@@ -435,17 +443,17 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         <div>
           <Label htmlFor="group1_percentage">
             Group 1 (%) *
-            {isArabica && <span className="text-xs text-muted-foreground ml-1">(max 12%)</span>}
+            <span className="text-xs text-muted-foreground ml-1">(max 14%)</span>
           </Label>
           <Input
             id="group1_percentage"
             type="number"
             step="0.1"
-            className={isArabica && g1Percentage > 12 ? 'border-destructive' : ''}
+            className={g1Percentage > 14 ? 'border-destructive' : ''}
             {...register('group1_percentage', { required: true, min: 0, max: 100 })}
           />
-          {isArabica && g1Percentage > 12 && (
-            <p className="text-xs text-destructive mt-1">Exceeds 12% limit - coffee will be rejected</p>
+          {g1Percentage > 14 && (
+            <p className="text-xs text-destructive mt-1">Exceeds 14% limit - coffee will be rejected</p>
           )}
         </div>
 
