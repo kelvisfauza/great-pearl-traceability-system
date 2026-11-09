@@ -73,19 +73,18 @@ export const useQualityControl = () => {
       
       // Page through all records (PostgREST caps each request at 1000 rows)
       const PAGE = 1000;
-      const MAX_PAGES = 10;
-      const allRecords: any[] = [];
-      for (let page = 0; page < MAX_PAGES; page++) {
-        const { data: chunk, error } = await supabase
-          .from('coffee_records')
+      const { count } = await supabase.from('coffee_records').select('id', { count: 'exact', head: true })
+        .not('status', 'in', '("sales","inventory")');
+      const pages = Math.min(10, Math.max(1, Math.ceil((count || 0) / PAGE)));
+      const results = await Promise.all(Array.from({ length: pages }, (_, page) =>
+        supabase.from('coffee_records')
           .select('id, date, kilograms, bags, supplier_id, supplier_name, coffee_type, batch_number, status, created_at, updated_at')
           .not('status', 'in', '("sales","inventory")')
-          .order('created_at', { ascending: false })
-          .range(page * PAGE, page * PAGE + PAGE - 1);
-        if (error) throw error;
-        allRecords.push(...(chunk || []));
-        if (!chunk || chunk.length < PAGE) break;
-      }
+          .order('created_at', { ascending: false }).order('id')
+          .range(page * PAGE, page * PAGE + PAGE - 1)));
+      const firstErr = results.find(r => r.error)?.error;
+      if (firstErr) throw firstErr;
+      const allRecords: any[] = results.flatMap(r => r.data || []);
 
       // Deduplicate by batch_number - keep the most recent one
       const batchMap = new Map();
