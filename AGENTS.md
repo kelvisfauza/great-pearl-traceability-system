@@ -1,5 +1,7 @@
 # Project architecture
 
+- Keep supplier bank confirmation PDF content in a dedicated builder, using the supplied business-name certificate independently of company incorporation branding; prepare shared issuance verification before offering the browser download.
+
 - Display pending provider submissions (including meal plans) in the default Admin Requests tab using the existing approval component; retain Procurement gating and surface read failures rather than showing a false empty queue.
 
 - Staff approval-request withdrawal principal inserts atomically issue a separate tiered fee through the ledger trigger; deleting a failed request-scoped debit reverses its exact treasury entries and linked fee, preventing partial charges and double Operations draws. All withdrawal channels share the service-charge tiers; provider costs remain separate.
