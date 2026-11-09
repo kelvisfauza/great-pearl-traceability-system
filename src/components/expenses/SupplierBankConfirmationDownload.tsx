@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import logoUrl from '@/assets/great-agro-coffee-logo.png';
+import signatureUrl from '@/assets/signatures/fauza.png';
 import { buildSupplierBankConfirmationPdf } from '@/utils/supplierBankConfirmationPdf';
 import { preparePdfPrint } from '@/utils/pdfPrintStamp';
 
@@ -27,7 +28,16 @@ export default function SupplierBankConfirmationDownload() {
       const context = canvas.getContext('2d');
       if (!context) throw new Error('The company logo could not be prepared.');
       context.drawImage(image, 0, 0);
-      const doc = buildSupplierBankConfirmationPdf(canvas.toDataURL('image/png'));
+      const signature = new Image();
+      signature.src = signatureUrl;
+      await signature.decode();
+      const signatureCanvas = document.createElement('canvas');
+      signatureCanvas.width = signature.naturalWidth;
+      signatureCanvas.height = signature.naturalHeight;
+      const signatureContext = signatureCanvas.getContext('2d');
+      if (!signatureContext) throw new Error('The saved signature could not be prepared.');
+      signatureContext.drawImage(signature, 0, 0);
+      const doc = buildSupplierBankConfirmationPdf(canvas.toDataURL('image/png'), signatureCanvas.toDataURL('image/png'));
       await preparePdfPrint(doc, 'Equity Bank Kasese supplier advance confirmation - Bwambale James');
       const ready = new File([doc.output('blob')], filename, { type: 'application/pdf' });
       setFile(ready);
