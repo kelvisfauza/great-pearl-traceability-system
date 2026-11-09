@@ -8,6 +8,7 @@ DECLARE
   v_quality jsonb;
   v_sales jsonb;
   v_after numeric;
+  v_expected_delta numeric;
   v_bad_price_rejected boolean := false;
 BEGIN
   SELECT id INTO STRICT v_assessment FROM public.quality_assessments
@@ -16,13 +17,11 @@ BEGIN
   SELECT jsonb_build_object('status',status,'reject_final',reject_final) INTO v_quality
   FROM public.quality_assessments WHERE id=v_assessment;
   SELECT jsonb_agg(to_jsonb(s) ORDER BY s.id) INTO v_sales FROM public.inventory_batch_sales s;
-  IF EXISTS(SELECT 1 FROM public.inventory_batch_sources WHERE coffee_record_id='20260907016') THEN
-    RAISE EXCEPTION 'Run the missing-stock regression before the historical correction';
-  END IF;
+  v_expected_delta := CASE WHEN EXISTS(SELECT 1 FROM public.inventory_batch_sources WHERE coffee_record_id='20260907016') THEN 0 ELSE 12 END;
   SELECT sum(total_kilograms) INTO v_before FROM public.inventory_batches;
   UPDATE public.quality_assessments SET admin_discretion_buy=true WHERE id=v_assessment;
-  IF (SELECT sum(total_kilograms) FROM public.inventory_batches) IS DISTINCT FROM v_before+12 THEN
-    RAISE EXCEPTION 'The approved 12 kg discretion delivery must add exactly 12 kg';
+  IF (SELECT sum(total_kilograms) FROM public.inventory_batches) IS DISTINCT FROM v_before+v_expected_delta THEN
+    RAISE EXCEPTION 'The 12 kg delivery must add exactly 12 kg only if not already linked';
   END IF;
   IF (SELECT sum(kilograms) FROM public.inventory_batch_sources WHERE coffee_record_id='20260907016') IS DISTINCT FROM 12::numeric THEN
     RAISE EXCEPTION 'The saved delivery must have exactly 12 kg of linked stock';

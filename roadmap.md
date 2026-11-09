@@ -1,9 +1,10 @@
 # Roadmap
 
 ## Discretion-approved coffee stock
-- [ ] Correct future discretion purchases to enter stock once while retaining rejected-quality records and existing payment rules.
-- [ ] Repair the confirmed missing deliveries and validate batch/source kilograms without changing treasury balances or sales allocations.
-- [ ] Run focused regression checks; authenticated end-to-end UI checks may be blocked by external Supabase session availability.
+- [x] Correct future discretion purchases to enter stock atomically on approval; preserve rejected assessments and Finance state, serialize delivery/day linkage, and remove the separate client delivery update.
+- [x] Audited repair of all 16 missing deliveries / 16,012 kg; each has matching linked stock, rejected quality preserved, no missing discretion sources remain, and Finance/sales/treasury snapshots stayed unchanged within the repair transaction.
+- [x] Rollback-only live checks passed for exact stock contribution, retries, rejected quality, unchanged Finance/sales and invalid-price rollback; nine stock/receipt regression tests passed and preview build clean.
+- [ ] Verify signed-in discretion approval through the real UI — external Supabase has no managed browser session.
 
 ## Supplier bank confirmation letter
 - [x] Add the Bwambale James UGX 20,000,000 supplier-advance letter for Equity Bank Kasese Branch to Company Forms, using the supplied business-name registration certificate.
