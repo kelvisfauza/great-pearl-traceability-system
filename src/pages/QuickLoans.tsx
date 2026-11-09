@@ -16,6 +16,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins, ArrowUpCircle, Edit, Scale, FileSignature } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import AdminLoanTracker from '@/components/loans/AdminLoanTracker';
+import AdminLoanQueue from '@/components/loans/AdminLoanQueue';
+import { loanApprovalBlock, LOAN_REVIEW_STATUSES } from '@/lib/loanApprovalRules';
 import LoanAppealsPage from '@/pages/admin/LoanAppeals';
 import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
@@ -57,7 +59,7 @@ const getFirstRepaymentDate = (startDateInput: Date | string, frequency: Repayme
 
 // Processing fees and insurance removed
 
-const QuickLoans = () => {
+const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
   const { employee, isAdmin } = useAuth();
   const { toast } = useToast();
   const { createAdvanceApprovalRequest, loading: advanceSubmitting } = useSalaryAdvanceApprovals();
@@ -73,6 +75,7 @@ const QuickLoans = () => {
   const [showAdvanceOdConfirm, setShowAdvanceOdConfirm] = useState(false);
   const [advanceOdConfirmed, setAdvanceOdConfirmed] = useState(false);
   const [loans, setLoans] = useState<any[]>([]);
+  const [loanReadError, setLoanReadError] = useState<string | null>(null);
   const [myLoans, setMyLoans] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
@@ -148,12 +151,14 @@ const QuickLoans = () => {
 
   useEffect(() => {
     fetchLoans();
-    fetchEmployees();
-    checkGuarantorRequests();
-    fetchGuaranteedLoans();
-    fetchWalletBalances();
-    fetchMyAdvance();
-  }, [employee]);
+    if (!approvalDesk) {
+      fetchEmployees();
+      checkGuarantorRequests();
+      fetchGuaranteedLoans();
+      fetchWalletBalances();
+      fetchMyAdvance();
+    }
+  }, [employee, approvalDesk]);
 
   const fetchMyAdvance = async () => {
     if (!employee?.email) return;
@@ -186,15 +191,26 @@ const QuickLoans = () => {
   const fetchLoans = async () => {
     if (!employee) return;
     setLoading(true);
+    setLoanReadError(null);
     try {
       if (isAdmin() || employee?.role === 'Manager') {
-        const { data } = await supabase.from('loans').select('*').order('created_at', { ascending: false });
-        setLoans(data || []);
+        const rows: any[] = [];
+        for (let offset = 0; ; offset += 500) {
+          let query = supabase.from('loans').select('*').order('created_at', { ascending: false }).order('id').range(offset, offset + 499);
+          if (approvalDesk) query = query.in('status', LOAN_REVIEW_STATUSES);
+          const { data, error } = await query;
+          if (error) throw error;
+          rows.push(...(data || []));
+          if (!data || data.length < 500) break;
+        }
+        setLoans(rows);
       }
+      if (approvalDesk) return;
       const { data: mine } = await supabase.from('loans').select('*').eq('employee_email', employee.email).order('created_at', { ascending: false });
       setMyLoans(mine || []);
     } catch (err) {
       console.error('Error fetching loans:', err);
+      setLoanReadError('Loan requests could not be loaded. Please refresh to retry.');
     } finally {
       setLoading(false);
     }
@@ -859,14 +875,20 @@ const QuickLoans = () => {
     if (!employee) return;
     setSubmitting(true);
     try {
-      const loan = loans.find(l => l.id === loanId);
-      if (!loan) return;
-
-      // SECURITY: Admin cannot approve a loan they guaranteed
-      if (approve && loan.guarantor_email === employee.email) {
-        toast({ title: "Conflict of Interest", description: "You cannot approve a loan you guaranteed. Another admin must approve this loan.", variant: "destructive" });
-        setSubmitting(false);
-        return;
+      if (submitting) return;
+      const { data: loan, error: readError } = await supabase.from('loans').select('*').eq('id', loanId).single();
+      if (readError) throw readError;
+      if (!loan) throw new Error('Loan not found. Refresh the queue.');
+      if (!isAdmin()) throw new Error('Administrator access is required.');
+      const actor = employee.email.toLowerCase();
+      if ([loan.employee_email, loan.guarantor_email, loan.guarantor2_email].some(email => email?.toLowerCase() === actor)) {
+        throw new Error('Another administrator must review a loan requested or guaranteed by you.');
+      }
+      if (approve) {
+        const block = loanApprovalBlock(loan, employee.email, isAdmin());
+        if (block) throw new Error(block);
+      } else if (!['pending_admin', 'revision_pending_signature'].includes(loan.status)) {
+        throw new Error('This loan is no longer awaiting review. Refresh the queue.');
       }
 
       if (approve) {
@@ -1112,7 +1134,7 @@ const QuickLoans = () => {
 
         // Upload PDF to storage
         const pdfPath = `loan-agreements/LOAN-${loanId.substring(0, 8)}-${Date.now()}.pdf`;
-        const pdfFile = new File([pdfBlob], pdfPath.split('/').pop()!, { type: 'application/pdf' });
+        const pdfFile = new File([pdfBlob], pdfPath.split('/').pop() || 'loan-agreement.pdf', { type: 'application/pdf' });
         const { error: uploadErr } = await supabase.storage.from('loan-documents').upload(pdfPath, pdfFile, { upsert: true });
         let pdfUrl = '';
         if (uploadErr) {
@@ -1168,10 +1190,12 @@ const QuickLoans = () => {
 
         toast({ title: "Loan Approved", description: "Loan disbursed, PDF generated & emailed to borrower and guarantor" });
       } else {
-        await supabase.from('loans').update({
+        const { data: rejected, error: rejectError } = await supabase.from('loans').update({
           status: 'rejected',
           admin_rejection_reason: rejectionReason || 'Admin declined',
-        }).eq('id', loanId);
+        }).eq('id', loanId).eq('status', loan.status).select('id').single();
+        if (rejectError) throw rejectError;
+        if (!rejected) throw new Error('Loan changed. Refresh before reviewing again.');
 
         await supabase.functions.invoke('send-sms', {
           body: { phone: loan.employee_phone, message: `Dear ${loan.employee_name}, your loan request of UGX ${loan.loan_amount.toLocaleString()} has been declined. Reason: ${rejectionReason || 'Not specified'}.`, userName: loan.employee_name, messageType: 'loan_rejected' }
@@ -2264,9 +2288,13 @@ const QuickLoans = () => {
 
   const { monthlyRate: previewRate, dailyRate: previewDailyRate, interest: previewInterest, total: previewTotal, weekly: previewWeekly, totalWeeks: previewTotalWeeks, totalDays: previewTotalDays } = calculateLoanDetails();
 
+  const LoanLayout = approvalDesk ? React.Fragment : DashboardLayout;
+  const layoutProps = approvalDesk ? {} : { title: "Quick Loans", subtitle: "Borrow and manage short-term loans" };
+
   return (
-    <DashboardLayout title="Quick Loans" subtitle="Borrow and manage short-term loans">
+    <LoanLayout {...layoutProps}>
       <div className="space-y-6">
+          {!approvalDesk && <>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Quick Loans</h1>
@@ -3413,7 +3441,9 @@ const QuickLoans = () => {
             </Card>
           </div>
 
-          <Tabs defaultValue="my-loans" onValueChange={(val) => {
+          </>}
+          {approvalDesk && isAdmin() && <AdminLoanQueue loans={loans} loading={loading} error={loanReadError} actorEmail={employee?.email} onRefresh={fetchLoans} onReview={setReviewLoan} onDetails={setDetailsLoan} onTrack={setTrackLoan} />}
+          {!approvalDesk && <Tabs defaultValue="my-loans" onValueChange={(val) => {
             if (val === 'employee-limits' && Object.keys(allAiLimits).length === 0 && !allAiLimitsLoading) {
               fetchAllAiLimits();
             }
@@ -3798,7 +3828,7 @@ const QuickLoans = () => {
                 printLoanStatement={printLoanStatement}
               />
             </TabsContent>
-          </Tabs>
+          </Tabs>}
       </div>
 
       <LoanDetailsDialog loan={detailsLoan} open={!!detailsLoan} onClose={() => setDetailsLoan(null)} />
@@ -4003,7 +4033,7 @@ const QuickLoans = () => {
         onClose={() => setShowRepaymentSlip(false)}
         loanData={repaymentSlipData}
       />
-    </DashboardLayout>
+    </LoanLayout>
   );
 };
 
