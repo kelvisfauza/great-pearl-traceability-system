@@ -16,7 +16,8 @@ import { RefreshCw, Mail, Eye, Loader2, Download, Save } from 'lucide-react';
 
 const labels: Record<string,string> = {pending:'Awaiting review',reviewed:'Reviewed',needs_correction:'Needs correction'};
 export default function QualityAnalysisPostings() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, employee } = useAuth();
+  const canLink = isAdmin() || ['tumwinealex@greatpearlcoffee.com','nuwagabagadaffi@greatpearlcoffee.com'].includes((employee?.email||'').toLowerCase());
   const [filter,setFilter] = useState('all');
   const [search,setSearch] = useState('');
   const [page,setPage] = useState(0);
@@ -98,7 +99,7 @@ export default function QualityAnalysisPostings() {
       <div className="space-y-3 border-t pt-3"><h3 className="font-semibold">Sampling order & delivery</h3>
       {candidates.error && <Alert variant="destructive"><AlertDescription>{(candidates.error as Error).message}</AlertDescription></Alert>}
       <p className="text-sm">Sampling reference: {selected.sampling_order_number || 'Not recorded'} · {selected.link_method || 'Not linked'}</p>
-      {isAdmin() ? <><Select value={orderId} onValueChange={v=>{setOrderId(v);const order=candidates.data?.orders?.find((o:any)=>o.id===v);setDeliveryId(order?.linked_store_record_id || 'none');}}><SelectTrigger aria-label="Linked sampling order"><SelectValue placeholder="Sampling order"/></SelectTrigger><SelectContent><SelectItem value="none">No sampling order</SelectItem>{selected.linked_sampling_order_id && !candidates.data?.orders?.some((o:any)=>o.id===selected.linked_sampling_order_id) && <SelectItem value={selected.linked_sampling_order_id}>Current order · {selected.linked_sampling_order_id}</SelectItem>}{candidates.data?.orders?.map((o:any)=><SelectItem key={o.id} value={o.id}>{o.order_number} · {o.supplier_name} · {new Date(o.delivery_time).toLocaleDateString()} · {o.reason}</SelectItem>)}</SelectContent></Select>
+      {canLink ? <><Select value={orderId} onValueChange={v=>{setOrderId(v);const order=candidates.data?.orders?.find((o:any)=>o.id===v);setDeliveryId(order?.linked_store_record_id || 'none');}}><SelectTrigger aria-label="Linked sampling order"><SelectValue placeholder="Sampling order"/></SelectTrigger><SelectContent><SelectItem value="none">No sampling order</SelectItem>{selected.linked_sampling_order_id && !candidates.data?.orders?.some((o:any)=>o.id===selected.linked_sampling_order_id) && <SelectItem value={selected.linked_sampling_order_id}>Current order · {selected.linked_sampling_order_id}</SelectItem>}{candidates.data?.orders?.map((o:any)=><SelectItem key={o.id} value={o.id}>{o.order_number} · {o.supplier_name} · {new Date(o.delivery_time).toLocaleDateString()} · {o.reason}</SelectItem>)}</SelectContent></Select>
       <Select value={deliveryId} onValueChange={setDeliveryId}><SelectTrigger aria-label="Linked delivery"><SelectValue placeholder="Delivery"/></SelectTrigger><SelectContent><SelectItem value="none">No delivery</SelectItem>{deliveryId!=='none' && !candidates.data?.deliveries?.some((d:any)=>d.id===deliveryId) && <SelectItem value={deliveryId}>Linked delivery · {deliveryId}</SelectItem>}{candidates.data?.deliveries?.map((d:any)=><SelectItem key={d.id} value={d.id}>{d.batch_number} · {d.supplier_name} · {d.date} · {d.kilograms} kg · {d.reason}</SelectItem>)}</SelectContent></Select><Button variant="outline" disabled={busy || candidates.isLoading} onClick={link}><Save className="mr-2 h-4 w-4"/>Confirm links</Button></> : <p className="text-sm break-words">Order: {selected.linked_sampling_order_id || 'Not linked'} · Delivery: {selected.linked_delivery_id || 'Not linked'}</p>}
       </div>
       {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}

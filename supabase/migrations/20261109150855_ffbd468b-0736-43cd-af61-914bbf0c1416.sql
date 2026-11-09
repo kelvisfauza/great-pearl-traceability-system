@@ -1,0 +1,22 @@
+CREATE OR REPLACE FUNCTION quality_postings_private.can_link_postings() RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS $$
+ SELECT public.can_manage_system_red_flags() OR lower(coalesce(public.current_user_email(),'')) IN ('tumwinealex@greatpearlcoffee.com','nuwagabagadaffi@greatpearlcoffee.com') $$;
+REVOKE ALL ON FUNCTION quality_postings_private.can_link_postings() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION quality_postings_private.can_link_postings() TO authenticated;
+
+CREATE OR REPLACE FUNCTION quality_postings_private.link_quality_posting(p_id uuid, p_order_id uuid DEFAULT NULL::uuid, p_delivery_id text DEFAULT NULL::text)
+ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $function$ DECLARE o public.quality_sampling_orders; BEGIN IF NOT quality_postings_private.can_link_postings() THEN RAISE EXCEPTION 'Not allowed to confirm posting links'; END IF; IF p_order_id IS NOT NULL THEN SELECT * INTO o FROM public.quality_sampling_orders WHERE id=p_order_id; IF NOT FOUND THEN RAISE EXCEPTION 'Sampling order not found'; END IF; IF p_delivery_id IS NOT NULL AND o.linked_store_record_id IS DISTINCT FROM p_delivery_id THEN RAISE EXCEPTION 'Delivery does not match the sampling order'; END IF; p_delivery_id:=coalesce(p_delivery_id,o.linked_store_record_id); END IF; IF p_delivery_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.coffee_records WHERE id=p_delivery_id) THEN RAISE EXCEPTION 'Delivery not found'; END IF; UPDATE public.quality_analysis_postings SET linked_sampling_order_id=p_order_id,linked_delivery_id=p_delivery_id,link_method='admin_confirmed',linked_by=auth.uid(),linked_at=now(),updated_at=now() WHERE id=p_id; IF NOT FOUND THEN RAISE EXCEPTION 'Posting not found'; END IF; RETURN jsonb_build_object('ok',true); END; $function$;
+
+CREATE OR REPLACE FUNCTION quality_postings_private.quality_posting_candidates(p_id uuid)
+ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $function$ DECLARE p public.quality_analysis_postings; d date; BEGIN IF NOT public.can_view_quality_postings() THEN RAISE EXCEPTION 'Quality access required'; END IF; SELECT * INTO p FROM public.quality_analysis_postings WHERE id=p_id; IF NOT FOUND THEN RAISE EXCEPTION 'Posting not found'; END IF; BEGIN d:=p.analysis_date::date; EXCEPTION WHEN OTHERS THEN d:=NULL; END; d:=coalesce(d,(p.received_at AT TIME ZONE 'Africa/Kampala')::date);
+RETURN jsonb_build_object('orders',coalesce((SELECT jsonb_agg(to_jsonb(t)) FROM (SELECT o.id,o.order_number,o.supplier_name,o.delivery_time,o.linked_store_record_id,o.linked_batch_number,CASE WHEN nullif(p.sampling_order_number,'') IS NOT NULL AND lower(trim(o.order_number))=lower(trim(p.sampling_order_number)) THEN 'Exact sampling order' WHEN nullif(p.batch_number,'') IS NOT NULL AND o.linked_batch_number=p.batch_number THEN 'Exact batch' ELSE 'Supplier and date — confirm' END AS reason FROM public.quality_sampling_orders o WHERE (nullif(p.sampling_order_number,'') IS NOT NULL AND lower(trim(o.order_number))=lower(trim(p.sampling_order_number))) OR (nullif(p.batch_number,'') IS NOT NULL AND o.linked_batch_number=p.batch_number) OR (nullif(trim(p.supplier_name),'') IS NOT NULL AND lower(trim(o.supplier_name))=lower(trim(p.supplier_name)) AND abs((o.delivery_time AT TIME ZONE 'Africa/Kampala')::date-d)<=3) ORDER BY o.delivery_time DESC LIMIT 50) t),'[]'::jsonb),
+'deliveries',coalesce((SELECT jsonb_agg(to_jsonb(t)) FROM (
+  SELECT * FROM (SELECT c.id,c.batch_number,c.supplier_name,c.date,c.kilograms,'Exact batch'::text AS reason, 0 AS rk, c.created_at FROM public.coffee_records c WHERE nullif(p.batch_number,'') IS NOT NULL AND c.batch_number=p.batch_number LIMIT 10) a
+  UNION ALL
+  SELECT * FROM (SELECT c.id,c.batch_number,c.supplier_name,c.date,c.kilograms,'Recent unlinked delivery from supplier'::text, 1, c.created_at FROM public.coffee_records c
+    WHERE nullif(trim(p.supplier_name),'') IS NOT NULL AND lower(trim(c.supplier_name))=lower(trim(p.supplier_name))
+      AND (nullif(p.batch_number,'') IS NULL OR c.batch_number IS DISTINCT FROM p.batch_number)
+      AND NOT EXISTS (SELECT 1 FROM public.quality_analysis_postings q WHERE q.linked_delivery_id=c.id AND q.id<>p.id)
+    ORDER BY c.date DESC, c.created_at DESC LIMIT 3) b
+  ORDER BY rk, date DESC, created_at DESC) t),'[]'::jsonb)); END; $function$;
