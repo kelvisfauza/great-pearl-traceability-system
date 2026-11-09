@@ -47,6 +47,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
   const [revNote, setRevNote] = useState('');
   const [borrowerDetails, setBorrowerDetails] = useState<any>(null);
   const [guarantorDetails, setGuarantorDetails] = useState<any>(null);
+  const [guarantor2Details, setGuarantor2Details] = useState<any>(null);
   const [borrowerLoans, setBorrowerLoans] = useState<any[]>([]);
   const [guarantorLoans, setGuarantorLoans] = useState<any[]>([]);
   const [borrowerLedger, setBorrowerLedger] = useState<any[]>([]);
@@ -127,6 +128,17 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
           const gBal = (gWalletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0);
           setGuarantorWalletBalance(gBal);
         }
+      }
+
+      if (loan.guarantor2_email) {
+        const { data: g2 } = await supabase
+          .from('employees')
+          .select('name, email, phone, salary, department, position')
+          .eq('email', loan.guarantor2_email)
+          .maybeSingle();
+        setGuarantor2Details(g2);
+      } else {
+        setGuarantor2Details(null);
       }
 
       // Fetch borrower's loan history
@@ -431,9 +443,16 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
           <div><div class="label">Own Active Loans</div><div class="value">${guarantorLoans.filter((l: any) => l.employee_email === loan.guarantor_email).length}</div></div>
           <div><div class="label">Guaranteeing Others</div><div class="value">${guarantorLoans.filter((l: any) => l.guarantor_email === loan.guarantor_email && l.id !== loan.id).length}</div></div>
         </div>
+        ${loan.guarantor2_name ? `
+        <div class="grid grid-3" style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+          <div><div class="label">Second Guarantor</div><div class="value">${loan.guarantor2_name}</div></div>
+          <div><div class="label">Position</div><div class="value">${guarantor2Details?.position || '—'}</div></div>
+          <div><div class="label">Salary</div><div class="value">UGX ${(guarantor2Details?.salary || 0).toLocaleString()}</div></div>
+          <div><div class="label">Guarantee Status</div><div class="value">${loan.guarantor2_approved ? '✅ Approved' : loan.guarantor2_declined ? '❌ Declined' : '⏳ Pending'}</div></div>
+        </div>` : ''}
         <div class="recovery-note">
           <strong>🔄 Recovery Plan:</strong> ${isWeekly ? 'Weekly' : 'Monthly'} installments of UGX ${installmentAmount.toLocaleString()} (${numInstallments} ${isWeekly ? 'weeks' : 'months'}). 
-          Default recovery order: Wallet → Salary → Guarantor (${loan.guarantor_name}).
+          Default recovery order: Borrower wallet → Salary → First guarantor (${loan.guarantor_name})${loan.guarantor2_name ? ` → Second guarantor (${loan.guarantor2_name}) for any balance still unpaid` : ''}.
         </div>
       </div>
 
@@ -902,7 +921,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
 
                   <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
                     <strong>Recovery Plan:</strong> {isWeekly ? 'Weekly' : isBullet ? 'Bullet' : 'Monthly'} installments of UGX {installmentAmount.toLocaleString()} ({numInstallments} {isWeekly ? 'weeks' : isBullet ? 'payment' : 'months'}). 
-                    Default recovery order: Wallet → Salary → Guarantor ({loan.guarantor_name}).
+                    Default recovery order: Borrower wallet → Salary → First guarantor ({loan.guarantor_name}){loan.guarantor2_name ? ` → Second guarantor (${loan.guarantor2_name}) for any balance still unpaid` : ''}.
                   </div>
                 </CardContent>
               </Card>
