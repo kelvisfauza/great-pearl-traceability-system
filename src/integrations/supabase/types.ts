@@ -13183,6 +13183,51 @@ export type Database = {
         }
         Relationships: []
       }
+      store_delivery_verifications: {
+        Row: {
+          coffee_record_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          recorded_bags: number | null
+          recorded_kg: number | null
+          updated_at: string
+          verified_at: string
+          verified_bags: number
+          verified_by: string
+          verified_by_user: string
+          verified_kg: number
+        }
+        Insert: {
+          coffee_record_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_bags?: number | null
+          recorded_kg?: number | null
+          updated_at?: string
+          verified_at?: string
+          verified_bags: number
+          verified_by: string
+          verified_by_user: string
+          verified_kg: number
+        }
+        Update: {
+          coffee_record_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_bags?: number | null
+          recorded_kg?: number | null
+          updated_at?: string
+          verified_at?: string
+          verified_bags?: number
+          verified_by?: string
+          verified_by_user?: string
+          verified_kg?: number
+        }
+        Relationships: []
+      }
       store_records: {
         Row: {
           batch_number: string | null
@@ -18124,6 +18169,10 @@ export type Database = {
         Args: { p_token: string }
         Returns: Json
       }
+      admin_create_inventory_batch: {
+        Args: { p_record_ids: string[] }
+        Returns: Json
+      }
       admin_delete_all_system_data: { Args: never; Returns: Json }
       admin_overdraft_close: {
         Args: { p_account_id: string; p_admin_email: string }
@@ -18885,6 +18934,7 @@ export type Database = {
       is_active_staff: { Args: never; Returns: boolean }
       is_admin_hr_or_finance: { Args: never; Returns: boolean }
       is_admin_or_hr: { Args: never; Returns: boolean }
+      is_batch_admin: { Args: never; Returns: boolean }
       is_conversation_member: { Args: { conv_id: string }; Returns: boolean }
       is_current_user_admin: { Args: never; Returns: boolean }
       is_current_user_admin_by_role: { Args: never; Returns: boolean }
@@ -19715,6 +19765,15 @@ export type Database = {
       verify_maintenance_recovery_pin: {
         Args: { _pin: string }
         Returns: boolean
+      }
+      verify_store_delivery: {
+        Args: {
+          p_coffee_record_id: string
+          p_notes?: string
+          p_verified_bags: number
+          p_verified_kg: number
+        }
+        Returns: Json
       }
       verify_withdrawal_code: {
         Args: { _code_id: string; _plaintext: string }

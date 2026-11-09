@@ -83,6 +83,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
       items: [
         { name: "Approvals", icon: CheckSquare, path: "/approvals", permission: null, requiresAdmin: true },
         { name: "Treasury Pool", icon: Wallet, path: "/admin/treasury", permission: null, requiresAdmin: true },
+        { name: "Batch Creation", icon: Package, path: "/admin/batch-creation", permission: null, requiresAdmin: true },
         { name: "User Statement", icon: FileText, path: "/admin/user-statement", permission: null, requiresAdmin: true },
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Communications", icon: Megaphone, path: "/communications", permission: null, requiresAdmin: true },
