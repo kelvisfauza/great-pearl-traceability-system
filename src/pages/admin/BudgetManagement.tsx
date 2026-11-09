@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 
 const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
 
-export default function BudgetManagement() {
+export default function BudgetManagement({ approvalDesk = false }: { approvalDesk?: boolean } = {}) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [seasons, setSeasons] = useState<any[]>([]);
@@ -184,7 +184,8 @@ export default function BudgetManagement() {
   const pending = requests.filter((r) => r.status === "pending" || r.status === "approved_1");
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6">
+    <div className={approvalDesk ? (pending.length === 0 ? "hidden" : "space-y-3") : "container mx-auto p-4 md:p-6 space-y-6"}>
+      {!approvalDesk && <>
       <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="-ml-2">
         <ArrowLeft className="w-4 h-4 mr-2" /> Back
       </Button>
@@ -192,9 +193,10 @@ export default function BudgetManagement() {
         <h1 className="text-3xl font-bold">Budget Management</h1>
         <p className="text-muted-foreground text-sm">Allocate season budgets to employees and approve budget withdrawals. Every withdrawal requires two distinct administrators.</p>
       </div>
+      </>}
 
       <Tabs defaultValue="approvals">
-        <TabsList>
+        <TabsList className={approvalDesk ? "hidden" : undefined}>
           <TabsTrigger value="approvals">Pending Approvals {pending.length > 0 && <Badge className="ml-2">{pending.length}</Badge>}</TabsTrigger>
           <TabsTrigger value="allocations">Allocations</TabsTrigger>
           <TabsTrigger value="seasons">Seasons</TabsTrigger>
