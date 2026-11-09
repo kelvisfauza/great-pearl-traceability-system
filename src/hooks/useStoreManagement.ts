@@ -51,32 +51,8 @@ export const useStoreManagement = () => {
       }
       console.log('Fetching store records from Supabase...');
       
-      // The server returns at most 1000 rows per request, so read every page
-      // (older deliveries were silently cut off). Only needed columns are fetched.
-      const PAGE = 1000;
       const cols = 'id, supplier_name, coffee_type, bags, kilograms, date, batch_number, status, grn_printed_at, grn_printed_by, created_by, created_at';
-      const { count } = await supabase.from('coffee_records').select('id', { count: 'exact', head: true });
-      const pages = Math.max(1, Math.ceil((count || 0) / PAGE));
-      const results = await Promise.all(
-        Array.from({ length: pages }, (_, i) =>
-          supabase.from('coffee_records').select(cols)
-            .order('created_at', { ascending: false }).order('id')
-            .range(i * PAGE, i * PAGE + PAGE - 1)
-        )
-      );
-      const error = results.find(r => r.error)?.error;
-      const seen = new Set<string>();
-      const supabaseRecords = results.flatMap(r => (r.data as any[]) || []).filter((r: any) => !seen.has(r.id) && seen.add(r.id));
-
-      if (error) {
-        console.error('Error fetching coffee records:', error);
-        setStoreRecords([]);
-        return;
-      }
-
-      console.log('Supabase records:', supabaseRecords?.length || 0);
-      
-      const transformedRecords: StoreRecord[] = (supabaseRecords || []).map((record: any) => ({
+      const mapRow = (record: any): StoreRecord => ({
         id: record.id,
         supplierName: record.supplier_name || '',
         coffeeType: record.coffee_type || '',
@@ -88,40 +64,69 @@ export const useStoreManagement = () => {
         grnPrintedAt: record.grn_printed_at || null,
         grnPrintedBy: record.grn_printed_by || null,
         createdBy: record.created_by || null,
-      }));
-      
-      // Get quality assessments status
-      // Show the deliveries straight away; refine statuses with Quality results next.
-      setStoreRecords(transformedRecords);
-      if (!silent) setLoading(false);
+      });
+      const applyQuality = (recs: StoreRecord[], qaRows: any[]) => {
+        const m = new Map(qaRows.map(qa => [qa.batch_number, qa.status]));
+        return recs.map(record => {
+          const q = m.get(record.batchNumber);
+          let st = record.status;
+          if (record.status === 'rejected' || q === 'rejected') st = 'rejected';
+          else if (q === 'submitted_to_finance') st = 'submitted_to_finance';
+          else if (q === 'assessed') st = 'assessed';
+          return { ...record, status: st };
+        });
+      };
 
-      // Quality statuses: read in a few large pages (one tiny request per delivery group was very slow).
+      // Step 1 (seconds): newest 200 deliveries with their Quality status, shown immediately.
+      const { data: recent, error: recentErr } = await supabase.from('coffee_records').select(cols)
+        .order('created_at', { ascending: false }).limit(200);
+      if (recentErr) throw recentErr;
+      const recentRecs = (recent || []).map(mapRow);
+      const recentBatches = Array.from(new Set(recentRecs.map(r => r.batchNumber).filter(Boolean)));
+      const { data: recentQa } = recentBatches.length
+        ? await supabase.from('quality_assessments').select('batch_number, status').in('batch_number', recentBatches)
+        : { data: [] as any[] };
+      const recentFinal = applyQuality(recentRecs, recentQa || []);
+      if (silent) {
+        // Background refresh: update only the newest deliveries, keep older ones already loaded.
+        setStoreRecords(prev => {
+          const ids = new Set(recentFinal.map(r => r.id));
+          return [...recentFinal, ...prev.filter(r => !ids.has(r.id))];
+        });
+        return;
+      }
+      setStoreRecords(prev => {
+        const ids = new Set(recentFinal.map(r => r.id));
+        return [...recentFinal, ...prev.filter(r => !ids.has(r.id))];
+      });
+      setLoading(false);
+
+      // Step 2 (background): every older delivery, in pages of 1000.
+      const PAGE = 1000;
+      const { count } = await supabase.from('coffee_records').select('id', { count: 'exact', head: true });
+      const pages = Math.max(1, Math.ceil((count || 0) / PAGE));
+      const results = await Promise.all(
+        Array.from({ length: pages }, (_, i) =>
+          supabase.from('coffee_records').select(cols)
+            .order('created_at', { ascending: false }).order('id')
+            .range(i * PAGE, i * PAGE + PAGE - 1)
+        )
+      );
+      const error = results.find(r => r.error)?.error;
+      if (error) throw error;
+      const seen = new Set<string>();
+      const transformedRecords = results.flatMap(r => (r.data as any[]) || [])
+        .filter((r: any) => !seen.has(r.id) && seen.add(r.id)).map(mapRow);
+
       const qaRows: any[] = [];
       for (let from = 0; ; from += 1000) {
         const { data: qa, error: qaErr } = await supabase
-          .from('quality_assessments')
-          .select('batch_number, status')
-          .order('id')
-          .range(from, from + 999);
+          .from('quality_assessments').select('batch_number, status').order('id').range(from, from + 999);
         if (qaErr) throw qaErr;
         qaRows.push(...(qa || []));
         if (!qa || qa.length < 1000) break;
       }
-      const qualityStatusMap = new Map(qaRows.map(qa => [qa.batch_number, qa.status]));
-
-      const finalRecords = transformedRecords.map(record => {
-        let finalStatus = record.status;
-        const qualityStatus = qualityStatusMap.get(record.batchNumber);
-        if (record.status === 'rejected' || qualityStatus === 'rejected') {
-          finalStatus = 'rejected';
-        } else if (qualityStatus === 'submitted_to_finance') {
-          finalStatus = 'submitted_to_finance';
-        } else if (qualityStatus === 'assessed') {
-          finalStatus = 'assessed';
-        }
-        return { ...record, status: finalStatus };
-      });
-
+      const finalRecords = applyQuality(transformedRecords, qaRows);
       setStoreRecords(finalRecords);
       setStoreRecords(finalRecords);
     } catch (error) {
@@ -610,7 +615,7 @@ export const useStoreManagement = () => {
     // Auto-refresh every 60 seconds to catch status updates (silent background refresh)
     const refreshInterval = setInterval(() => {
       fetchStoreData(true); // Pass true for silent refresh
-    }, 60000);
+    }, 30000);
     
     return () => clearInterval(refreshInterval);
   }, []);
