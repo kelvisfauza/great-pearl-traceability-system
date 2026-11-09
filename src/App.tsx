@@ -1,3 +1,4 @@
+import SamplingOrderAlert from "@/components/quality/SamplingOrderAlert";
 import React, { useEffect } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
 import RouteMetadata from '@/components/RouteMetadata';
@@ -240,6 +241,7 @@ const App: React.ComponentType = () => {
           <GroupCallProvider>
           <CallProvider>
             <Toaster />
+            <SamplingOrderAlert />
             <Sonner />
             <PrintIntentDialog />
             <GroupCallDialog />
