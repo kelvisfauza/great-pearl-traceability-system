@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { coffeeRejectionReason } from './coffeeRejectionRules';
 
 export interface QualityCalculatorInputs {
   refPrice: string;
@@ -113,7 +114,8 @@ export const calculateQualityPrice = (
     const totalDeductionPercent = less12 + totalFm + moistureDeductionPercent;
     const deductionPerKg = (refPrice * totalDeductionPercent) / 100 + discretion;
     const actualPricePerKg = Math.max(0, refPrice - deductionPerKg);
-    const isRejected = totalFm > 6;
+    const rejectionReason = coffeeRejectionReason({ moisture, gp1, gp2, less12, pods, husks, stones }, false);
+    const isRejected = rejectionReason !== null;
 
     return {
       finalPrice: isRejected ? null : actualPricePerKg,
@@ -123,7 +125,7 @@ export const calculateQualityPrice = (
       fm: totalFm,
       rejectFinal: isRejected,
       note: isRejected
-        ? `Rejected: Foreign matter ${totalFm.toFixed(1)}% exceeds 6%.`
+        ? `Rejected: ${rejectionReason}`
         : `Deduction/kg: UGX ${Math.round(deductionPerKg).toLocaleString('en-UG')}`,
     };
   }
@@ -137,7 +139,8 @@ export const calculateQualityPrice = (
     over(less12, 1) -
     robustaInArabica;
 
-  const outturnRejected = less12 > 3 || robustaInArabica > 3 || gp1 > 12;
+  const rejectionReason = coffeeRejectionReason({ moisture, gp1, gp2, less12, pods, husks, stones, robustaInArabica });
+  const outturnRejected = rejectionReason !== null;
   const outturn = outturnRejected
     ? null
     : 100 -
@@ -155,7 +158,7 @@ export const calculateQualityPrice = (
   const gp2Penalty = over(gp2, 10) * 20;
   const d14LowPenalty = cleanD14 < 78 ? (78 - cleanD14) * 50 : 0;
   const d14HighBonus = cleanD14 > 82 ? (cleanD14 - 82) * 50 : 0;
-  const rejectFinal = moisture > 16.5 || gp1 > 12 || gp2 > 25 || less12 > 3 || totalFm > 6 || pods > 6 || husks > 6 || stones > 6 || robustaInArabica > 3;
+  const rejectFinal = rejectionReason !== null;
 
   const outturnPrice = rejectFinal
     ? null
@@ -185,9 +188,7 @@ export const calculateQualityPrice = (
       discretion;
 
   let note = 'Standard/Penalty Price Applied';
-  if (robustaInArabica > 3) note = `Rejected: Robusta in Arabica exceeds 3% (${robustaInArabica.toFixed(1)}%).`;
-  else if (gp1 > 12) note = `Rejected: GP1 defects exceed 12% (${gp1.toFixed(1)}%).`;
-  else if (rejectFinal) note = 'Rejected by quality thresholds.';
+  if (rejectionReason) note = `Rejected: ${rejectionReason}`;
   else if (gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && pods === 0 && husks === 0 && stones === 0 && robustaInArabica === 0) note = 'Bonus: Premium Price Applied';
 
   return {
