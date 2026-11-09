@@ -1,8 +1,9 @@
 # Roadmap
 
 ## Loans in Admin Approvals
-- [ ] Add pending loan reviews to the Admin Requests desk using the existing loan approval workflow; preserve guarantor, security, separation-of-duties and disbursement checks.
-- [ ] Run focused loan approval checks and inspect the preview; signed-in verification depends on available external Supabase access.
+- [x] Add pending loan reviews to Admin Requests using the existing review/revision/payment workflow; fresh saved-loan checks and a private transition trigger block self/guarantor approval, missing required guarantees and unsigned terms.
+- [x] Eleven loan/withdrawal rules tests passed; private trigger installed without caller execution grants and preview build clean; browser reached the location-permission screen.
+- [ ] Verify signed-in administrator review and approval end-to-end — external Supabase has no managed browser session; no real loan approved or funds moved during testing.
 
 ## Coffee calculator rejection limits
 - [x] Apply shared moisture 18%, Group 1 14%, Group 2 28%, Less 12 4%, and pods/husks/stones 4% each to Arabica/Robusta, admin and milling calculators, V2 assessment gating and training; remove combined 6% rejection, preserve price deductions and saved decisions.
