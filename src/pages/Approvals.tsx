@@ -7,6 +7,7 @@ import ContractRenewalApprovals from '@/components/admin/ContractRenewalApproval
 import MealDisbursementSection from '@/components/admin/MealDisbursementSection';
 import ServiceProviderPayments from '@/components/admin/ServiceProviderPayments';
 import ProviderSubmissionApprovals from '@/components/admin/ProviderSubmissionApprovals';
+import QuickLoans from '@/pages/QuickLoans';
 import SupportStaffPerDiemSection from '@/components/admin/SupportStaffPerDiemSection';
 import AdminWalletOperations from '@/components/admin/AdminWalletOperations';
 import BankDepositApprovals from '@/components/admin/BankDepositApprovals';
@@ -92,6 +93,7 @@ const Approvals = () => {
           </TabsList>
 
           <TabsContent value="requests" className="mt-0 space-y-5">
+            <QuickLoans approvalDesk />
             <ProviderSubmissionApprovals />
             <ApprovalCenter />
           </TabsContent>
