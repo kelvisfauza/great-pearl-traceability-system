@@ -1,5 +1,10 @@
 # Roadmap
 
+## Discretion-approved coffee stock
+- [ ] Correct future discretion purchases to enter stock once while retaining rejected-quality records and existing payment rules.
+- [ ] Repair the confirmed missing deliveries and validate batch/source kilograms without changing treasury balances or sales allocations.
+- [ ] Run focused regression checks; authenticated end-to-end UI checks may be blocked by external Supabase session availability.
+
 ## Supplier bank confirmation letter
 - [x] Add the Bwambale James UGX 20,000,000 supplier-advance letter for Equity Bank Kasese Branch to Company Forms, using the supplied business-name registration certificate.
 - [x] Rendered and visually checked the one-page PDF: correct header, certificate number/date, branch, account and signature spacing; no clipping or overlap. Preview build clean.
