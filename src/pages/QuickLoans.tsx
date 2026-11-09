@@ -872,10 +872,9 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
   };
 
   const handleAdminApproval = async (loanId: string, approve: boolean, rejectionReason?: string) => {
-    if (!employee) return;
+    if (!employee || submitting) return;
     setSubmitting(true);
     try {
-      if (submitting) return;
       const { data: loan, error: readError } = await supabase.from('loans').select('*').eq('id', loanId).single();
       if (readError) throw readError;
       if (!loan) throw new Error('Loan not found. Refresh the queue.');
@@ -910,7 +909,7 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
         };
         const nextDeduction = isPureSalary
           ? computePureSalaryFirstDue(startDate)
-          : getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
+          : getFirstRepaymentDate(startDate, (loan.repayment_frequency || 'monthly') as RepaymentFrequency);
 
         // Evaluation fee (10k) is baked into loan_amount/total_repayable as profit,
         // but it must NOT be sent to the borrower's wallet — only the requested amount is disbursed.
@@ -1076,7 +1075,7 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
         // SMS to borrower with repayment details
         const firstRepaymentDate = isPureSalary
           ? computePureSalaryFirstDue(startDate)
-          : getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
+          : getFirstRepaymentDate(startDate, (loan.repayment_frequency || 'monthly') as RepaymentFrequency);
         const repaymentDateStr = firstRepaymentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
         const installmentAmount = isWeekly
           ? Math.ceil(loan.total_repayable / (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7)))
