@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL } from './companyBrand';
 
 // Business-name certificate supplied for this letter; not the parent/company incorporation record.
-export const SUPPLIER_LETTER_REGISTRATION = 'Business Name Registration No: 8003082157051 | Registered: 9 March 2026';
+export const SUPPLIER_LETTER_REGISTRATION = 'Business Name Registration No. 8003082157051';
 
 export function buildSupplierBankConfirmationPdf(logo: string) {
   const doc = new jsPDF({ format: 'a4', unit: 'mm' });
@@ -24,18 +24,18 @@ export function buildSupplierBankConfirmationPdf(logo: string) {
   doc.text(['The Branch Manager', 'Equity Bank', 'Kasese Branch'], 18, 75);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10.5);
-  const subject = doc.splitTextToSize('RE: CONFIRMATION OF SOURCE AND PURPOSE OF UGX 20,000,000 DEPOSIT - BWAMBALE JAMES, ACCOUNT NO. 1022101523938', 174);
+  const subject = ['RE: CONFIRMATION OF SOURCE OF FUNDS - UGX 20,000,000', 'ACCOUNT HOLDER: BWAMBALE JAMES | ACCOUNT NO. 1022101523938'];
   doc.text(subject, 18, 96);
   let y = 96 + subject.length * 5 + 7;
   doc.setFont('helvetica', 'normal');
   doc.text('Dear Sir/Madam,', 18, y);
   y += 10;
   const paragraphs = [
-    'We write to confirm that UGX 20,000,000 (Uganda Shillings Twenty Million only) deposited into the Equity Bank account of Bwambale James, account number 1022101523938, originated from Great Agro Coffee.',
-    'The funds were provided to Mr. Bwambale James as a supplier advance for coffee supplies during the 2026/2027 main season.',
-    'Great Agro Coffee disbursed the funds from its company account held with Stanbic Bank through Twekyo, the agent banking intermediary acting on our behalf. Twekyo subsequently deposited the funds into the supplier\'s above-mentioned Equity Bank account.',
-    'We therefore confirm that Great Agro Coffee was the source of the funds and that the deposit was made on our behalf for the stated supplier advance. Kindly accept this letter as confirmation of the source and business purpose of the deposit.',
-    'Should you require further clarification or supporting transaction records, please contact the undersigned.',
+    'We hereby confirm that UGX 20,000,000 (Uganda Shillings Twenty Million only) deposited into the above-mentioned Equity Bank account held by Mr. Bwambale James originated from Great Agro Coffee.',
+    'This payment constitutes a supplier advance to Mr. Bwambale James for the supply of coffee during the 2026/2027 main season.',
+    'The funds were disbursed from Great Agro Coffee\'s account held with Stanbic Bank to Twekyo, the agent banking intermediary acting on our behalf. Twekyo subsequently deposited the funds into Mr. Bwambale James\'s Equity Bank account, number 1022101523938.',
+    'Accordingly, we confirm that Great Agro Coffee was the source of the funds and that Twekyo made the deposit on our behalf for the business purpose stated above. This letter is issued at your request as confirmation of the source and purpose of the deposit.',
+    'Please contact the undersigned should you require any further clarification or supporting transaction documentation.',
   ];
   for (const paragraph of paragraphs) {
     const lines = doc.splitTextToSize(paragraph, 174);
