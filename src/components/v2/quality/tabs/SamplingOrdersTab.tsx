@@ -100,10 +100,10 @@ const buildOrderPdfBase64 = async (order: any): Promise<string | undefined> => {
   }
 };
 
-export const printSamplingOrder = (order: any) => {
+export const printSamplingOrder = (order: any, existing?: Window | null) => {
   const qrData = buildPublicUrl(`/verify/${encodeURIComponent(order.order_number)}`);
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
-  const w = window.open("", "_blank", "width=800,height=1000");
+  const w = existing || window.open("", "_blank", "width=800,height=1000");
   if (!w) return;
   w.document.write(`<!doctype html><html><head><title>${order.order_number}</title>
   <style>

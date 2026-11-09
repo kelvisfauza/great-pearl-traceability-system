@@ -60,7 +60,7 @@ export default function QualityAnalysisPostings() {
       if(ins.error)throw ins.error;
       const res=await (supabase as any).rpc('link_quality_posting',{p_id:selected.id,p_order_id:ins.data.id,p_delivery_id:deliveryId});
       if(res.error)throw res.error;
-      if(w){w.close();} printSamplingOrder(ins.data);
+      printSamplingOrder(ins.data, w);
       setSelected(null);await refresh();
     }catch(e:any){w?.close();setError(e.message);}finally{setBusy(false);}
   };
