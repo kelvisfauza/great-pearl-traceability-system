@@ -54,7 +54,7 @@ export default function QualityAnalysisPostings() {
   };
   const rows = useQuery({queryKey:['quality-outlook-postings',filter,page],refetchInterval:60_000,queryFn:async()=>{
     let q=(supabase as any).from('quality_analysis_postings').select('*',{count:'exact'}).order('received_at',{ascending:false}).range(page*25,page*25+24);
-    if(filter!=='all') q=q.eq('status',filter);
+    if(filter!=='all') q=q.eq('status',filter); if(filter==='pending') q=q.is('linked_delivery_id',null);
     const res=await q; if(res.error) throw res.error; return {items:res.data as any[],count:res.count as number};
   }});
   const status=useQuery({queryKey:['quality-outlook-status'],refetchInterval:60_000,queryFn:async()=>{
