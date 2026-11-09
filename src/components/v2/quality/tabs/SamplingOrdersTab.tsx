@@ -25,6 +25,8 @@ import { COMPANY_TAGLINE, COMPANY_ADDRESS } from '@/utils/companyBrand';
 const SAMPLING_EMAILS = [
   "onesmusrubambura@greatpearlcoffee.com",
   "sserunkumataufiq@greatpearlcoffee.com",
+  "tumwinealex@greatpearlcoffee.com",
+  "nuwagabagadaffi@greatpearlcoffee.com",
 ];
 
 const SAMPLE_TYPES = [

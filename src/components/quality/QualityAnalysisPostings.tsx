@@ -16,7 +16,8 @@ import { RefreshCw, Mail, Eye, Loader2, Download, Save } from 'lucide-react';
 
 const labels: Record<string,string> = {pending:'Awaiting review',reviewed:'Reviewed',needs_correction:'Needs correction'};
 export default function QualityAnalysisPostings() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, employee } = useAuth();
+  const canLink = isAdmin() || ['tumwinealex@greatpearlcoffee.com','nuwagabagadaffi@greatpearlcoffee.com'].includes((employee?.email||'').toLowerCase());
   const [filter,setFilter] = useState('all');
   const [search,setSearch] = useState('');
   const [page,setPage] = useState(0);
