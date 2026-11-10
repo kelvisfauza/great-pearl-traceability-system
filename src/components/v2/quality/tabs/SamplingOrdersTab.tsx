@@ -246,6 +246,9 @@ const SamplingOrdersTab = () => {
       if (!form.supplier_name.trim() || !form.sample_type || !form.sampled_by.trim()) {
         throw new Error("Supplier, sample type and sampled by are required");
       }
+      if (!isAllowedSupplier(form.supplier_name, form.sample_type, supplierNames)) {
+        throw new Error("Pick the supplier from the supplier list. Only offer samples can use a typed name.");
+      }
       const moisture = form.moisture === "" ? null : parseFloat(form.moisture);
       if (moisture !== null && (isNaN(moisture) || moisture < 0 || moisture > 100)) {
         throw new Error("Moisture must be between 0 and 100%");
@@ -302,6 +305,9 @@ const SamplingOrdersTab = () => {
       if (!past.sample_date) throw new Error("Pick the date the sample was taken");
       if (!past.supplier_name.trim() || !past.sample_type || !past.sampled_by.trim()) {
         throw new Error("Supplier, sample type and sampled by are required");
+      }
+      if (!isAllowedSupplier(past.supplier_name, past.sample_type, supplierNames)) {
+        throw new Error("Pick the supplier from the supplier list. Only offer samples can use a typed name.");
       }
       if (!past.assessed_by.trim()) throw new Error("Type who made the assessment");
       const grams = past.grams === "" ? null : parseFloat(past.grams);
