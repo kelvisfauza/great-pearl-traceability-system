@@ -69,15 +69,15 @@ export default function QualityAnalysisPostings() {
     try{const res=await (supabase as any).rpc('link_quality_posting',{p_id:selected.id,p_order_id:orderId==='none'?null:orderId,p_delivery_id:deliveryId==='none'?null:deliveryId});if(res.error)throw res.error;setSelected(null);await refresh();}
     catch(e:any){setError(e.message);}finally{setBusy(false);}
   };
-  const rows = useQuery({queryKey:['quality-outlook-postings',filter,page],refetchInterval:60_000,queryFn:async()=>{
+  const rows = useQuery({queryKey:['quality-outlook-postings',filter,page,isAdmin()],refetchInterval:60_000,queryFn:async()=>{
     let q=(supabase as any).from('quality_analysis_postings').select('*',{count:'exact'}).order('received_at',{ascending:false}).range(page*25,page*25+24);
-    if(filter!=='all') q=q.eq('status',filter); if(filter==='pending') q=q.is('linked_delivery_id',null);
+    if(filter!=='all') q=q.eq('status',filter); if(filter==='pending' && !isAdmin()) q=q.is('linked_delivery_id',null);
     const res=await q; if(res.error) throw res.error; return {items:res.data as any[],count:res.count as number};
   }});
   const status=useQuery({queryKey:['quality-outlook-status'],refetchInterval:60_000,queryFn:async()=>{
     const res=await (supabase as any).rpc('quality_outlook_status'); if(res.error) throw res.error; return res.data;
   }});
-  const counts=useQualityPostingCounts();
+  const counts=useQualityPostingCounts(isAdmin());
   const refresh=async()=>{await Promise.all([rows.refetch(),status.refetch(),counts.refetch()]);};
   const sync=async(action='sync')=>{
     setBusy(true);setError('');
