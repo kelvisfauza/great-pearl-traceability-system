@@ -36,6 +36,23 @@ const SAMPLE_TYPES = [
   { value: "dispatch", label: "Dispatch" },
 ];
 
+const SupplierField = ({ value, sampleType, suppliers, onChange, listId }: { value: string; sampleType: string; suppliers: string[]; onChange: (v: string) => void; listId: string }) => {
+  const free = sampleType === "offer_sample";
+  const invalid = !free && !!value.trim() && !suppliers.some((n) => n.toLowerCase() === value.trim().toLowerCase());
+  return (
+    <>
+      <Input value={value} list={free ? undefined : listId} onChange={(e) => onChange(e.target.value)} placeholder={free ? "Supplier / seller name" : "Start typing, then pick from the supplier list"} />
+      {!free && <datalist id={listId}>{suppliers.map((n) => <option key={n} value={n} />)}</datalist>}
+      <p className={`text-xs ${invalid ? "text-destructive" : "text-muted-foreground"}`}>
+        {free ? "Offer samples can use any name." : invalid ? "Pick a supplier from the list so the sample matches the delivery." : "Choose the supplier exactly as saved in the supplier list."}
+      </p>
+    </>
+  );
+};
+
+export const isAllowedSupplier = (name: string, sampleType: string, suppliers: string[]) =>
+  sampleType === "offer_sample" || suppliers.some((n) => n.toLowerCase() === name.trim().toLowerCase());
+
 const typeLabel = (v: string) => SAMPLE_TYPES.find((t) => t.value === v)?.label || v;
 
 const nowLocalInput = () => {
@@ -148,6 +165,15 @@ const SamplingOrdersTab = () => {
   const { employee, isAdmin, hasPermission } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: supplierNames = [] } = useQuery({
+    queryKey: ["sampling-supplier-names"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("suppliers").select("name").order("name").limit(5000);
+      if (error) throw error;
+      return Array.from(new Set((data || []).map((r: any) => String(r.name || "").trim()).filter(Boolean)));
+    },
+    staleTime: 300000,
+  });
 
   const email = (employee?.email || "").toLowerCase();
   const role = (employee?.role || "").toLowerCase();
@@ -220,6 +246,9 @@ const SamplingOrdersTab = () => {
       if (!form.supplier_name.trim() || !form.sample_type || !form.sampled_by.trim()) {
         throw new Error("Supplier, sample type and sampled by are required");
       }
+      if (!isAllowedSupplier(form.supplier_name, form.sample_type, supplierNames)) {
+        throw new Error("Pick the supplier from the supplier list. Only offer samples can use a typed name.");
+      }
       const moisture = form.moisture === "" ? null : parseFloat(form.moisture);
       if (moisture !== null && (isNaN(moisture) || moisture < 0 || moisture > 100)) {
         throw new Error("Moisture must be between 0 and 100%");
@@ -276,6 +305,9 @@ const SamplingOrdersTab = () => {
       if (!past.sample_date) throw new Error("Pick the date the sample was taken");
       if (!past.supplier_name.trim() || !past.sample_type || !past.sampled_by.trim()) {
         throw new Error("Supplier, sample type and sampled by are required");
+      }
+      if (!isAllowedSupplier(past.supplier_name, past.sample_type, supplierNames)) {
+        throw new Error("Pick the supplier from the supplier list. Only offer samples can use a typed name.");
       }
       if (!past.assessed_by.trim()) throw new Error("Type who made the assessment");
       const grams = past.grams === "" ? null : parseFloat(past.grams);
@@ -413,7 +445,7 @@ const SamplingOrdersTab = () => {
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Supplier name</Label>
-              <Input value={form.supplier_name} onChange={(e) => setForm({ ...form, supplier_name: e.target.value })} placeholder="Supplier / seller name" />
+              <SupplierField listId="so-suppliers" value={form.supplier_name} sampleType={form.sample_type} suppliers={supplierNames} onChange={(v) => setForm({ ...form, supplier_name: v })} />
             </div>
             <div className="space-y-2">
               <Label>Sample type</Label>
@@ -480,7 +512,7 @@ const SamplingOrdersTab = () => {
               </div>
               <div className="space-y-2">
                 <Label>Supplier name <span className="text-destructive">*</span></Label>
-                <Input value={past.supplier_name} onChange={(e) => setPast({ ...past, supplier_name: e.target.value })} placeholder="Supplier / seller name" />
+                <SupplierField listId="so-suppliers-past" value={past.supplier_name} sampleType={past.sample_type} suppliers={supplierNames} onChange={(v) => setPast({ ...past, supplier_name: v })} />
               </div>
               <div className="space-y-2">
                 <Label>Sample type <span className="text-destructive">*</span></Label>
