@@ -10,7 +10,7 @@ export type QualityPostingCounts = {
 
 const STATUSES = ['pending', 'reviewed', 'needs_correction'] as const;
 
-export async function fetchQualityPostingCounts(): Promise<QualityPostingCounts> {
+export async function fetchQualityPostingCounts(includeLinked = false): Promise<QualityPostingCounts> {
   const [total, pending, reviewed, needs_correction] = await Promise.all([
     (supabase as any).from('quality_analysis_postings').select('id', { count: 'exact', head: true }),
     ...(STATUSES.map((status) => {
@@ -18,7 +18,7 @@ export async function fetchQualityPostingCounts(): Promise<QualityPostingCounts>
         .from('quality_analysis_postings')
         .select('id', { count: 'exact', head: true })
         .eq('status', status);
-      if (status === 'pending') q = q.is('linked_delivery_id', null);
+      if (status === 'pending' && !includeLinked) q = q.is('linked_delivery_id', null);
       return q;
     }) as any[]),
   ]);
@@ -35,10 +35,10 @@ export async function fetchQualityPostingCounts(): Promise<QualityPostingCounts>
   };
 }
 
-export function useQualityPostingCounts() {
+export function useQualityPostingCounts(includeLinked = false) {
   return useQuery({
-    queryKey: ['quality-outlook-posting-counts'],
-    queryFn: fetchQualityPostingCounts,
+    queryKey: ['quality-outlook-posting-counts', includeLinked],
+    queryFn: () => fetchQualityPostingCounts(includeLinked),
     refetchInterval: 60_000,
   });
 }
