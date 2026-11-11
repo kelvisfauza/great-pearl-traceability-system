@@ -1,5 +1,10 @@
 # Roadmap
 
+## Real backup and recovery page
+- [ ] Connect Supabase backup management securely and verify project-supported features — requires management-service access.
+- [ ] Replace placeholder figures and inactive controls with verified history, supported creation/schedule controls and guarded recovery.
+- [ ] Test authorization, confirmation, failure states and real connected reads; do not restore production data during testing.
+
 ## Settings problem resolution
 - [x] Add administrator problem reporting, investigation/resolution notes and tracked email escalation to Fauza using existing ticket records; suspected code problems are clearly labelled as unconfirmed.
 - [x] Provide safe connection/reload checks, existing red-flag checks and guarded payout/access/backup destinations; no automatic payment retries or balance changes.
