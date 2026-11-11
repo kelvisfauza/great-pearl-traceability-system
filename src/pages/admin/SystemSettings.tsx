@@ -1,201 +1,85 @@
+import { Component, Suspense, useState, type ReactNode } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import Layout from "@/components/Layout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import FirebaseMigrationTool from "@/components/admin/FirebaseMigrationTool";
-import SuperAdminCreator from "@/components/admin/SuperAdminCreator";
-import MessagingSettings from "@/components/admin/MessagingSettings";
-import WalletFreezeManager from "@/components/admin/WalletFreezeManager";
-import OverdraftUsageRules from "@/components/admin/OverdraftUsageRules";
-import SundayWithdrawalSettings from "@/components/admin/SundayWithdrawalSettings";
-import LoyaltyAwardsToggle from "@/components/admin/LoyaltyAwardsToggle";
-import LoanPolicySettings from "@/components/admin/LoanPolicySettings";
-import UnifiedPermissionManager from "@/components/admin/UnifiedPermissionManager";
-import AdminWalletOperations from "@/components/admin/AdminWalletOperations";
-import ProviderSettings from "@/components/admin/ProviderSettings";
-import SecuritySettings from "@/components/admin/SecuritySettings";
-import UserPermissionsList from "@/components/admin/UserPermissionsList";
-import RoleAssignmentManager from "@/components/admin/RoleAssignmentManager";
-import GrnInputRoleManager from "@/components/admin/GrnInputRoleManager";
-import QuickPermissionAssignment from "@/components/admin/QuickPermissionAssignment";
-import PermissionOverview from "@/components/admin/PermissionOverview";
-import { PermissionChangeApprovals } from "@/components/admin/PermissionChangeApprovals";
-import AccountStatusManager from "@/components/admin/AccountStatusManager";
-import EmployeeSuspensionManager from "@/components/admin/EmployeeSuspensionManager";
-import DeletionRequestsManager from "@/components/admin/DeletionRequestsManager";
-import { DatabaseCleanupTool } from "@/components/admin/DatabaseCleanupTool";
-import { DataArchiveManager } from "@/components/admin/DataArchiveManager";
-import MaintenanceToggle from "@/components/it/MaintenanceToggle";
-import ScheduledDowntimeSettings from "@/components/it/ScheduledDowntimeSettings";
-import BackupManagement from "@/components/it/BackupManagement";
-import { Database, Settings, Shield, MessageSquare, Snowflake, ShieldAlert, KeyRound, Wallet, Smartphone, Users, UserX, Wrench, HardDrive, Banknote } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MigrateSupplierCodesButton } from "@/components/suppliers/MigrateSupplierCodesButton";
-import { MigrateBatchNumbersButton } from "@/components/admin/MigrateBatchNumbersButton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, ArrowUpRight, ChevronRight, Loader2, Search, Settings2, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { settingsCategories, settingsTools } from "@/components/admin/settingsCatalog";
+
+class SettingsToolBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (this.state.failed) return <div role="alert" className="py-10 space-y-4"><p className="text-destructive">This control could not be opened.</p><Button variant="outline" onClick={() => window.location.reload()}>Reload settings</Button></div>;
+    return this.props.children;
+  }
+}
 
 const SystemSettings = () => {
+  const [params, setParams] = useSearchParams();
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [advanced, setAdvanced] = useState(false);
+  const selected = settingsTools.find(tool => tool.id === params.get("tool"));
+  const SelectedControl = selected?.component;
+  const query = search.trim().toLowerCase();
+  const visible = settingsTools.filter(tool =>
+    (!tool.advanced || advanced) && (category === "all" || tool.category === category) &&
+    (!query || `${tool.title} ${tool.keywords} ${settingsCategories.find(c => c.id === tool.category)?.label}`.toLowerCase().includes(query)));
+  const openTool = (id: string) => setParams({ tool: id });
+
   return (
-    <Layout
-      title="System Settings"
-      subtitle="Configure system-wide settings and perform administrative tasks"
-    >
-      <Tabs defaultValue="permissions" className="space-y-6">
-        <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-        <TabsList className="inline-flex w-auto min-w-full flex-nowrap">
-          <TabsTrigger value="permissions" className="gap-2">
-            <KeyRound className="h-4 w-4" />
-            Permissions
-          </TabsTrigger>
-          <TabsTrigger value="user-access" className="gap-2">
-            <Users className="h-4 w-4" />
-            User Access
-          </TabsTrigger>
-          <TabsTrigger value="user-accounts" className="gap-2">
-            <UserX className="h-4 w-4" />
-            Users &amp; Deletions
-          </TabsTrigger>
-          <TabsTrigger value="maintenance" className="gap-2">
-            <Wrench className="h-4 w-4" />
-            Maintenance
-          </TabsTrigger>
-          <TabsTrigger value="backup" className="gap-2">
-            <HardDrive className="h-4 w-4" />
-            Backup
-          </TabsTrigger>
-          <TabsTrigger value="messaging" className="gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Messaging
-          </TabsTrigger>
-          <TabsTrigger value="providers" className="gap-2">
-            <Smartphone className="h-4 w-4" />
-            Providers
-          </TabsTrigger>
-          <TabsTrigger value="wallet-ops" className="gap-2">
-            <Wallet className="h-4 w-4" />
-            Wallet Ops
-          </TabsTrigger>
-          <TabsTrigger value="wallet" className="gap-2">
-            <Snowflake className="h-4 w-4" />
-            Wallet Freeze
-          </TabsTrigger>
-          <TabsTrigger value="overdraft" className="gap-2">
-            <ShieldAlert className="h-4 w-4" />
-            Overdraft Rules
-          </TabsTrigger>
-          <TabsTrigger value="loans" className="gap-2">
-            <Banknote className="h-4 w-4" />
-            Loan Policy
-          </TabsTrigger>
-          <TabsTrigger value="migration" className="gap-2">
-            <Database className="h-4 w-4" />
-            Data Migration
-          </TabsTrigger>
-          <TabsTrigger value="general" className="gap-2">
-            <Settings className="h-4 w-4" />
-            General
-          </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2">
-            <Shield className="h-4 w-4" />
-            Security
-          </TabsTrigger>
-        </TabsList>
-        </div>
-
-        <TabsContent value="permissions" className="space-y-4">
-          <UnifiedPermissionManager />
-        </TabsContent>
-
-        <TabsContent value="user-access" className="space-y-6">
-          <GrnInputRoleManager />
-          <PermissionChangeApprovals />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <UserPermissionsList />
-              <PermissionOverview />
-            </div>
-            <div className="space-y-6">
-              <QuickPermissionAssignment />
-              <RoleAssignmentManager />
-            </div>
+    <Layout title="System Settings" subtitle="Administration & business controls">
+      {selected ? (
+        <div className="space-y-6 min-w-0">
+          <div className="flex flex-wrap items-center gap-3 border-b pb-4">
+            <Button variant="outline" size="sm" onClick={() => setParams({})} className="gap-2"><ArrowLeft className="h-4 w-4" />All settings</Button>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-xl font-semibold break-words">{selected.title}</h2>
           </div>
-        </TabsContent>
+          <SettingsToolBoundary key={selected.id}>
+            <Suspense fallback={<div role="status" className="flex items-center justify-center gap-3 py-16 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" />Opening {selected.title}…</div>}>
+              {SelectedControl ? <SelectedControl /> : selected.path ? <Button asChild><Link to={selected.path}>Open {selected.title}<ArrowUpRight className="ml-2 h-4 w-4" /></Link></Button> : null}
+            </Suspense>
+          </SettingsToolBoundary>
+        </div>
+      ) : (
+        <div className="space-y-7 min-w-0">
+          <header className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between border-b pb-6">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="bg-primary/10 text-primary p-3 rounded-lg shrink-0"><Settings2 className="h-8 w-8" /></div>
+              <div><h2 className="text-2xl font-semibold">Control centre</h2><p className="text-sm text-muted-foreground mt-1">Great Agro Coffee</p></div>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" />Administrator access</div>
+          </header>
 
-        <TabsContent value="user-accounts" className="space-y-6">
-          <AccountStatusManager />
-          <EmployeeSuspensionManager />
-          <DeletionRequestsManager />
-        </TabsContent>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input aria-label="Search settings" placeholder="Search settings…" value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-10" /></div>
+            <Button variant={advanced ? "secondary" : "outline"} aria-pressed={advanced} onClick={() => setAdvanced(v => !v)} className="gap-2 h-10"><SlidersHorizontal className="h-4 w-4" />Advanced tools</Button>
+          </div>
 
-        <TabsContent value="maintenance" className="space-y-6">
-          <MaintenanceToggle />
-          <ScheduledDowntimeSettings />
-          <DatabaseCleanupTool />
-        </TabsContent>
+          <nav aria-label="Settings categories" className="flex gap-2 overflow-x-auto pb-2">
+            <Button variant={category === "all" ? "default" : "outline"} size="sm" onClick={() => setCategory("all")} aria-pressed={category === "all"} className="shrink-0">All settings</Button>
+            {settingsCategories.map(c => <Button key={c.id} variant={category === c.id ? "default" : "outline"} size="sm" aria-pressed={category === c.id} onClick={() => setCategory(c.id)} className="gap-2 shrink-0"><c.icon className="h-4 w-4" />{c.label}</Button>)}
+          </nav>
 
-        <TabsContent value="backup" className="space-y-6">
-          <BackupManagement />
-          <DataArchiveManager />
-        </TabsContent>
-
-        <TabsContent value="messaging" className="space-y-4">
-          <MessagingSettings />
-        </TabsContent>
-
-        <TabsContent value="providers" className="space-y-4">
-          <ProviderSettings />
-        </TabsContent>
-
-        <TabsContent value="wallet-ops" className="space-y-4">
-          <AdminWalletOperations />
-        </TabsContent>
-
-        <TabsContent value="wallet" className="space-y-4">
-          <LoyaltyAwardsToggle />
-          <SundayWithdrawalSettings />
-          <WalletFreezeManager />
-        </TabsContent>
-
-        <TabsContent value="overdraft" className="space-y-4">
-          <OverdraftUsageRules />
-        </TabsContent>
-
-        <TabsContent value="loans" className="space-y-4">
-          <LoanPolicySettings />
-        </TabsContent>
-
-        <TabsContent value="migration" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Supplier Code Migration</CardTitle>
-              <CardDescription>
-                Update all supplier codes to the new sequential format (GPC 00001, GPC 00002, etc.)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MigrateSupplierCodesButton />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Batch Number Migration</CardTitle>
-              <CardDescription>
-                Convert all batch numbers to the new format (YYYYMMDD001). 
-                Sequence resets daily: 20250203001, 20250203002, etc.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MigrateBatchNumbersButton />
-            </CardContent>
-          </Card>
-          <FirebaseMigrationTool />
-        </TabsContent>
-
-        <TabsContent value="general" className="space-y-4">
-          <SuperAdminCreator />
-        </TabsContent>
-
-        <TabsContent value="security" className="space-y-4">
-          <SecuritySettings />
-        </TabsContent>
-      </Tabs>
+          {visible.length === 0 && <div className="py-12 text-center space-y-3"><p className="text-muted-foreground">No matching settings.</p><Button variant="outline" onClick={() => { setSearch(""); setCategory("all"); }}>Clear filters</Button></div>}
+          {settingsCategories.map(c => {
+            const tools = visible.filter(tool => tool.category === c.id);
+            if (!tools.length) return null;
+            return <section key={c.id} aria-labelledby={`heading-${c.id}`} className="space-y-3">
+              <div className="flex items-center gap-2"><c.icon className="h-5 w-5 text-primary" /><h3 id={`heading-${c.id}`} className="text-lg font-semibold">{c.label}</h3><Badge variant="secondary">{tools.length}</Badge></div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {tools.map(tool => {
+                  const contents = <><span className="rounded-md bg-muted p-2 shrink-0 text-primary"><tool.icon className="h-5 w-5" /></span><span className="flex-1 min-w-0 whitespace-normal break-words text-sm font-medium text-left">{tool.title}{tool.advanced && <span className="block text-xs text-muted-foreground font-normal mt-1">Advanced</span>}</span>{tool.path ? <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />}</>;
+                  return tool.path ? <Button key={tool.id} asChild variant="outline" className="h-auto min-h-20 justify-start gap-3 p-4 rounded-lg"><Link to={tool.path}>{contents}</Link></Button> : <Button key={tool.id} variant="outline" className="h-auto min-h-20 justify-start gap-3 p-4 rounded-lg" onClick={() => openTool(tool.id)}>{contents}</Button>;
+                })}
+              </div>
+            </section>;
+          })}
+        </div>
+      )}
     </Layout>
   );
 };

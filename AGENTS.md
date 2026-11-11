@@ -1,5 +1,7 @@
 # Project architecture
 
+- Keep System Settings as a searchable catalog of lazily opened existing controls and guarded management links; reuse authoritative settings consumers rather than exposing arbitrary JSON edits or duplicating financial/security policies.
+
 - Embed the pending loan queue in Admin Requests through QuickLoans approvalDesk mode to reuse the existing review/revision/payment workflow; enforce borrower/guarantor conflicts and signed guarantor/borrower prerequisites at the loan transition boundary, preserving separate service-driven appeals and historical loans.
 
 - Keep coffee rejection decisions in coffeeRejectionRules shared by pricing calculators, assessment gating and training; preserve independent price deduction formulas and saved historical decisions when limits change.
