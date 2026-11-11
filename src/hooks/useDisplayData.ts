@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { stripLegacySupplierSuffix } from '@/utils/supplierDisplay';
 export interface DisplayData {
   // Suppliers chart
   topSuppliers: { name: string; kgs: number }[];
@@ -46,11 +45,42 @@ const defaultData: DisplayData = {
 export const useDisplayData = () => {
   const [data, setData] = useState<DisplayData>(defaultData);
 
-  const fetchAll = async () => {
+  useEffect(() => {
+  let active = true;
+  let suppliersInFlight = false;
+  let suppliersQueued = false;
+  let detailsInFlight = false;
+  let supplierCount = 0;
+  let supplierKgs = 0;
+
+  const fetchSuppliers = async () => {
+    if (suppliersInFlight) { suppliersQueued = true; return; }
+    suppliersInFlight = true;
+    try {
+      const result = await supabase.rpc('display_supplier_summary');
+      if (result.error) throw result.error;
+      const summary = result.data as { topSuppliers: DisplayData['topSuppliers']; totalKgs: number } | null;
+      if (active && summary) {
+        supplierKgs = Number(summary.totalKgs);
+        setData(previous => ({ ...previous, topSuppliers: summary.topSuppliers,
+          totalKgs: supplierKgs, totalProcessed: supplierKgs,
+          avgPerSupplier: supplierCount > 0 ? Math.round(supplierKgs / supplierCount) : 0 }));
+      }
+    } catch (error) {
+      console.error('Unable to refresh display supplier rankings', error);
+    } finally {
+      suppliersInFlight = false;
+      if (active && suppliersQueued) { suppliersQueued = false; void fetchSuppliers(); }
+    }
+  };
+
+  const fetchDetails = async () => {
+    if (detailsInFlight) return;
+    detailsInFlight = true;
+    try {
     const today = new Date().toISOString().split('T')[0];
 
     const [
-      coffeeRecords,
       suppliers,
       contracts,
       eudrBatches,
@@ -59,7 +89,6 @@ export const useDisplayData = () => {
       todayRecords,
       pendingRecords,
     ] = await Promise.all([
-      supabase.from('coffee_records').select('supplier_name, kilograms, coffee_type'),
       supabase.from('suppliers').select('id, origin'),
       supabase.from('buyer_contracts').select('buyer_name, total_quantity'),
       supabase.from('eudr_batches').select('id, status'),
@@ -68,18 +97,6 @@ export const useDisplayData = () => {
       supabase.from('coffee_records').select('supplier_name, kilograms, coffee_type, created_at').eq('date', today).order('created_at', { ascending: false }).limit(20),
       supabase.from('coffee_records').select('supplier_name, kilograms, coffee_type').eq('status', 'pending').limit(10),
     ]);
-
-    // Top suppliers
-    const supplierMap = new Map<string, number>();
-    coffeeRecords.data?.forEach((r) => {
-      const raw = stripLegacySupplierSuffix(r.supplier_name || 'Unknown');
-      const name = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
-      supplierMap.set(name, (supplierMap.get(name) || 0) + Number(r.kilograms || 0));
-    });
-    const topSuppliers = Array.from(supplierMap.entries())
-      .map(([name, kgs]) => ({ name, kgs: Math.round(kgs) }))
-      .sort((a, b) => b.kgs - a.kgs)
-      .slice(0, 8);
 
     // Top buyers
     const buyerMap = new Map<string, number>();
@@ -93,8 +110,8 @@ export const useDisplayData = () => {
       .slice(0, 6);
 
     // Supplier stats
-    const totalKgs = coffeeRecords.data?.reduce((sum, r) => sum + Number(r.kilograms || 0), 0) || 0;
     const totalSuppliers = suppliers.data?.length || 0;
+    supplierCount = totalSuppliers;
     const originCount = new Map<string, number>();
     suppliers.data?.forEach((s) => {
       if (s.origin) originCount.set(s.origin, (originCount.get(s.origin) || 0) + 1);
@@ -105,7 +122,6 @@ export const useDisplayData = () => {
       .map(([name]) => name);
 
     // Milling
-    const totalProcessed = coffeeRecords.data?.reduce((sum, r) => sum + Number(r.kilograms || 0), 0) || 0;
     let dispatched = 0;
     dispatches.data?.forEach((d) => {
       const trucks = d.trucks as any[];
@@ -114,17 +130,16 @@ export const useDisplayData = () => {
       }
     });
 
-    setData({
-      topSuppliers,
+    if (!active) return;
+    setData(previous => ({
+      ...previous,
       topBuyers,
       totalSuppliers,
-      totalKgs: Math.round(totalKgs),
-      avgPerSupplier: totalSuppliers > 0 ? Math.round(totalKgs / totalSuppliers) : 0,
+      avgPerSupplier: totalSuppliers > 0 ? Math.round(supplierKgs / totalSuppliers) : 0,
       topDistricts,
       tracedBatches: eudrBatches.data?.length || 0,
       eudrCompliant: eudrBatches.data?.filter((b) => b.status === 'traced').length || 0,
       totalDocs: eudrDocs.data?.length || 0,
-      totalProcessed: Math.round(totalProcessed),
       dispatched: Math.round(dispatched),
       todayPurchases: (todayRecords.data || []).map((r) => ({
         supplier_name: r.supplier_name,
@@ -137,14 +152,20 @@ export const useDisplayData = () => {
         kilograms: r.kilograms,
       })),
       loaded: true,
-    });
+    }));
+    } catch (error) {
+      console.error('Unable to refresh display details', error);
+    } finally {
+      detailsInFlight = false;
+    }
   };
 
-  useEffect(() => {
+    const fetchAll = () => { void fetchSuppliers(); void fetchDetails(); };
     fetchAll();
 
-    // Refresh every 60s
-    const interval = setInterval(fetchAll, 60000);
+    // Rankings do not wait for slower buyer, document or dispatch reads.
+    const supplierInterval = setInterval(fetchSuppliers, 30000);
+    const interval = setInterval(fetchDetails, 60000);
 
     // Realtime for new purchases
     const channel = supabase
@@ -153,6 +174,8 @@ export const useDisplayData = () => {
       .subscribe();
 
     return () => {
+      active = false;
+      clearInterval(supplierInterval);
       clearInterval(interval);
       supabase.removeChannel(channel);
     };

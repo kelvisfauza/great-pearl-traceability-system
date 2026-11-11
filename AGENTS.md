@@ -1,5 +1,7 @@
 # Project architecture
 
+- TV supplier totals use invoker RLS and independent reads to avoid delays.
+
 - Read backup protection through an authenticated administrator-only Supabase Management connector; production restore requires fresh Super Admin sign-in, exact backup confirmation and a unique submitted audit claim, and never auto-retries uncertain outcomes. Provider-unavailable creation/schedule/download actions remain unavailable rather than simulated.
 
 - Track Settings problems in existing system_settings-source support tickets through an authenticated administrator endpoint; recovery only reloads/diagnoses or opens guarded workflows, while code classifications remain provisional and escalation delivery must be confirmed.

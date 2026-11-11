@@ -1,6 +1,8 @@
 # Roadmap
 
 ## Modern company display
+- [x] Load supplier rankings independently through a compact RLS-preserving database summary, without delivery-row truncation or overlapping refreshes; refresh every 30 seconds. Live aggregate checked against 4,576 deliveries and delayed-detail regression passed.
+- [ ] Verify signed-in supplier ranking display with real staff access — external unmanaged Supabase supplies no automated session; actual public /display renders, but anonymous supplier access intentionally remains denied.
 - [x] Refocus /display on 19 company/coffee-journey slides with two dedicated supplier-ranking pages; remove market commentary from this destination while keeping the separate price-display board.
 - [x] Actual /display browser checks confirm journey and supplier showcase navigation; no invented ranking names when data is unavailable. Build clean. Authenticated supplier data read remains unverified.
 - [x] Correct the actual /display inactivity destination to reuse the modern company presentation; remove its duplicate headers, documentary embeds and unavailable TradingView symbol. Verified actual /display in browser: intro, buying board, pause/next and no TradingView frames; build clean.

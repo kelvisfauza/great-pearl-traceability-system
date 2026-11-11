@@ -18462,6 +18462,7 @@ export type Database = {
           deducted_kg: number
         }[]
       }
+      display_supplier_summary: { Args: never; Returns: Json }
       ensure_inventory_batch_source_for_record: {
         Args: { p_coffee_record_id: string }
         Returns: Json
