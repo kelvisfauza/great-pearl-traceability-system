@@ -1,5 +1,9 @@
 # Roadmap
 
+## Modern company display
+- [x] Refresh the existing TV display with a coffee-photo company introduction/closing, stronger company identity, simpler buying board, cleaner shared slide styling and play/pause/previous/next controls; retain prices, news, polling and WakeLock.
+- [x] Browser-isolated company intro and buying board rendered; navigation/pause work and 902×855 view has no horizontal overflow. Preview build clean; normal signed-in route unavailable to automated checks.
+
 ## Real backup and recovery page
 - [x] Connect Supabase backup management securely: verified eight completed physical backups; latest 11 November 02:15 UTC. App credential read returned HTTP 200.
 - [x] Replace placeholders with verified history, refresh, coverage notices and guarded Super Admin restoration. Schedule read requires Enterprise (402); on-demand recovery point is unavailable (400); no invented incremental/download actions or paid upgrades.

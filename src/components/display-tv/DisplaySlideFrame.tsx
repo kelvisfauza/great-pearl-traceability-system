@@ -38,10 +38,10 @@ const DisplaySlideFrame = ({ children }: DisplaySlideFrameProps) => {
   return (
     <div
       ref={containerRef}
-      className="relative aspect-[16/9] w-full overflow-hidden rounded-[2rem] border border-border/60 bg-background shadow-2xl"
+      className="relative aspect-[16/9] w-full overflow-hidden bg-background"
     >
       <div
-        className="absolute left-1/2 top-1/2 h-[1080px] w-[1920px] overflow-hidden rounded-[2rem] bg-background"
+        className="absolute left-1/2 top-1/2 h-[1080px] w-[1920px] overflow-hidden bg-background"
         style={{ transform, transformOrigin: "center center" }}
       >
         {children}

@@ -22,7 +22,7 @@ const OperationsSlide = ({ data }: OperationsSlideProps) => {
       <div className="space-y-6">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Internal operations</p>
-          <h2 className="mt-4 text-6xl font-black tracking-tight text-foreground">Factory intake is moving in real time.</h2>
+          <h2 className="mt-4 text-5xl font-black tracking-tight text-foreground">Great Agro Coffee in numbers.</h2>
         </div>
 
         <div className="grid grid-cols-2 gap-5">
@@ -59,7 +59,7 @@ const OperationsSlide = ({ data }: OperationsSlideProps) => {
             </div>
 
             <div className="space-y-3">
-              {data.topSuppliers.slice(0, 5).map((supplier, index) => (
+              {data.topSuppliers.slice(0, 3).map((supplier, index) => (
                 <div key={supplier.name} className="flex items-center justify-between rounded-[1.25rem] border border-border/50 bg-background/70 px-5 py-4">
                   <div className="flex items-center gap-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/12 text-xl font-black text-primary">
@@ -89,7 +89,7 @@ const OperationsSlide = ({ data }: OperationsSlideProps) => {
             </div>
 
             <div className="grid gap-3">
-              {data.topBuyers.slice(0, 6).map((buyer, index) => (
+              {data.topBuyers.slice(0, 3).map((buyer, index) => (
                 <div key={buyer.name} className="flex items-center justify-between rounded-[1.25rem] border border-border/50 bg-background/70 px-5 py-4">
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/12 text-lg font-black text-primary">

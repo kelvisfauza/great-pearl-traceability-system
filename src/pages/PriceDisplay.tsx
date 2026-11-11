@@ -19,6 +19,7 @@ import { useDisplayData } from "@/hooks/useDisplayData";
 import { useLiveIcePrices } from "@/hooks/useLiveIcePrices";
 import { usePriceHistory } from "@/hooks/usePriceHistory";
 import { useCoffeeMarketBriefing } from "@/hooks/useCoffeeMarketBriefing";
+import { Button } from "@/components/ui/button";
 import type { DisplaySlide } from "@/components/display-tv/types";
 
 const PriceDisplay = () => {
@@ -47,6 +48,7 @@ const PriceDisplay = () => {
 
   const { briefing, loading: briefingLoading, refresh: refreshBriefing } = useCoffeeMarketBriefing(marketSnapshot);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
@@ -178,12 +180,13 @@ const PriceDisplay = () => {
   ], [briefing, briefingLoading, displayData, history, historyLoading, liveIcePrices, prices]);
 
   useEffect(() => {
+    if (paused) return;
     const timer = window.setTimeout(() => {
       setActiveIndex((current) => (current + 1) % slides.length);
     }, slides[activeIndex]?.duration ?? 12000);
 
     return () => window.clearTimeout(timer);
-  }, [activeIndex, slides]);
+  }, [activeIndex, slides, paused]);
 
   useEffect(() => {
     const syncFullscreen = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -254,11 +257,15 @@ const PriceDisplay = () => {
   const currentSlide = slides[activeIndex];
 
   return (
-    <div className="tv-display-shell min-h-screen bg-background p-5 text-foreground">
+    <div className="tv-display-shell min-h-screen bg-background text-foreground flex items-center">
       <DisplaySlideFrame>
         <main className="tv-display-stage flex h-full flex-col overflow-hidden bg-background">
           <DisplayHeader
-            title="Coffee Market TV Presentation"
+            title="Great Agro Coffee"
+            paused={paused}
+            onPause={() => setPaused(value => !value)}
+            onPrevious={() => setActiveIndex(index => (index - 1 + slides.length) % slides.length)}
+            onNext={() => setActiveIndex(index => (index + 1) % slides.length)}
             slideLabel={currentSlide.label}
             slideIndex={activeIndex}
             slideCount={slides.length}
@@ -267,24 +274,18 @@ const PriceDisplay = () => {
             isFullscreen={isFullscreen}
           />
 
-          <div className="relative flex-1 overflow-hidden bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.12),transparent_36%),radial-gradient(circle_at_bottom_right,hsl(var(--chart-2)/0.12),transparent_30%)]">
+          <div className="tv-slide-content relative flex-1 min-h-0 overflow-hidden">
             <DisplayAudioCue slideId={currentSlide.id} enabled headlines={briefing?.headlines ?? []} />
 
             <div key={currentSlide.id} className="animate-fadeIn h-full">
               {currentSlide.content}
             </div>
 
-            <div className="absolute bottom-8 left-12 right-12 flex items-center gap-3">
-              {slides.map((slide, index) => (
-                <button
-                  key={slide.id}
-                  aria-label={`Go to ${slide.label}`}
-                  className={`h-3 rounded-full transition-all duration-300 ${index === activeIndex ? "w-16 bg-primary" : "w-3 bg-border"}`}
-                  onClick={() => setActiveIndex(index)}
-                />
-              ))}
-            </div>
           </div>
+          <nav aria-label="Presentation slides" className="tv-slide-navigation flex items-center gap-4 px-12 py-3 border-t border-border shrink-0">
+            <span className="text-lg text-primary font-medium w-72 shrink-0">{String(activeIndex + 1).padStart(2, '0')} / {slides.length} · {currentSlide.label}</span>
+            <div className="flex gap-2 flex-1">{slides.map((slide, index) => <Button key={slide.id} variant="ghost" size="icon" aria-label={`Go to ${slide.label}`} title={slide.label} aria-current={index === activeIndex ? 'step' : undefined} className={`h-10 min-h-0 flex-1 rounded-none ${index === activeIndex ? 'text-primary' : 'text-muted-foreground'}`} onClick={() => setActiveIndex(index)}><span className={`block h-1 w-full ${index === activeIndex ? 'bg-primary' : 'bg-border'}`} /></Button>)}</div>
+          </nav>
 
           <DisplayFooter tickerItems={tickerItems} />
         </main>
