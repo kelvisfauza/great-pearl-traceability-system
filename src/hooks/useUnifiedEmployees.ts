@@ -50,11 +50,11 @@ export const useUnifiedEmployees = () => {
       // Transform and set employees
       const transformedEmployees: UnifiedEmployee[] = (supabaseEmployees || []).map(emp => ({
         id: emp.id,
-        name: emp.name,
-        email: emp.email,
+        name: emp.name || '',
+        email: emp.email || '',
         phone: emp.phone || '',
-        position: emp.position,
-        department: emp.department,
+        position: emp.position || '',
+        department: emp.department || '',
         salary: emp.salary || 0,
         role: emp.role || 'User',
         permissions: emp.permissions || ['General Access'],
