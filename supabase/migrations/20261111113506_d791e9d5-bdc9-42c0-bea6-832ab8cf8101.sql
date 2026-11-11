@@ -1,0 +1,1 @@
+ALTER FUNCTION system_integrity_private.quality_price_ok(numeric, public.quality_assessments) SET search_path = public;

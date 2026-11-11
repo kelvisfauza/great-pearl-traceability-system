@@ -19295,6 +19295,16 @@ export type Database = {
           request_type: string
         }[]
       }
+      resolve_coffee_flag: {
+        Args: {
+          p_action: string
+          p_keep?: string
+          p_note?: string
+          p_target: string
+          p_value?: number
+        }
+        Returns: Json
+      }
       resolve_grn_reference: { Args: { p_code: string }; Returns: string }
       resolve_guarantor_recovery_appeal: {
         Args: {

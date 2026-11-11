@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertTriangle, RefreshCw, ArrowUpRight, UserCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import CoffeeFlagActions, { COFFEE_FLAG_RULES } from './CoffeeFlagActions';
 
 type Flag = {
-  id: string; department: string; severity: string; title: string;
+  id: string; fingerprint: string; rule_key: string; department: string; severity: string; title: string;
   details: Record<string, unknown>; review_path: string; status: string;
   assigned_to: string | null; review_notes: string | null;
   first_detected_at: string; last_detected_at: string;
@@ -96,6 +97,7 @@ export default function SystemRedFlagsPanel() {
       <Dialog open={!!selected} onOpenChange={open => { if (!open) setSelected(null); }}><DialogContent className="max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>{selected?.title}</DialogTitle></DialogHeader>
         <p className="text-sm">{String(selected?.details.action || '')}</p>
         <dl className="space-y-2 text-sm">{Object.entries(selected?.details || {}).filter(([k]) => k !== 'action').map(([key, value]) => <div key={key}><dt className="font-medium capitalize">{key.replace(/_/g, ' ')}</dt><dd className="text-muted-foreground break-all whitespace-pre-wrap">{typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value ?? 'Not recorded')}</dd></div>)}</dl>
+        {selected && selected.status !== 'resolved' && COFFEE_FLAG_RULES.includes(selected.rule_key) && <CoffeeFlagActions ruleKey={selected.rule_key} fingerprint={selected.fingerprint} details={selected.details as any} onDone={() => { client.invalidateQueries({ queryKey: ['system-red-flags'] }); setSelected(null); }} />}
         <label htmlFor="flag-notes" className="text-sm font-medium">Review notes</label><Textarea id="flag-notes" value={notes} onChange={e => setNotes(e.target.value)} disabled={!editable} />
         <div className="flex flex-wrap gap-2"><Button disabled={busy || !editable} onClick={() => save(true)}><UserCheck className="mr-2 h-4 w-4" />Take task</Button><Button variant="outline" disabled={busy || !editable} onClick={() => save(false)}>Save note</Button><Button variant="outline" asChild><Link to={selected?.review_path || '/'}>Open department<ArrowUpRight className="ml-2 h-4 w-4" /></Link></Button></div>
       </DialogContent></Dialog>
