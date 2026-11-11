@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { explainError } from '@/lib/errorExplain';
 
 const RECIPIENTS = ['tatwanzire@greatpearlcoffee.com', 'fauzakusa@greatpearlcoffee.com'];
 const DEDUPE_WINDOW_MS = 10 * 60 * 1000; // suppress identical error for 10 min
@@ -41,7 +42,7 @@ class GlobalErrorCaptureService {
       this.dedupe.set(sig, now);
 
       // All errors are batched into a single daily 5 PM digest — never sent immediately
-      this.persistError({ ...errorData, ts: now });
+      this.persistError({ ...errorData, ts: now, metadata: { ...(errorData.metadata || {}), page: window.location.pathname } });
     } catch {
       // never throw from error capture
     }
@@ -72,20 +73,22 @@ class GlobalErrorCaptureService {
 
       localStorage.removeItem(PENDING_STORAGE_KEY);
 
+      const who = this.userContext.name || this.userContext.email || 'A user';
+      const groups = new Map<string, { text: string; count: number; first: number; last: number }>();
+      for (const e of list) {
+        const text = explainError(who, { page: e.metadata?.page, url: e.metadata?.url, method: e.metadata?.method, status: e.metadata?.status, body: e.metadata?.body, description: e.description, title: e.title });
+        const g = groups.get(text);
+        if (g) { g.count++; g.last = Math.max(g.last, e.ts); } else groups.set(text, { text, count: 1, first: e.ts, last: e.ts });
+      }
       const lines: string[] = [];
-      lines.push(`Daily Client Error Digest — ${list.length} event(s) captured today.`);
-      lines.push(`User: ${this.userContext.name || ''} (${this.userContext.email || 'n/a'}) — Dept: ${this.userContext.department || 'n/a'}`);
+      lines.push(`${who} (${this.userContext.email || 'n/a'}, ${this.userContext.department || 'no department'}) ran into ${list.length} problem(s) today — ${groups.size} different kind(s):`);
       lines.push('');
-      list.forEach((e, i) => {
-        lines.push(`${i + 1}. [${(e.severity || '').toUpperCase()}] ${e.title}`);
-        lines.push(`   ${e.description || 'n/a'}`);
-        lines.push(`   Type: ${e.error_type} | Component: ${e.component}`);
-        if (e.metadata?.url) lines.push(`   URL: ${e.metadata.url}`);
-        lines.push(`   Time: ${new Date(e.ts).toLocaleString()}`);
+      [...groups.values()].sort((a, b) => b.count - a.count).forEach((g, i) => {
+        const when = g.count > 1 ? `happened ${g.count} times, ${new Date(g.first).toLocaleTimeString()}–${new Date(g.last).toLocaleTimeString()}` : `at ${new Date(g.first).toLocaleString()}`;
+        lines.push(`${i + 1}. ${g.text} (${when})`);
         lines.push('');
       });
-
-      const subject = `[Daily Error Digest] ${list.length} client error(s) — ${todayKey}`;
+      const subject = `[Daily Error Digest] ${who}: ${groups.size} kind(s) of problem — ${todayKey}`;
       const idem = `client-digest-${todayKey}-${this.userContext.email || 'anon'}`;
 
       for (const recipient of RECIPIENTS) {
@@ -96,7 +99,7 @@ class GlobalErrorCaptureService {
               recipientEmail: recipient,
               idempotencyKey: `${idem}-${recipient}`,
               templateData: {
-                title: `Daily Client Error Digest — ${list.length} events`,
+                title: `What went wrong for ${who} today`,
                 subject,
                 message: lines.join('\n'),
                 recipientName: recipient.split('@')[0],
@@ -178,6 +181,10 @@ class GlobalErrorCaptureService {
           
           // Skip logging for Supabase internal calls
           if (!url.includes('system_errors') && !url.includes('system_console_logs')) {
+            const method = (args[1]?.method || (args[0] instanceof Request ? args[0].method : 'GET')).toUpperCase();
+            let body: any = null;
+            try { body = await response.clone().json(); } catch { /* not json */ }
+            if (body && typeof body === 'object') body = { message: String(body.message || body.error_description || body.error || body.msg || '').slice(0, 300), code: body.code };
             this.logError({
               title: `HTTP ${response.status} Error`,
               description: `Request to ${url} failed with status ${response.status}`,
@@ -186,8 +193,10 @@ class GlobalErrorCaptureService {
               component: 'Network',
               metadata: { 
                 url, 
-                status: response.status, 
-                statusText: response.statusText 
+                status: response.status,
+                statusText: response.statusText,
+                method,
+                body
               }
             });
           }
@@ -212,7 +221,7 @@ class GlobalErrorCaptureService {
             severity: 'high',
             component: 'Network',
             stack_trace: error.stack,
-            metadata: { url }
+            metadata: { url, method: (args[1]?.method || 'GET').toUpperCase(), status: 0, body: { message: error.message } }
           });
         }
         
