@@ -23,12 +23,14 @@ import { Button } from "@/components/ui/button";
 import type { DisplaySlide } from "@/components/display-tv/types";
 import { CoffeeJourneySlide, journeyChapters, SupplierShowcaseSlide, JourneyOverviewSlide } from '@/components/display-tv/CoffeeJourneySlides';
 import { DailyPriceTableSlide, useDisplayPublicPrices } from '@/components/display-tv/DailyPriceTableSlide';
+import { useDisplayTvSettings, scaledDuration } from '@/hooks/useDisplayTvSettings';
 import { StaffShowcaseSlide, useDisplayStaff } from '@/components/display-tv/StaffShowcaseSlide';
 
 const PriceDisplay = ({ companyMode = false }: { companyMode?: boolean }) => {
   const { prices, loading: pricesLoading, fetchPrices } = useReferencePrices();
   const displayData = useDisplayData();
   const publicPrices = useDisplayPublicPrices();
+  const tvSettings = useDisplayTvSettings();
   const { staff, loading: staffLoading, failed: staffFailed } = useDisplayStaff(companyMode);
   const { data: liveIcePrices, refresh: refreshIcePrices } = useLiveIcePrices();
   const { history, loading: historyLoading, refreshHistory } = usePriceHistory(30);
@@ -198,8 +200,13 @@ const PriceDisplay = ({ companyMode = false }: { companyMode?: boolean }) => {
     { id:'price-table-2', label:'Today’s buying prices', duration:18000, content:<DailyPriceTableSlide data={publicPrices.data} failed={publicPrices.failed} /> },
     { id:'suppliers-community', label:'Our supplier community', duration:16000, content:<SupplierShowcaseSlide data={displayData} offset={4} /> },
     ...journeyChapters.slice(8).map(chapter => ({ id:chapter.id, label:chapter.label, duration:16000, content:<CoffeeJourneySlide chapter={chapter} /> })),
+    ...tvSettings.custom_slides.map((c, i) => ({ id:`custom-${i}`, label:c.title, duration:14000, content:<section className="h-full px-20 py-16 flex flex-col justify-center gap-8"><p className="text-2xl text-primary">ANNOUNCEMENT</p><h2 className="text-8xl leading-tight">{c.title}</h2><p className="text-4xl text-muted-foreground whitespace-pre-line max-w-6xl">{c.body}</p></section> })),
     { id:'brand-outro', label:'Great Agro Coffee', duration:12000, content:<BrandSignatureSlide variant="outro" /> },
-  ], [displayData, staff, staffLoading, staffFailed, publicPrices]);
+  ].filter(slide => {
+    const h = tvSettings.hidden_slides;
+    const group = slide.id.startsWith('brand') ? 'brand' : slide.id.startsWith('price-table') ? 'price-table' : slide.id.startsWith('staff') ? 'staff' : slide.id.startsWith('suppliers') ? 'suppliers' : slide.id === 'journey-overview' ? 'journey-overview' : slide.id.startsWith('custom') ? 'custom' : 'journey';
+    return !h.includes(group);
+  }).map(slide => ({ ...slide, duration: scaledDuration(slide.duration, tvSettings.speed) })), [displayData, staff, staffLoading, staffFailed, publicPrices, tvSettings]);
   const slides = companyMode ? companySlides : marketSlides;
 
   useEffect(() => {
@@ -274,8 +281,8 @@ const PriceDisplay = ({ companyMode = false }: { companyMode?: boolean }) => {
       (purchase) => `${purchase.supplier_name} delivered ${purchase.kilograms} kg of ${purchase.coffee_type}`
     );
     const headlineItems = (briefing?.headlines ?? []).slice(0, 6).map((headline) => headline.title);
-    return companyMode ? ['Great Agro Coffee · P.O Box 431420, Kasese, Uganda', 'The coffee journey · Growing · Harvesting · Drying · Quality · Milling · Traceability', ...purchaseItems] : [...todayPriceItems, ...purchaseItems, ...headlineItems];
-  }, [companyMode, briefing?.headlines, displayData.dispatched, displayData.todayPurchases, prices.arabicaBuyingPrice, prices.robustaBuyingPrice]);
+    return companyMode ? [...tvSettings.ticker_items, 'Great Agro Coffee · P.O Box 431420, Kasese, Uganda', 'The coffee journey · Growing · Harvesting · Drying · Quality · Milling · Traceability', ...purchaseItems] : [...todayPriceItems, ...purchaseItems, ...headlineItems];
+  }, [tvSettings.ticker_items, companyMode, briefing?.headlines, displayData.dispatched, displayData.todayPurchases, prices.arabicaBuyingPrice, prices.robustaBuyingPrice]);
 
   const currentSlide = slides[activeIndex] ?? slides[0];
 

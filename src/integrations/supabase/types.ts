@@ -2963,6 +2963,36 @@ export type Database = {
         }
         Relationships: []
       }
+      display_tv_settings: {
+        Row: {
+          custom_slides: Json
+          hidden_slides: string[]
+          id: number
+          speed: number
+          ticker_items: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          custom_slides?: Json
+          hidden_slides?: string[]
+          id?: number
+          speed?: number
+          ticker_items?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          custom_slides?: Json
+          hidden_slides?: string[]
+          id?: number
+          speed?: number
+          ticker_items?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       edit_requests: {
         Row: {
           created_at: string

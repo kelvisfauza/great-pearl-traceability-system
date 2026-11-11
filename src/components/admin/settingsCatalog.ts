@@ -48,6 +48,7 @@ export const settingsTools: SettingsTool[] = [
   { id: "hr", category: "operations", title: "Staff records & withdrawal limits", keywords: "human resources employee daily transaction limits allowances", icon: Users, path: "/v2/hr" },
   { id: "quality", category: "operations", title: "Coffee quality & pricing", keywords: "prices moisture defects assessments postings", icon: Building2, path: "/quality-control" },
   { id: "suppliers", category: "operations", title: "Supplier records", keywords: "names phone bank accounts", icon: Users, path: "/suppliers" },
+  { id: "display-tv", category: "operations", title: "TV display screen", keywords: "display tv slides speed ticker words announcements", icon: Building2, component: lazy(() => import("./DisplayTvSettings")) },
   { id: "forms", category: "operations", title: "Company forms & expenses", keywords: "paper templates print meal plans agent banking", icon: FileText, path: "/expenses" },
   { id: "approvals", category: "operations", title: "Admin approvals", keywords: "loans requests meal plans review", icon: Shield, path: "/approvals" },
   { id: "security", category: "security", title: "Security policy", keywords: "login devices authentication sessions", icon: Shield, component: lazy(() => import("./SecuritySettings")) },
