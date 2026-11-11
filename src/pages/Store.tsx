@@ -466,7 +466,12 @@ const Store = () => {
       toast.success("Record deleted successfully");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete record");
+      const msg = String((error as any)?.message || "");
+      if (msg.includes("supplier_payments")) {
+        toast.error("This delivery can't be deleted because Finance has already paid for it. It is kept as proof of the payment. Use System red flags in the Administrator Hub to mark it as a duplicate instead.");
+      } else {
+        toast.error("Failed to delete record");
+      }
     }
   };
 
