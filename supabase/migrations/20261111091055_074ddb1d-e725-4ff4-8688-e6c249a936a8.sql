@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS one_submitted_backup_restore ON public.audit_logs ((table_name)) WHERE table_name = 'supabase_backups' AND action = 'backup_restore_submitted';

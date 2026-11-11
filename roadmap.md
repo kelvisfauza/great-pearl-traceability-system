@@ -1,9 +1,10 @@
 # Roadmap
 
 ## Real backup and recovery page
-- [ ] Connect Supabase backup management securely and verify project-supported features — requires management-service access.
-- [ ] Replace placeholder figures and inactive controls with verified history, supported creation/schedule controls and guarded recovery.
-- [ ] Test authorization, confirmation, failure states and real connected reads; do not restore production data during testing.
+- [x] Connect Supabase backup management securely: verified eight completed physical backups; latest 11 November 02:15 UTC. App credential read returned HTTP 200.
+- [x] Replace placeholders with verified history, refresh, coverage notices and guarded Super Admin restoration. Schedule read requires Enterprise (402); on-demand recovery point is unavailable (400); no invented incremental/download actions or paid upgrades.
+- [x] Four authorization/recency/confirmation/error tests passed; unique audit claim prevents concurrent restore submission. No production restore or schedule change performed.
+- [ ] Verify signed-in Backups page and recovery drill — external unmanaged Supabase has no browser session; production recovery requires an explicit separately authorized drill. Creation and schedule editing await Supabase-supported availability/plan.
 
 ## Settings problem resolution
 - [x] Add administrator problem reporting, investigation/resolution notes and tracked email escalation to Fauza using existing ticket records; suspected code problems are clearly labelled as unconfirmed.

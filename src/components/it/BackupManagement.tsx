@@ -1,214 +1,70 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { 
-  HardDrive, 
-  Download, 
-  Upload, 
-  Calendar,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Database,
-  Shield
-} from 'lucide-react';
-import { useBackups } from '@/hooks/useBackups';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Database, RefreshCw, ShieldCheck, AlertTriangle, RotateCcw, CalendarClock } from 'lucide-react';
+import { useBackups, type BackupJob } from '@/hooks/useBackups';
 
-
+const date = (value: string) => new Date(value).toLocaleString('en-GB', { timeZone: 'Africa/Kampala', dateStyle: 'medium', timeStyle: 'short' });
 const BackupManagement = () => {
-  const { stats, percentUsed, jobs, schedules, loading, startFullBackup, startIncremental, restoreData } = useBackups();
-
-  const formatTS = (ts?: any) => {
-    try {
-      const d = ts?.toDate ? ts.toDate() : ts ? new Date(ts) : null;
-      return d ? d.toLocaleString() : '—';
-    } catch {
-      return '—';
-    }
+  const { protection, loading, error, refresh, restore } = useBackups();
+  const [selected, setSelected] = useState<BackupJob | null>(null);
+  const [confirmation, setConfirmation] = useState('');
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [attempted, setAttempted] = useState(false);
+  const jobs = [...(protection?.backups || [])].sort((a, b) => b.inserted_at.localeCompare(a.inserted_at));
+  const latest = jobs.find(b => b.status === 'completed');
+  const submit = async () => {
+    if (!selected || submitting || attempted) return;
+    setSubmitting(true); setAttempted(true);
+    try { const result = await restore(selected, confirmation); setMessage(result.message); }
+    catch (e) { setMessage(e instanceof Error ? e.message : 'Restore outcome unconfirmed. Check Supabase before retrying.'); }
+    finally { setSubmitting(false); }
   };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'failed':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'running':
-        return <Clock className="h-4 w-4 text-blue-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
-      case 'failed':
-        return <Badge className="bg-red-100 text-red-800">Failed</Badge>;
-      case 'running':
-        return <Badge className="bg-blue-100 text-blue-800">Running</Badge>;
-      default:
-        return <Badge variant="secondary">Unknown</Badge>;
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Backup Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <HardDrive className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Storage Used</p>
-                <p className="text-2xl font-bold">{stats ? `${stats.storage_used_gb?.toFixed?.(1) ?? stats.storage_used_gb} GB` : '—'}</p>
-                <Progress value={percentUsed} className="mt-2 h-2" />
-                <p className="text-xs text-gray-500 mt-1">{percentUsed}% of {stats?.capacity_gb ?? '—'} GB</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Last Backup</p>
-                <p className="text-2xl font-bold">{stats?.last_backup_status ? stats.last_backup_status[0]?.toUpperCase() + stats.last_backup_status.slice(1) : '—'}</p>
-                <p className="text-xs text-gray-500 mt-1">{stats?.last_backup_time?.toDate ? stats.last_backup_time.toDate().toLocaleString() : '—'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Calendar className="h-8 w-8 text-purple-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Next Backup</p>
-                <p className="text-2xl font-bold">Scheduled</p>
-                <p className="text-xs text-gray-500 mt-1">{stats?.next_backup_time?.toDate ? stats.next_backup_time.toDate().toLocaleString() : '—'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+  return <div className="space-y-6 min-w-0">
+    <header className="flex flex-wrap items-start justify-between gap-3">
+      <div><h2 className="text-2xl flex items-center gap-2"><Database className="h-6 w-6 text-primary" />Backup & recovery</h2><p className="text-sm text-muted-foreground mt-1">Great Agro Coffee · Supabase database</p></div>
+      <Button variant="outline" onClick={() => void refresh()} disabled={loading}><RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />{loading ? 'Checking…' : 'Refresh'}</Button>
+    </header>
+    {error && <div role="alert" className="border border-destructive rounded-md p-4 text-sm text-destructive">{error}{protection && <p className="mt-1">Previously loaded figures below may be out of date.</p>}</div>}
+    {!protection && loading && <p className="text-muted-foreground">Checking Supabase backup protection…</p>}
+    {protection && <>
+      <div className="grid gap-4 sm:grid-cols-3 border-y py-5">
+        <div><ShieldCheck className="h-5 w-5 text-primary mb-2" /><p className="text-sm text-muted-foreground">Latest completed backup</p><p className="font-semibold mt-1">{latest ? date(latest.inserted_at) : 'None reported'}</p><p className="text-xs text-muted-foreground">East Africa Time</p></div>
+        <div><Database className="h-5 w-5 text-primary mb-2" /><p className="text-sm text-muted-foreground">Saved backup history</p><p className="text-2xl font-semibold mt-1">{jobs.filter(b => b.status === 'completed').length}</p><p className="text-xs text-muted-foreground">Completed backups reported by Supabase</p></div>
+        <div><CalendarClock className="h-5 w-5 text-primary mb-2" /><p className="text-sm text-muted-foreground">Point-in-time recovery</p><p className="font-semibold mt-1">{protection.pitr_enabled ? 'Enabled' : 'Not enabled'}</p><p className="text-xs text-muted-foreground">Checked {date(protection.checked_at)}</p></div>
       </div>
-
-      {/* Backup Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Backup Controls
-          </CardTitle>
-          <CardDescription>Manage backup operations and schedules</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button className="h-16 flex-col" onClick={startFullBackup} disabled={loading}>
-              <Download className="h-6 w-6 mb-2" />
-              Start Full Backup
-            </Button>
-            <Button variant="outline" className="h-16 flex-col" onClick={startIncremental} disabled={loading}>
-              <Upload className="h-6 w-6 mb-2" />
-              Incremental Backup
-            </Button>
-            <Button variant="outline" className="h-16 flex-col" disabled>
-              <Shield className="h-6 w-6 mb-2" />
-              Restore Data
-            </Button>
+      <section className="space-y-3"><h3 className="text-lg">Protection & availability</h3>
+        <dl className="space-y-3 text-sm">
+          <div><dt className="font-medium">Daily backup schedule</dt><dd className="text-muted-foreground mt-1">{protection.schedule ? `${protection.schedule.schedule_for} UTC` : protection.schedule_error || 'No schedule reported'}</dd></div>
+          <div><dt className="font-medium">On-demand recovery point</dt><dd className="text-muted-foreground mt-1">{protection.recovery_point ? `${protection.recovery_point.name} · ${protection.recovery_point.status.toLowerCase()}` : protection.recovery_point_error || 'No recovery point reported'}</dd></div>
+          <div><dt className="font-medium">Uploaded files</dt><dd className="text-muted-foreground mt-1">Database backups do not contain uploaded document or photo files. Separate file protection has not been verified.</dd></div>
+        </dl>
+      </section>
+      <section><h3 className="text-lg mb-3">Backup history</h3>
+        {!jobs.length && <p className="text-sm text-muted-foreground">Supabase reported no saved backups.</p>}
+        <div className="divide-y">{jobs.map(backup => <div key={backup.id} className="py-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0"><p className="font-medium">{date(backup.inserted_at)}</p><p className="text-xs text-muted-foreground mt-1">{backup.physical ? 'Physical database backup' : 'Database backup'}</p></div>
+          <div className="flex items-center gap-3"><Badge variant={backup.status === 'failed' ? 'destructive' : 'secondary'} className="capitalize">{backup.status}</Badge>
+            {protection.can_restore && backup.status === 'completed' && <Button size="sm" variant="outline" onClick={() => { setSelected(backup); setConfirmation(''); setAcknowledged(false); setMessage(null); setAttempted(false); }}><RotateCcw className="h-4 w-4 mr-2" />Restore</Button>}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Backup Schedule */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Backup Schedule
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {schedules.length === 0 && (
-              <div className="p-4 border rounded-lg text-sm text-muted-foreground">No schedules defined.</div>
-            )}
-            {schedules.map((s) => (
-              <div key={s.id} className="p-4 border rounded-lg">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="font-medium">{s.name}</h4>
-                    <p className="text-sm text-gray-500">{s.cron}</p>
-                  </div>
-                  <Badge className={s.active ? 'bg-green-100 text-green-800' : ''}>{s.active ? 'Active' : 'Paused'}</Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Backup History */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <HardDrive className="h-5 w-5" />
-            Recent Backups
-          </CardTitle>
-          <CardDescription>History of backup operations</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {jobs.length === 0 && (
-              <div className="p-4 border rounded-lg text-sm text-muted-foreground">No backup jobs yet.</div>
-            )}
-            {jobs.map((backup) => (
-              <div key={backup.id} className="p-4 border rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    {getStatusIcon(backup.status)}
-                    <div>
-                      <h4 className="font-medium">{backup.type}</h4>
-                      <p className="text-sm text-gray-500">{formatTS(backup.date)}</p>
-                    </div>
-                  </div>
-                  {getStatusBadge(backup.status)}
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Size: </span>
-                    <span className="font-medium">{backup.size ?? '—'}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Duration: </span>
-                    <span className="font-medium">{backup.duration ?? '—'}</span>
-                  </div>
-                </div>
-                {backup.status === 'completed' && (
-                  <div className="mt-3 flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Download className="h-3 w-3 mr-1" />
-                      Download
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Shield className="h-3 w-3 mr-1" />
-                      Restore
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+        </div>)}</div>
+        {!protection.can_restore && <p className="text-xs text-muted-foreground mt-3">Production restoration is restricted to Super Admin.</p>}
+      </section>
+    </>}
+    <Dialog open={!!selected} onOpenChange={open => { if (!open && !submitting) setSelected(null); }}>
+      <DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Restore production database</DialogTitle><DialogDescription>Restore the backup from {selected ? date(selected.inserted_at) : ''} (East Africa Time).</DialogDescription></DialogHeader>
+        <div className="border border-destructive rounded-md p-3 text-sm text-destructive flex gap-2"><AlertTriangle className="h-5 w-5 shrink-0" /><p>Changes made after this backup will be lost. The system will be interrupted. Uploaded files are not restored. Sign in again within ten minutes before submitting.</p></div>
+        <label className="flex gap-2 text-sm items-start"><Checkbox checked={acknowledged} onCheckedChange={v => setAcknowledged(v === true)} disabled={attempted} /><span>I accept the data loss and service interruption.</span></label>
+        <label className="text-sm space-y-2"><span className="block">Type the exact confirmation:</span><code className="block break-all text-xs">RESTORE {selected?.inserted_at}</code><Input aria-label="Restore confirmation" value={confirmation} onChange={e => setConfirmation(e.target.value)} disabled={attempted} autoComplete="off" /></label>
+        {message && <p role="status" className="text-sm border rounded-md p-3">{message}</p>}
+        <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" disabled={submitting} onClick={() => setSelected(null)}>Close</Button><Button variant="destructive" disabled={!selected || !acknowledged || confirmation !== `RESTORE ${selected.inserted_at}` || submitting || attempted} onClick={() => void submit()}>{submitting ? 'Submitting…' : 'Confirm restore'}</Button></div>
+      </DialogContent>
+    </Dialog>
+  </div>;
 };
-
 export default BackupManagement;

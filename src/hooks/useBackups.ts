@@ -1,76 +1,37 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FunctionsHttpError } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
-export type BackupStatus = 'completed' | 'failed' | 'running' | 'queued';
-
-export interface BackupStats {
-  storage_used_gb: number;
-  capacity_gb: number;
-  last_backup_status?: BackupStatus;
-  last_backup_time?: any;
-  next_backup_time?: any;
+export interface BackupJob { id: number; inserted_at: string; status: string; physical: boolean }
+export interface BackupProtection {
+  checked_at: string; backups: BackupJob[]; pitr_enabled: boolean; can_restore: boolean;
+  schedule: { schedule_for: string } | null; schedule_error: string | null;
+  recovery_point: { name: string; status: string; completed_on: string | null } | null; recovery_point_error: string | null;
 }
-
-export interface BackupJob {
-  id: string;
-  date: any;
-  type: 'Full Backup' | 'Incremental' | 'Database Backup';
-  size?: string;
-  status: BackupStatus;
-  duration?: string;
+async function invoke(body: object) {
+  const { data, error } = await supabase.functions.invoke('backup-management', { body });
+  if (error) {
+    let message = 'Backup service could not be reached. Try refreshing.';
+    if (error instanceof FunctionsHttpError) {
+      try { const response = await error.context.json(); if (response.error) message = response.error; } catch { /* Do not display raw HTML. */ }
+    }
+    throw new Error(message);
+  }
+  if (!data?.ok) throw new Error(data?.error || 'Backup request was not completed');
+  return data;
 }
-
-export interface BackupSchedule {
-  id: string;
-  name: string;
-  cron: string;
-  active: boolean;
-}
-
 export const useBackups = () => {
-  // Backup functionality disabled - Firebase has been migrated to Supabase
-  const [stats, setStats] = useState<BackupStats | null>({
-    storage_used_gb: 0,
-    capacity_gb: 100,
-    last_backup_status: 'completed'
-  });
-  const [jobs, setJobs] = useState<BackupJob[]>([]);
-  const [schedules, setSchedules] = useState<BackupSchedule[]>([]);
+  const [protection, setProtection] = useState<BackupProtection | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const percentUsed = useMemo(() => {
-    if (!stats || !stats.capacity_gb) return 0;
-    return Math.round(((stats.storage_used_gb || 0) / stats.capacity_gb) * 100);
-  }, [stats?.storage_used_gb, stats?.capacity_gb]);
-
-  const startJob = useCallback(async (type: BackupJob['type']) => {
-    console.log('Backup functionality disabled (Firebase migration):', type);
+  const [error, setError] = useState<string | null>(null);
+  const busy = useRef(false);
+  const refresh = useCallback(async () => {
+    if (busy.current) return;
+    busy.current = true; setLoading(true); setError(null);
+    try { setProtection(await invoke({ action: 'status' })); } catch (e) { setError(e instanceof Error ? e.message : 'Backup check failed'); }
+    finally { busy.current = false; setLoading(false); }
   }, []);
-
-  const startFullBackup = useCallback(async () => startJob('Full Backup'), [startJob]);
-  const startIncremental = useCallback(async () => startJob('Incremental'), [startJob]);
-  
-  const restoreData = useCallback(async (jobId: string) => {
-    console.log('Restore functionality disabled (Firebase migration):', jobId);
-  }, []);
-
-  const upsertStats = useCallback(async (payload: Partial<BackupStats>) => {
-    console.log('Backup stats update disabled (Firebase migration):', payload);
-  }, []);
-
-  const toggleSchedule = useCallback(async (id: string, active: boolean) => {
-    console.log('Schedule toggle disabled (Firebase migration):', id, active);
-  }, []);
-
-  return { 
-    stats, 
-    percentUsed, 
-    jobs, 
-    schedules, 
-    loading, 
-    startFullBackup, 
-    startIncremental, 
-    restoreData, 
-    upsertStats, 
-    toggleSchedule 
-  };
+  useEffect(() => { void refresh(); const timer = window.setInterval(() => void refresh(), 60000); return () => window.clearInterval(timer); }, [refresh]);
+  const restore = useCallback(async (backup: BackupJob, confirmation: string) => invoke({ action: 'restore', id: backup.id, confirmation, acknowledge: true }), []);
+  return { protection, loading, error, refresh, restore };
 };
