@@ -1,6 +1,8 @@
 # Roadmap
 
 ## Modern company display
+- [x] Refocus /display on 19 company/coffee-journey slides with two dedicated supplier-ranking pages; remove market commentary from this destination while keeping the separate price-display board.
+- [x] Actual /display browser checks confirm journey and supplier showcase navigation; no invented ranking names when data is unavailable. Build clean. Authenticated supplier data read remains unverified.
 - [x] Correct the actual /display inactivity destination to reuse the modern company presentation; remove its duplicate headers, documentary embeds and unavailable TradingView symbol. Verified actual /display in browser: intro, buying board, pause/next and no TradingView frames; build clean.
 - [x] Refresh the existing TV display with a coffee-photo company introduction/closing, stronger company identity, simpler buying board, cleaner shared slide styling and play/pause/previous/next controls; retain prices, news, polling and WakeLock.
 - [x] Browser-isolated company intro and buying board rendered; navigation/pause work and 902×855 view has no horizontal overflow. Preview build clean; normal signed-in route unavailable to automated checks.

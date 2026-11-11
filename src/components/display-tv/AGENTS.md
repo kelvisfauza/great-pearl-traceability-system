@@ -1,0 +1,1 @@
+- Use the shared fixed-resolution frame for company and market presentations; keep company journey content separate from market commentary so the inactivity display stays company-focused. Supplier showcases use available recorded delivery rankings, never invented names or totals.
