@@ -11,7 +11,7 @@ class SettingsToolBoundary extends Component<{ children: ReactNode }, { failed: 
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   render() {
-    if (this.state.failed) return <div role="alert" className="py-10 space-y-4"><p className="text-destructive">This control could not be opened.</p><Button variant="outline" onClick={() => window.location.reload()}>Reload settings</Button></div>;
+    if (this.state.failed) return <div role="alert" className="py-10 space-y-4"><p className="text-destructive">This control could not be opened. If reloading does not help, report it for investigation.</p><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => window.location.reload()}>Reload settings</Button><Button asChild><Link to="/admin/system-settings?tool=problem-resolution">Report problem</Link></Button></div></div>;
     return this.props.children;
   }
 }
@@ -51,7 +51,7 @@ const SystemSettings = () => {
               <div className="bg-primary/10 text-primary p-3 rounded-lg shrink-0"><Settings2 className="h-8 w-8" /></div>
               <div><h2 className="text-2xl font-semibold">Control centre</h2><p className="text-sm text-muted-foreground mt-1">Great Agro Coffee</p></div>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" />Administrator access</div>
+            <div className="flex flex-wrap items-center gap-3"><span className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" />Administrator access</span><Button variant="outline" onClick={() => openTool('problem-resolution')}>Problems & recovery</Button></div>
           </header>
 
           <div className="flex flex-col sm:flex-row gap-3">

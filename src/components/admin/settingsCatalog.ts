@@ -22,6 +22,7 @@ export interface SettingsTool {
 }
 
 export const settingsTools: SettingsTool[] = [
+  { id: "problem-resolution", category: "maintenance", title: "Problems & safe recovery", keywords: "error report escalate resolve retry code support troubleshoot connection red flags", icon: Wrench, component: lazy(() => import("./SystemProblemResolution")) },
   { id: "permissions", category: "people", title: "Staff permissions", keywords: "department modules access rights", icon: KeyRound, component: lazy(() => import("./UnifiedPermissionManager")) },
   { id: "accounts", category: "people", title: "Enable or disable accounts", keywords: "block login staff active", icon: Users, component: lazy(() => import("./AccountStatusManager")) },
   { id: "suspensions", category: "people", title: "Employee suspensions", keywords: "forced leave suspended", icon: Users, component: lazy(() => import("./EmployeeSuspensionManager")) },

@@ -1,5 +1,10 @@
 # Roadmap
 
+## Settings problem resolution
+- [ ] Add administrator problem reporting, tracked escalation, and clearly labelled suspected code problems using the existing ticket records.
+- [ ] Provide safe connection/record checks and existing guarded recovery destinations; never automatically resend payments or alter balances.
+- [ ] Validate permissions, recovery rules, preview rendering and build; authenticated end-to-end checks depend on external Supabase access.
+
 ## Settings change email alerts
 - [x] Capture committed changes across system settings and eight access/security/maintenance tables; unchanged saves produce no alerts and only changed field names are emailed.
 - [x] Deploy email-only alerts to Fauza using the existing sender, private queue, leased claims, stable email idempotency keys, immediate dispatch and temporary five-minute retries removed after drain.

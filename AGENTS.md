@@ -1,5 +1,7 @@
 # Project architecture
 
+- Track Settings problems in existing system_settings-source support tickets through an authenticated administrator endpoint; recovery only reloads/diagnoses or opens guarded workflows, while code classifications remain provisional and escalation delivery must be confirmed.
+
 - Capture committed settings/access changes into a private alert outbox with field names only; wake the authenticated email worker on enqueue, use idempotent delivery and leased claims, and remove retry scheduling after drain so routine alerts do not depend on browser state.
 
 - Keep System Settings as a searchable catalog of lazily opened existing controls and guarded management links; reuse authoritative settings consumers rather than exposing arbitrary JSON edits or duplicating financial/security policies.
