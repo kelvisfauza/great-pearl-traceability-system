@@ -18462,6 +18462,7 @@ export type Database = {
           deducted_kg: number
         }[]
       }
+      display_public_prices: { Args: never; Returns: Json }
       display_public_staff: {
         Args: never
         Returns: {
