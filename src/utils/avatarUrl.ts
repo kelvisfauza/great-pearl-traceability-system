@@ -15,6 +15,9 @@ export function extractAvatarPath(value?: string | null): string | null {
   const raw = (value || '').trim();
   if (!raw) return null;
 
+  // CDN-hosted asset URLs (Lovable assets) are served as-is, not signed
+  if (raw.startsWith('/__l5e/')) return null;
+
   // Already a bare object path
   if (!/^https?:\/\//i.test(raw)) {
     return raw.replace(new RegExp(`^${BUCKET}/`), '');
