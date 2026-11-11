@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Settings change email alerts
-- [ ] Capture committed settings and access-policy changes, excluding unchanged saves and sensitive values.
-- [ ] Deliver email-only alerts to Fauza through the existing sender with durable retry and duplicate protection.
-- [ ] Test change capture, permissions and email delivery without changing live business policies.
+- [x] Capture committed changes across system settings and eight access/security/maintenance tables; unchanged saves produce no alerts and only changed field names are emailed.
+- [x] Deploy email-only alerts to Fauza using the existing sender, private queue, leased claims, stable email idempotency keys, immediate dispatch and temporary five-minute retries removed after drain.
+- [x] Three rules tests passed; rollback database tests verified actual/no-op capture and private worker permissions; unauthorized endpoint rejected. A harmless test setting produced a sent email at 08:19 UTC and was removed; no business policy or payment changed. Browser-origin saves remain unverified due to external authentication.
 
 ## Central system settings
 - [x] Replace the long settings tabs with a searchable, categorized directory of 39 controls/destinations, loading only the selected control; advanced tools are separated.
