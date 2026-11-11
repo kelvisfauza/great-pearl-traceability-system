@@ -1,5 +1,10 @@
 # Roadmap
 
+## Expired sign-in logout
+- [x] Detect confirmed expired sign-ins across shared app requests; clear current-device access and show a sign-in notice without retrying actions or logging out for unrelated errors.
+- [x] Five expiry/permission/request and error-explanation tests passed; latest preview compilation clean. Public sign-in route remained blank in browser, so real logout UI is not verified.
+- [ ] Verify signed-in expiry to login end-to-end — external unmanaged Supabase has no automated staff session.
+
 ## Modern company display
 - [x] Add rotating four-person staff showcases using saved names, roles, departments and signed portraits under existing access rules; replace repeated journey photos with seven distinct scenes and alternating editorial chapters. Actual /display navigation at 968×855 checked with no overflow or runtime errors; build clean.
 - [ ] Verify real staff portraits on a signed-in display — external unmanaged Supabase supplies no automated staff session; signed-out display does not expose private employee records.

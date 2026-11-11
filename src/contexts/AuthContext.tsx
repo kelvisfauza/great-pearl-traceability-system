@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { securityService } from '@/services/securityService';
 import { checkDeviceTrust, sendNewDeviceAlertEmail, trustFirstDevice } from '@/utils/deviceDetection';
 import { isTraineeRole } from '@/lib/trainee';
+import { SESSION_EXPIRED_EVENT } from '@/lib/sessionExpiry';
 
 interface Employee {
   id: string;
@@ -67,6 +68,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const onSessionExpired = () => {
+      setUser(null);
+      setSession(null);
+      setEmployee(null);
+      setLoading(false);
+      toast({
+        title: 'Sign-in expired',
+        description: 'You have been logged out. Please sign in again.',
+        variant: 'destructive',
+      });
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+  }, [toast]);
 
   // Function to force refresh employee data
   const refreshEmployeeData = async () => {
