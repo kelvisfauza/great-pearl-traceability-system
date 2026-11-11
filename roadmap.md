@@ -1,9 +1,10 @@
 # Roadmap
 
 ## Settings problem resolution
-- [ ] Add administrator problem reporting, tracked escalation, and clearly labelled suspected code problems using the existing ticket records.
-- [ ] Provide safe connection/record checks and existing guarded recovery destinations; never automatically resend payments or alter balances.
-- [ ] Validate permissions, recovery rules, preview rendering and build; authenticated end-to-end checks depend on external Supabase access.
+- [x] Add administrator problem reporting, investigation/resolution notes and tracked email escalation to Fauza using existing ticket records; suspected code problems are clearly labelled as unconfirmed.
+- [x] Provide safe connection/reload checks, existing red-flag checks and guarded payout/access/backup destinations; no automatic payment retries or balance changes.
+- [x] Three rules tests passed; deployed endpoint rejects unauthenticated calls (401), existing table grants/policies checked, isolated desktop/mobile controls render without overflow, preview build clean.
+- [ ] Verify real signed-in report → investigation → email escalation → resolution and red-flag checks — external unmanaged Supabase has no managed browser session; no live ticket or email was created for testing.
 
 ## Settings change email alerts
 - [x] Capture committed changes across system settings and eight access/security/maintenance tables; unchanged saves produce no alerts and only changed field names are emailed.
