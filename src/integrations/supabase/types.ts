@@ -18373,6 +18373,16 @@ export type Database = {
         Args: { p_bonus_id: string; p_reference?: string }
         Returns: Json
       }
+      claim_settings_alerts: {
+        Args: never
+        Returns: unknown[]
+        SetofOptions: {
+          from: "*"
+          to: "events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       cleanup_expired_email_verification_codes: {
         Args: never
         Returns: undefined
@@ -18464,6 +18474,10 @@ export type Database = {
       finalize_treasury_momo_deposit: {
         Args: { p_error?: string; p_reference: string; p_status: string }
         Returns: Json
+      }
+      finish_settings_alert: {
+        Args: { p_error?: string; p_id: string; p_sent: boolean }
+        Returns: undefined
       }
       fix_denis_auth_final: { Args: never; Returns: Json }
       generate_support_ticket_code: { Args: never; Returns: string }
@@ -19294,6 +19308,7 @@ export type Database = {
         Args: { p_enabled: boolean }
         Returns: Json
       }
+      settings_alert_auth: { Args: { p_token: string }; Returns: boolean }
       sg_is_automation: { Args: never; Returns: boolean }
       submit_legacy_store_clearance: {
         Args: { p: Json }

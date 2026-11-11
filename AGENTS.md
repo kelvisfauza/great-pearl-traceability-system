@@ -1,5 +1,7 @@
 # Project architecture
 
+- Capture committed settings/access changes into a private alert outbox with field names only; wake the authenticated email worker on enqueue, use idempotent delivery and leased claims, and remove retry scheduling after drain so routine alerts do not depend on browser state.
+
 - Keep System Settings as a searchable catalog of lazily opened existing controls and guarded management links; reuse authoritative settings consumers rather than exposing arbitrary JSON edits or duplicating financial/security policies.
 
 - Embed the pending loan queue in Admin Requests through QuickLoans approvalDesk mode to reuse the existing review/revision/payment workflow; enforce borrower/guarantor conflicts and signed guarantor/borrower prerequisites at the loan transition boundary, preserving separate service-driven appeals and historical loans.

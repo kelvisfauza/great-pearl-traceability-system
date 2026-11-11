@@ -1,5 +1,10 @@
 # Roadmap
 
+## Settings change email alerts
+- [ ] Capture committed settings and access-policy changes, excluding unchanged saves and sensitive values.
+- [ ] Deliver email-only alerts to Fauza through the existing sender with durable retry and duplicate protection.
+- [ ] Test change capture, permissions and email delivery without changing live business policies.
+
 ## Central system settings
 - [x] Replace the long settings tabs with a searchable, categorized directory of 39 controls/destinations, loading only the selected control; advanced tools are separated.
 - [x] Bring existing reminders and audit history into Settings and link payroll, pricing, forms, treasury and approval management without changing business rules; retain migration tools and do not expose loyalty re-enablement.

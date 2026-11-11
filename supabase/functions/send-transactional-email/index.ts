@@ -181,6 +181,7 @@ Deno.serve(async (req) => {
     // elsewhere. Mirroring them here produced a second, useless "subject only"
     // SMS to the same person. Email only for these.
     const NO_SMS_MIRROR_TEMPLATES = new Set([
+      'settings-change',
       'price-update',
       'price-correction',
       'supplier-price-notice',
@@ -215,6 +216,7 @@ Deno.serve(async (req) => {
     }
     if (isErrorDigest) { allowSms = false; allowEmail = true }
     if (skipSms) allowSms = false
+    if (templateName === 'settings-change') { allowEmail = true; allowSms = false }
     if (!allowEmail && !allowSms) {
       console.log(`🚫 Template '${templateName}' disabled by admin channel preferences`)
       return new Response(

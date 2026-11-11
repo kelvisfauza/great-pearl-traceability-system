@@ -136,6 +136,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'instant-withdrawal-confirmation': instantWithdrawalConfirmation,
   'request-expired-refund': requestExpiredRefund,
   'general-notification': generalNotification,
+  'settings-change': { ...generalNotification, displayName: 'Settings Change' },
   'lab-rules-announcement': labRulesAnnouncement,
   'payment-receipt': paymentReceipt,
   'withdrawal-auth-request': withdrawalAuthRequest,
