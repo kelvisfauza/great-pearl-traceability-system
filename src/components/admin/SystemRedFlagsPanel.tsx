@@ -1,3 +1,4 @@
+import { FlagDetailValue } from './FlagDetailValue';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -96,7 +97,7 @@ export default function SystemRedFlagsPanel() {
       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground"><span>Page {page + 1} · {data?.count || 0} tasks</span><div className="flex gap-2"><Button size="sm" variant="ghost" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Previous</Button><Button size="sm" variant="ghost" disabled={(page + 1) * 25 >= (data?.count || 0)} onClick={() => setPage(p => p + 1)}>Next</Button></div></div>
       <Dialog open={!!selected} onOpenChange={open => { if (!open) setSelected(null); }}><DialogContent className="max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>{selected?.title}</DialogTitle></DialogHeader>
         <p className="text-sm">{String(selected?.details.action || '')}</p>
-        <dl className="space-y-2 text-sm">{Object.entries(selected?.details || {}).filter(([k]) => k !== 'action').map(([key, value]) => <div key={key}><dt className="font-medium capitalize">{key.replace(/_/g, ' ')}</dt><dd className="text-muted-foreground break-all whitespace-pre-wrap">{typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value ?? 'Not recorded')}</dd></div>)}</dl>
+        <dl className="space-y-2 text-sm">{Object.entries(selected?.details || {}).filter(([k]) => k !== 'action' && !['fingerprint','lot_id','record_id'].includes(k)).map(([key, value]) => <div key={key}><dt className="font-medium capitalize">{key.replace(/_/g, ' ')}</dt><dd className="text-muted-foreground break-words"><FlagDetailValue name={key} value={value} /></dd></div>)}</dl>
         {selected && selected.status !== 'resolved' && COFFEE_FLAG_RULES.includes(selected.rule_key) && <CoffeeFlagActions ruleKey={selected.rule_key} fingerprint={selected.fingerprint} details={selected.details as any} onDone={() => { client.invalidateQueries({ queryKey: ['system-red-flags'] }); setSelected(null); }} />}
         <label htmlFor="flag-notes" className="text-sm font-medium">Review notes</label><Textarea id="flag-notes" value={notes} onChange={e => setNotes(e.target.value)} disabled={!editable} />
         <div className="flex flex-wrap gap-2"><Button disabled={busy || !editable} onClick={() => save(true)}><UserCheck className="mr-2 h-4 w-4" />Take task</Button><Button variant="outline" disabled={busy || !editable} onClick={() => save(false)}>Save note</Button><Button variant="outline" asChild><Link to={selected?.review_path || '/'}>Open department<ArrowUpRight className="ml-2 h-4 w-4" /></Link></Button></div>
