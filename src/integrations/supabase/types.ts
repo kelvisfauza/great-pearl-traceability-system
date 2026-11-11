@@ -18492,6 +18492,10 @@ export type Database = {
           deducted_kg: number
         }[]
       }
+      delete_duplicate_coffee_record: {
+        Args: { p_reason?: string; p_record_id: string }
+        Returns: Json
+      }
       display_public_prices: { Args: never; Returns: Json }
       display_public_staff: {
         Args: never

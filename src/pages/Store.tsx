@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useStoreDeliveryIntake } from "@/hooks/useStoreDeliveryIntake";
@@ -468,7 +469,13 @@ const Store = () => {
       console.error(error);
       const msg = String((error as any)?.message || "");
       if (msg.includes("supplier_payments")) {
-        toast.error("This delivery can't be deleted because Finance has already paid for it. It is kept as proof of the payment. Use System red flags in the Administrator Hub to mark it as a duplicate instead.");
+        const reason = window.prompt("This delivery was already paid. Deleting it as a double entry will record the paid amount as an advance owed by the supplier. Type a reason to continue:");
+        if (!reason || !reason.trim()) return;
+        const { data, error: rpcErr } = await (supabase as any).rpc("delete_duplicate_coffee_record", { p_record_id: recordId, p_reason: reason.trim() });
+        if (rpcErr) { toast.error(rpcErr.message || "Failed to delete record"); return; }
+        const adv = Number(data?.advance_ugx || 0);
+        toast.success(adv > 0 ? `Double entry deleted. UGX ${adv.toLocaleString()} recorded as an advance on the supplier.` : "Double entry deleted.");
+        setTimeout(() => window.location.reload(), 1500);
       } else {
         toast.error("Failed to delete record");
       }

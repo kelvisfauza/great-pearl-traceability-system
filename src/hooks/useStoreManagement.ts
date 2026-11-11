@@ -336,6 +336,14 @@ export const useStoreManagement = () => {
         return;
       }
 
+      // Paid deliveries must go through the double-entry routine (keeps payment, creates supplier advance)
+      const { data: lots } = await supabase.from('finance_coffee_lots').select('id').eq('coffee_record_id', recordId);
+      const lotIds = (lots || []).map((l: any) => l.id);
+      if (lotIds.length) {
+        const { data: paid } = await supabase.from('supplier_payments' as any).select('id').in('lot_id', lotIds).limit(1);
+        if (paid && paid.length) throw new Error('PAID_DELIVERY supplier_payments');
+      }
+
       console.log('✅ All checks passed, proceeding with deletion...');
       
       // Delete in cascade order
@@ -379,6 +387,7 @@ export const useStoreManagement = () => {
       });
     } catch (error: any) {
       console.error('❌ Error deleting coffee record:', error);
+      if (String(error?.message || '').includes('supplier_payments')) throw error;
       toast({
         title: "❌ Deletion Failed",
         description: error.message || "An unexpected error occurred while deleting the record",
