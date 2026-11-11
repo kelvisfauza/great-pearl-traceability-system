@@ -1,6 +1,10 @@
 import harvest from '@/assets/coffee-display-harvest.jpg';
 import drying from '@/assets/coffee-journey-drying.jpg';
 import roasting from '@/assets/coffee-journey-roasting.jpg';
+import farm from '@/assets/coffee-journey-farm.jpg';
+import quality from '@/assets/coffee-journey-quality.jpg';
+import stock from '@/assets/coffee-journey-stock.jpg';
+import cup from '@/assets/coffee-journey-cup.jpg';
 import { Leaf, Package, ScanLine, Users } from 'lucide-react';
 import type { DisplayData } from '@/hooks/useDisplayData';
 
@@ -22,8 +26,10 @@ export const journeyChapters = [
 ];
 
 export const CoffeeJourneySlide = ({ chapter }: { chapter: typeof journeyChapters[number] }) => <section className="relative h-full overflow-hidden">
-  <img src={chapter.image} width={1920} height={1088} alt={chapter.label === 'From green bean to roast' || chapter.label === 'Farm to cup' ? 'Roasted coffee beans in a cooling tray' : chapter.image === drying ? 'Coffee drying on raised beds, illustrative scene' : 'Ripe coffee cherries'} className="absolute inset-0 h-full w-full object-cover" />
-  <div className="tv-company-shade absolute inset-0" />
+  {['roots', 'harvest', 'drying-story', 'quality-story', 'stock-story', 'roast-story', 'cup-story'].includes(chapter.id) ? <>
+    <img src={chapter.id === 'roots' ? farm : chapter.id === 'quality-story' ? quality : chapter.id === 'stock-story' ? stock : chapter.id === 'cup-story' ? cup : chapter.image} loading="lazy" width={1920} height={1088} alt={`${chapter.label} — illustrative coffee journey scene`} className="absolute inset-0 h-full w-full object-cover" />
+    <div className="tv-company-shade absolute inset-0" />
+  </> : <div className="absolute inset-0 flex items-center justify-end pr-24 bg-primary text-primary-foreground"><div className="border-l border-primary-foreground/30 pl-16 w-[440px]"><p className="text-9xl font-serif text-secondary">{String(journeyChapters.indexOf(chapter) + 1).padStart(2, '0')}</p><p className="text-4xl leading-relaxed mt-8">{chapter.label}</p><Leaf className="h-24 w-24 mt-12 text-secondary" /></div></div>}
   <div className="relative h-full flex flex-col justify-center px-16 max-w-[1120px]">
     <p className="text-secondary text-2xl mb-7">THE COFFEE JOURNEY · {chapter.label}</p>
     <h2 className="tv-on-photo text-8xl leading-tight">{chapter.title}</h2>

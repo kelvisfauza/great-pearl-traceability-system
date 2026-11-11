@@ -22,10 +22,12 @@ import { useCoffeeMarketBriefing } from "@/hooks/useCoffeeMarketBriefing";
 import { Button } from "@/components/ui/button";
 import type { DisplaySlide } from "@/components/display-tv/types";
 import { CoffeeJourneySlide, journeyChapters, SupplierShowcaseSlide, JourneyOverviewSlide } from '@/components/display-tv/CoffeeJourneySlides';
+import { StaffShowcaseSlide, useDisplayStaff } from '@/components/display-tv/StaffShowcaseSlide';
 
 const PriceDisplay = ({ companyMode = false }: { companyMode?: boolean }) => {
   const { prices, loading: pricesLoading, fetchPrices } = useReferencePrices();
   const displayData = useDisplayData();
+  const { staff, loading: staffLoading, failed: staffFailed } = useDisplayStaff(companyMode);
   const { data: liveIcePrices, refresh: refreshIcePrices } = useLiveIcePrices();
   const { history, loading: historyLoading, refreshHistory } = usePriceHistory(30);
 
@@ -183,13 +185,17 @@ const PriceDisplay = ({ companyMode = false }: { companyMode?: boolean }) => {
   const companySlides = useMemo<DisplaySlide[]>(() => [
     { id:'brand-intro', label:'Great Agro Coffee', duration:12000, content:<BrandSignatureSlide /> },
     { id:'journey-overview', label:'Farm to cup', duration:14000, content:<JourneyOverviewSlide /> },
+    ...Array.from({ length: Math.max(1, Math.ceil(staff.length / 4)) }, (_, page) => ({
+      id: `staff-${page}`, label: `Our staff · ${page + 1}`, duration: 16000,
+      content: <StaffShowcaseSlide staff={staff.slice(page * 4, page * 4 + 4)} page={page} pages={Math.max(1, Math.ceil(staff.length / 4))} loading={staffLoading} failed={staffFailed} />,
+    })),
     ...journeyChapters.slice(0,3).map(chapter => ({ id:chapter.id, label:chapter.label, duration:16000, content:<CoffeeJourneySlide chapter={chapter} /> })),
     { id:'suppliers-leading', label:'Our top suppliers', duration:16000, content:<SupplierShowcaseSlide data={displayData} /> },
     ...journeyChapters.slice(3,8).map(chapter => ({ id:chapter.id, label:chapter.label, duration:16000, content:<CoffeeJourneySlide chapter={chapter} /> })),
     { id:'suppliers-community', label:'Our supplier community', duration:16000, content:<SupplierShowcaseSlide data={displayData} offset={4} /> },
     ...journeyChapters.slice(8).map(chapter => ({ id:chapter.id, label:chapter.label, duration:16000, content:<CoffeeJourneySlide chapter={chapter} /> })),
     { id:'brand-outro', label:'Great Agro Coffee', duration:12000, content:<BrandSignatureSlide variant="outro" /> },
-  ], [displayData]);
+  ], [displayData, staff, staffLoading, staffFailed]);
   const slides = companyMode ? companySlides : marketSlides;
 
   useEffect(() => {
@@ -267,7 +273,7 @@ const PriceDisplay = ({ companyMode = false }: { companyMode?: boolean }) => {
     return companyMode ? ['Great Agro Coffee · P.O Box 431420, Kasese, Uganda', 'The coffee journey · Growing · Harvesting · Drying · Quality · Milling · Traceability', ...purchaseItems] : [...todayPriceItems, ...purchaseItems, ...headlineItems];
   }, [companyMode, briefing?.headlines, displayData.dispatched, displayData.todayPurchases, prices.arabicaBuyingPrice, prices.robustaBuyingPrice]);
 
-  const currentSlide = slides[activeIndex];
+  const currentSlide = slides[activeIndex] ?? slides[0];
 
   return (
     <div className="tv-display-shell min-h-screen bg-background text-foreground flex items-center">
