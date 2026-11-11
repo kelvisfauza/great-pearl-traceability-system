@@ -1,6 +1,6 @@
 # Project architecture
 
-- TV supplier totals use invoker RLS and independent reads to avoid delays.
+- TV supplier totals use the security-definer display_supplier_summary RPC with independent reads.
 
 - Read backup protection through an authenticated administrator-only Supabase Management connector; production restore requires fresh Super Admin sign-in, exact backup confirmation and a unique submitted audit claim, and never auto-retries uncertain outcomes. Provider-unavailable creation/schedule/download actions remain unavailable rather than simulated.
 

@@ -1,2 +1,2 @@
 - Use the shared fixed-resolution frame for company and market presentations; keep company journey content separate from market commentary so the inactivity display stays company-focused. Supplier showcases use available recorded delivery rankings, never invented names or totals.
-- Staff showcases read only name, role, department and portrait through existing employee RLS and signed-avatar handling; never publish private staff data or substitute generated people for actual employees.
+- Staff showcases read only name, role, department and portrait through the display_public_staff RPC and signed-avatar handling; never publish private staff data or substitute generated people for actual employees.
