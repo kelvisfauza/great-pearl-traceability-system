@@ -24,13 +24,8 @@ export const useDisplayStaff = (enabled: boolean) => {
       if (fetching) return;
       fetching = true;
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { if (active) setLoading(false); return; }
-        // Existing employee RLS and private photo policies decide visibility.
-        const result = await supabase.from('employees')
-          .select('id, name, department, position, avatar_url')
-          .eq('status', 'active').or('disabled.is.null,disabled.eq.false')
-          .order('department').order('name');
+        // Public-safe fields only (name, role, department, display photo).
+        const result = await (supabase as any).rpc('display_public_staff');
         if (result.error) throw result.error;
         if (active) { setStaff(result.data ?? []); setFailed(false); }
       } catch (error) {
