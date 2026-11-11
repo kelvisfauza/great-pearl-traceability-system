@@ -5,6 +5,7 @@
 - [x] Bring existing reminders and audit history into Settings and link payroll, pricing, forms, treasury and approval management without changing business rules; retain migration tools and do not expose loyalty re-enablement.
 - [x] Preview build clean; isolated desktop/mobile directory, search, categories and advanced visibility verified with no mobile page overflow.
 - [ ] Verify signed-in control loading and saved changes — external Supabase has no managed browser session; actual route stops at the location-permission gate. No live settings or financial records changed.
+- [ ] Walk through every Settings control signed in and report load/save failures — requested 11 November; blocked by external unmanaged Supabase authentication. Signing into the preview does not supply an automated session; no live saves attempted and no individual failure confirmed.
 
 ## Restore original batching
 - [x] Restore automatic daily stock linkage, including discretion purchases, without rebuilding existing batches or changing payments/sales.
