@@ -70,9 +70,8 @@
 - Keep V1 desktop/mobile and V2 navigation grouping aligned while preserving existing route paths and permission guards, so menu organization does not change access rights or bookmarked links.
 - Temporarily pause My Deductions by rendering an unavailable page at its existing route rather than changing deductions data, so direct links remain safe and the feature can be restored later.
 - Package Android with Capacitor's bundled web assets instead of a remote preview URL, so installed copies do not depend on a temporary development site. Build the app bundle with `CAPACITOR_BUILD=true npm run build` (sets Vite base to './'); the normal web build keeps base '/' so deep links refresh correctly.- Record part payments for any Finance-stage payment through the finance-partial-payment function and the partial_payments tables, finalizing the source item only when the balance reaches zero, so each flow keeps a single paid/balance record and cannot be paid twice.
-- Bounced GosentePay payouts restore their exact recorded amount + fee to the tracked GosentePay balance via gosentepay_reverse_payout (service-role only, idempotent per reference), triggered by provider-confirmed callbacks and the payout poller's 48h re-check; Yo needs no tracking because its balance is synced live.
+- Bounced GosentePay payouts restore amount + fee via idempotent service-role gosentepay_reverse_payout (callbacks and the poller's 48h re-check); Yo balance syncs live.
 - Staff wallet withdrawals leave only via the user_wallets debit; disburse-approval-request must not also draw Operations.
 - Provider/bank charges leave treasury with the payout: GosentePay fees debit Operations via trigger (returned on bounce); bank charges post against Cash at Bank.
 - Coffee integrity flags join the existing scanner via a private view; admins fix them only through audited resolve_coffee_flag, which never deletes paid entries.
-
-- Internal/scheduled edge functions call requireInternalOrAdmin (_shared/internal-auth.ts): cron jobs and DB triggers send the vault-backed x-internal-secret via private_edge.header(), so the public key alone can no longer run payouts or broadcasts.
+- Internal edge functions use requireInternalOrAdmin; cron/triggers send private_edge.header(), so the public key cannot run them.
