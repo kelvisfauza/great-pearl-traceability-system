@@ -1,5 +1,6 @@
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 const SITE_NAME = 'Great Agro Coffee'
 const SENDER_DOMAIN = 'notify.greatpearlcoffeesystem.site'
@@ -72,6 +73,8 @@ Deno.serve(async (req) => {
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
   let body: any = {}
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
   try { body = await req.json() } catch {}
   const extra: string[] = Array.isArray(body.extraEmails) ? body.extraEmails : []
 

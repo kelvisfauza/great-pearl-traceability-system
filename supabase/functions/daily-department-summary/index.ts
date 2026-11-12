@@ -3,6 +3,7 @@ import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 const SITE_NAME = "Great Agro Coffee"
 const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site"
@@ -104,6 +105,8 @@ Deno.serve(async (req) => {
     if (body.targetEmail) targetEmail = body.targetEmail
     if (body.broadcastTemplate) broadcastTemplate = body.broadcastTemplate
   } catch {}
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 
   // ─── BROADCAST MODE: send a template to ALL employees ───
   if (broadcastTemplate) {

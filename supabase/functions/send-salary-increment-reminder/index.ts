@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5'
 import { calculatePayroll } from '../_shared/statutory.ts'
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,6 +30,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: false, error: error.message }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 
   const recipients = (employees || []).filter((e: any) =>
     !EXCLUDED_NAME_PATTERNS.some(rx => rx.test(e.name || ''))

@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 // Watches the HR channel in Microsoft Teams for messages that start with
 // "LEAVE" and turns them into approval_requests rows (type 'leave').
@@ -162,6 +163,8 @@ function normalizeName(s: string): string {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 
   const lovableKey = Deno.env.get('LOVABLE_API_KEY');
   const teamsKey = Deno.env.get('MICROSOFT_TEAMS_API_KEY');

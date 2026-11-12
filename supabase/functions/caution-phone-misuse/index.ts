@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendLovableEmail } from "npm:@lovable.dev/email-js@0.0.4";
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 const SITE_NAME = "Great Agro Coffee";
 const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site";
@@ -67,6 +68,8 @@ P.O Box 431420, Kasese, Uganda · Operations: +256 393 101103`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

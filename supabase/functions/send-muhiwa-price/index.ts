@@ -1,4 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 // One-off: send today's Great Agro Coffee prices to supplier Muhiwa.
 Deno.serve(async (req) => {
@@ -8,6 +9,8 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
   let body: Record<string, unknown> = {}
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
   try { body = await req.json() } catch { /* no body */ }
 
   const phone = typeof body.phone === 'string' ? body.phone : '0781309165'

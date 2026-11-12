@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { yoSendAirtime, normalizePhone } from '../_shared/yo-payments.ts'
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -122,6 +123,8 @@ Deno.serve(async (req) => {
 
     results.push({ email: r.email, amount: r.amount, status: 'sent', yoRef: yo.transactionRef, smsStatus })
   }
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 
   return new Response(JSON.stringify({ ok: true, results }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

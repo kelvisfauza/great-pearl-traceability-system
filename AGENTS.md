@@ -74,3 +74,5 @@
 - Staff wallet withdrawals leave only via the user_wallets debit; disburse-approval-request must not also draw Operations.
 - Provider/bank charges leave treasury with the payout: GosentePay fees debit Operations via trigger (returned on bounce); bank charges post against Cash at Bank.
 - Coffee integrity flags join the existing scanner via a private view; admins fix them only through audited resolve_coffee_flag, which never deletes paid entries.
+
+- Internal/scheduled edge functions call requireInternalOrAdmin (_shared/internal-auth.ts): cron jobs and DB triggers send the vault-backed x-internal-secret via private_edge.header(), so the public key alone can no longer run payouts or broadcasts.

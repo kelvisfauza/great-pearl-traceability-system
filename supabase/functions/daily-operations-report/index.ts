@@ -6,6 +6,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { jsPDF } from 'npm:jspdf@2.5.2'
 import autoTableMod from 'npm:jspdf-autotable@3.8.4'
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 const autoTable: any = (autoTableMod as any).default ?? autoTableMod
 
@@ -384,4 +385,6 @@ Download the PDF: ${downloadUrl}`
     console.error('❌ daily-operations-report failed:', (error as Error).message)
     return json({ ok: false, error: (error as Error).message })
   }
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 })

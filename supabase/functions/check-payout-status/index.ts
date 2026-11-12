@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { resolveYoTransactionStatus } from "../_shared/yo-status.ts";
 import { gosenteStatus, interpretGosenteTxStatus, reverseGosentePayout } from "../_shared/gosentepay.ts";
 import { treasuryRelease } from "../_shared/treasury.ts";
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +14,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 
   try {
     const supabase = createClient(

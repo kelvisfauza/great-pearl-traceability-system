@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { compactLegacyPriceSms } from '../_shared/compact-price-sms.ts'
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 // One-off / on-demand resender for failed price_update SMS.
 // Sends directly via YoolaSMS using LOCAL Uganda format (07XXXXXXXX),
@@ -94,4 +95,6 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 })

@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString();
 
@@ -17,6 +18,8 @@ const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString();
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 
   try {
     const admin = createClient(

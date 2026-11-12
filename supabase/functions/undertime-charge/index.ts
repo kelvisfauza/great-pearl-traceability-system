@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +24,8 @@ Deno.serve(async (req) => {
   )
 
   let body: any = {}
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
   try { body = await req.json() } catch { /* empty body ok */ }
   const day = typeof body?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
     ? body.date

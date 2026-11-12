@@ -19825,6 +19825,10 @@ export type Database = {
         Args: { _code: string; _lock_id: string }
         Returns: boolean
       }
+      verify_internal_edge_secret: {
+        Args: { p_secret: string }
+        Returns: boolean
+      }
       verify_login_otp: {
         Args: { _code: string; _user_id: string }
         Returns: Json

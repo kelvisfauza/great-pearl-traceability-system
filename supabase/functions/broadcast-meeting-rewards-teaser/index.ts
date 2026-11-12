@@ -1,5 +1,6 @@
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 
 const SITE_NAME = "Great Agro Coffee"
 const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site"
@@ -121,6 +122,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: false, error: error.message }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
+
+  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 
   const recipients = (employees || [])
     .filter((e: any) => e.email && e.disabled !== true)
