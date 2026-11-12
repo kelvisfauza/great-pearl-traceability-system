@@ -36,6 +36,7 @@ export const settingsTools: SettingsTool[] = [
   { id: "wallet-ops", category: "money", title: "Wallet operations", keywords: "credit debit adjustment balance", icon: Banknote, component: lazy(() => import("./AdminWalletOperations")) },
   { id: "wallet-freeze", category: "money", title: "Freeze or unfreeze wallets", keywords: "withdrawals blocked frozen", icon: Shield, component: lazy(() => import("./WalletFreezeManager")) },
   { id: "sunday", category: "money", title: "Sunday withdrawal settings", keywords: "weekend withdrawals", icon: Banknote, component: lazy(() => import("./SundayWithdrawalSettings")) },
+  { id: "loyalty-awards", category: "money", title: "Loyalty awards on/off", keywords: "loyalty rewards pause resume points", icon: Banknote, component: lazy(() => import("./LoyaltyAwardsToggle")) },
   { id: "overdraft", category: "money", title: "Overdraft usage rules", keywords: "borrowing balance penalty", icon: Banknote, component: lazy(() => import("./OverdraftUsageRules")) },
   { id: "loans", category: "money", title: "Loan policy", keywords: "business facility limits guarantor security", icon: Banknote, component: lazy(() => import("./LoanPolicySettings")) },
   { id: "treasury", category: "money", title: "Treasury accounts", keywords: "funding bank reconciliation deposits", icon: Building2, path: "/admin/treasury" },
