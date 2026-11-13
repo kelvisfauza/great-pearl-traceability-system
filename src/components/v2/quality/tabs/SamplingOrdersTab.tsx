@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { escapeStrings } from \"@/lib/escapeHtml\";
+import { escapeStrings } from "@/lib/escapeHtml";
 import samplingBanner from "@/assets/sampling-lab-banner.jpg";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { findSimilarSamplingOrders } from "@/lib/samplingDuplicates";
