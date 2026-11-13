@@ -1,3 +1,4 @@
+import { requireStaff } from "../_shared/internal-auth.ts";
 // Generic Excel/OneDrive sync via Microsoft Graph (Lovable connector gateway).
 // Ensures /GAC-System-Reports/<workbook>.xlsx exists, ensures the named worksheet,
 // clears its used range, then writes header + rows.
@@ -135,6 +136,8 @@ async function writeRange(itemId: string, sheet: string, values: any[][]): Promi
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const __caller = await requireStaff(req, corsHeaders);
+  if (__caller instanceof Response) return __caller;
 
   try {
     if (!LOVABLE_API_KEY || !EXCEL_KEY) {

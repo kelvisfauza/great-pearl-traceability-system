@@ -1,3 +1,4 @@
+import { safeOrigin } from '../_shared/safe-redirect.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5';
 
 const corsHeaders = {
@@ -20,10 +21,7 @@ Deno.serve(async (req) => {
   }
 
    try {
-      const requestOrigin = req.headers.get('origin')?.trim();
-      const redirectTo = requestOrigin && /^https?:\/\//i.test(requestOrigin)
-        ? `${requestOrigin}/auth?post_auth=face`
-        : 'https://greatpearlcoffeesystem.site/auth?post_auth=face';
+      const redirectTo = `${safeOrigin(req)}/auth?post_auth=face`;
 
      const { email, descriptor } = await req.json().catch(() => ({}));
 

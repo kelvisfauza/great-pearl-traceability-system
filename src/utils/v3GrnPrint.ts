@@ -1,3 +1,4 @@
+import { escapeStrings } from '@/lib/escapeHtml';
 import {
   LOGO_URL, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS,
   COMPANY_PHONES, COMPANY_EMAIL, COMPANY_REG,
@@ -85,7 +86,8 @@ function copy(g: V3GrnPrintData, label: string) {
   </section>`;
 }
 
-export function printV3Grn(g: V3GrnPrintData) {
+export function printV3Grn(raw: V3GrnPrintData) {
+  const g = escapeStrings(raw);
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8" /><title>${g.grn_number}</title>
   <style>
     *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;margin:0;color:#111;font-size:11px}

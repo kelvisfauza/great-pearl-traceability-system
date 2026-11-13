@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { escapeStrings } from \"@/lib/escapeHtml\";
 import samplingBanner from "@/assets/sampling-lab-banner.jpg";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { findSimilarSamplingOrders } from "@/lib/samplingDuplicates";
@@ -117,7 +118,8 @@ const buildOrderPdfBase64 = async (order: any): Promise<string | undefined> => {
   }
 };
 
-export const printSamplingOrder = (order: any, existing?: Window | null) => {
+export const printSamplingOrder = (rawOrder: any, existing?: Window | null) => {
+  const order = escapeStrings(rawOrder || {});
   const qrData = buildPublicUrl(`/verify/${encodeURIComponent(order.order_number)}`);
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
   const w = existing || window.open("", "_blank", "width=800,height=1000");

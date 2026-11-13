@@ -52,7 +52,8 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     let employee = employeeByAuth;
-    if (!employee && user.email) {
+    // Only fall back to email matching when that email address has been confirmed.
+    if (!employee && user.email && user.email_confirmed_at) {
       const { data: employeeByEmail } = await supabase
         .from("employees")
         .select("id, auth_user_id, email, name, phone, position, department, status, disabled")

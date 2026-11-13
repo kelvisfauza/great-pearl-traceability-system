@@ -1,3 +1,4 @@
+import "../_shared/redact-logs.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { loadProviderSettings } from "../_shared/provider-settings.ts"
@@ -398,6 +399,15 @@ serve(async (req) => {
       )
     }
     userId = user.id
+    // Only active employees may send texts; self-registered or disabled accounts cannot.
+    const staffDb = createClient(supabaseUrl, serviceRoleKey)
+    const { data: staff } = await staffDb.from('employees').select('id, disabled').ilike('email', user.email || '').maybeSingle()
+    if (!staff || staff.disabled === true) {
+      return new Response(
+        JSON.stringify({ error: 'Only active staff can send messages' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
   }
   console.log('Authenticated:', isServiceRole ? 'service-role' : userId)
 

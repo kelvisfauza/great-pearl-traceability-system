@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       const phone = (body.phone || emp?.phone || "").toString().trim();
       if (!phone) return json({ ok: false, error: "No phone number on your employee profile" });
 
-      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
       const amount = Number(body.amount) || null;
 
       const { data: row, error: insErr } = await admin

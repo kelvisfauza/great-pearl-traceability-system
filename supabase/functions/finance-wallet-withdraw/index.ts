@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       if (feeError) return json({ ok: false, error: "Could not calculate withdrawal charge" });
       if (available < amount + Number(fee || 0)) return json({ ok: false, error: `Insufficient wallet balance for withdrawal and charge (UGX ${available.toLocaleString()})` });
 
-      const code = String(Math.floor(1000 + Math.random() * 9000));
+      const code = String(1000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 9000));
       const targetId = `${emp.email.toLowerCase()}:${amount}`;
       const { data: row, error } = await admin.from("admin_approval_codes").insert({
         target_type: TARGET,

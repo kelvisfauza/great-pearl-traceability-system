@@ -21,9 +21,10 @@ export interface SendReceiptResult {
 // Short, stable public redirect that resolves to a fresh 24h signed URL
 // at click-time. Used in SMS so the message stays well under any per-segment
 // length limit and the JWT-bearing signed URL never gets truncated mid-token.
-const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || '';
-const buildShortReceiptLink = (reference: string) =>
-  `${SUPABASE_URL}/functions/v1/receipt-link?ref=${encodeURIComponent(reference)}`;
+const buildShortReceiptLink = async (reference: string, fallback?: string): Promise<string | undefined> => {
+  const { data } = await supabase.functions.invoke('receipt-link', { body: { ref: reference } });
+  return (data as any)?.url || fallback;
+};
 
 export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendReceiptResult> => {
   const reference = input.reference || buildReceiptReference();
@@ -182,7 +183,7 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
   const phone = input.recipientPhone || input.paidTo.phone;
   if (phone) {
     const totalStr = formatUGX(input.total);
-    const shortLink = buildShortReceiptLink(reference);
+    const shortLink = await buildShortReceiptLink(reference, pdfUrl);
     const sms = `GREAT PEARL COFFEE — Payment Receipt ${reference}: ${totalStr} for "${input.description.substring(0, 40)}". Download: ${shortLink}`;
     tasks.push(
       supabase.functions

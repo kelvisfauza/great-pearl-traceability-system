@@ -7,6 +7,7 @@
 // Only for wallet / cash / bank_deposit methods. Mobile money is handled
 // by the gosentepay-callback flow (paired DEPOSIT + LOAN_REPAYMENT on
 // Yo SUCCESS). Called from QuickLoans.tsx (early payoff + wallet repay).
+import { requireStaff } from "../_shared/internal-auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -21,6 +22,9 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
+
+  const __caller = await requireStaff(req, corsHeaders);
+  if (__caller instanceof Response) return __caller;
 
   try {
     const body = await req.json();
@@ -55,6 +59,11 @@ Deno.serve(async (req) => {
       .eq("id", loan_id)
       .single();
     if (loanErr || !loan) throw new Error("Loan not found");
+    if (!__caller.isAdmin && String(loan.employee_email || "").toLowerCase() !== __caller.email) {
+      return new Response(JSON.stringify({ ok: false, error: "You can only repay your own loan." }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
+      });
+    }
     if (loan.status !== "active") {
       return new Response(JSON.stringify({ ok: false, error: `Loan is not active (status: ${loan.status})` }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

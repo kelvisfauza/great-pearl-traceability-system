@@ -35,7 +35,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const email = (employeeEmail || userData.user.email || "").toLowerCase();
+    const email = (userData.user.email || "").toLowerCase(); // always the signed-in user
+    void employeeEmail;
 
     // Validate balance
     const { data: balanceData } = await admin.rpc("get_user_balance_safe", { user_email: email });

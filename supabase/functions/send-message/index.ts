@@ -1,3 +1,4 @@
+import { requireStaff } from "../_shared/internal-auth.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5'
 
 const corsHeaders = {
@@ -38,7 +39,7 @@ async function sendEmailViaSendGrid(to: string, subject: string, message: string
         subject: subject,
         content: [
           { type: 'text/plain', value: message },
-          { type: 'text/html', value: message.replace(/\n/g, '<br>') }
+          { type: 'text/html', value: String(message).replace(/[&<>"']/g, (c: string) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'} as Record<string,string>)[c]).replace(/\n/g, '<br>') }
         ]
       })
     })
@@ -198,6 +199,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+  const __caller = await requireStaff(req, corsHeaders);
+  if (__caller instanceof Response) return __caller;
 
   try {
     const supabase = createClient(

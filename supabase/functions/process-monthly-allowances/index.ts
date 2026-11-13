@@ -1,3 +1,4 @@
+import "../_shared/redact-logs.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { yoSendAirtime, normalizePhone } from '../_shared/yo-payments.ts'
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";

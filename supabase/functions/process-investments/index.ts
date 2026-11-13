@@ -1,3 +1,4 @@
+import "../_shared/redact-logs.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 

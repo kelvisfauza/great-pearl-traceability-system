@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { requireStaff } from "../_shared/internal-auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -11,8 +12,13 @@ const FEE = 10000;
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const __caller = await requireStaff(req, corsHeaders);
+  if (__caller instanceof Response) return __caller;
+
   try {
-    const { employee_email, requested_amount, requested_loan_type, requested_duration, guarantor_emails } = await req.json();
+    const { employee_email: requestedEmail, requested_amount, requested_loan_type, requested_duration, guarantor_emails } = await req.json();
+    // Staff may only evaluate their own loan; Admin/HR/Finance may evaluate anyone.
+    const employee_email = __caller.isAdmin ? requestedEmail : __caller.email;
     if (!employee_email) {
       return new Response(JSON.stringify({ ok: false, error: "employee_email required" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },

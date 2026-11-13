@@ -1,3 +1,4 @@
+import { requireStaff } from '../_shared/internal-auth.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5';
 
 const corsHeaders = {
@@ -54,6 +55,14 @@ Deno.serve(async (req) => {
     }
 
     const displayName = employee?.name ?? normalizedEmail.split('@')[0];
+
+    // Enrolment must come from the employee's own signed-in session.
+    if (action === 'enroll_begin' || action === 'enroll_finish') {
+      const caller = await requireStaff(req, corsHeaders);
+      if (caller instanceof Response || caller.internal || caller.email !== normalizedEmail) {
+        return json({ ok: false, error: 'Sign in to the system on this phone with your own account to register your fingerprint.' });
+      }
+    }
 
     // ---- First-time enrolment straight from the scanned phone link ----
     if (action === 'enroll_begin') {

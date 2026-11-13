@@ -1,5 +1,6 @@
 import { addToPrintQueue } from '@/lib/printQueue';
 import { toast } from 'sonner';
+import { escapeStrings } from '@/lib/escapeHtml';
 import logo from '@/assets/great-agro-coffee-logo.png';
 
 interface AckData {
@@ -17,7 +18,8 @@ interface AckData {
   processedBy: string;
 }
 
-export function printProviderAcknowledgement(d: AckData, opts?: { direct?: boolean; queue?: boolean }) {
+export function printProviderAcknowledgement(raw: AckData, opts?: { direct?: boolean; queue?: boolean }) {
+  const d = escapeStrings(raw);
   const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
   const date = new Date().toLocaleString('en-UG', { dateStyle: 'long', timeStyle: 'short' });
   const typeLabel = d.requestType === 'meal_plan' ? 'Meal Plan Payment' : 'Service Provider Payment';

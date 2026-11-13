@@ -1,3 +1,4 @@
+import { requireStaff } from "../_shared/internal-auth.ts";
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
@@ -58,6 +59,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+  const __caller = await requireStaff(req, corsHeaders);
+  if (__caller instanceof Response) return __caller;
 
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
   if (!lovableApiKey) {

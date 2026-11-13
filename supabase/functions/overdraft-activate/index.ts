@@ -1,3 +1,4 @@
+import { requireStaff } from "../_shared/internal-auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -8,7 +9,11 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const { user_email, action } = await req.json();
+    const __caller = await requireStaff(req, corsHeaders);
+    if (__caller instanceof Response) return __caller;
+    const { user_email: requestedEmail, action } = await req.json();
+    // Staff may only activate/close their own overdraft; Admin/HR/Finance may act for others.
+    const user_email = __caller.isAdmin ? requestedEmail : __caller.email;
     if (!user_email) return new Response(JSON.stringify({ ok: false, error: "user_email required" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 

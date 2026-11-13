@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, pin: recoveredPin, fee: recoveredFee, overdraft: recoveredOverdraft, smsSent, emailSent })
     }
 
-    const code = String(Math.floor(100000 + Math.random() * 900000))
+    const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000))
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
     // Hash the code before storing it

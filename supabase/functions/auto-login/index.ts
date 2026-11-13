@@ -1,3 +1,5 @@
+import { safeOrigin } from '../_shared/safe-redirect.ts';
+import "../_shared/redact-logs.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5'
 
 const corsHeaders = {
@@ -14,10 +16,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const { token } = body;
-    const requestOrigin = req.headers.get('origin')?.trim();
-    const redirectTo = requestOrigin && /^https?:\/\//i.test(requestOrigin)
-      ? `${requestOrigin}/auth?post_auth=auto`
-      : 'https://greatpearlcoffeesystem.site/auth?post_auth=auto';
+    const redirectTo = `${safeOrigin(req)}/auth?post_auth=auto`;
 
     console.log('Auto-login request for token:', token?.substring(0, 8) + '***');
     

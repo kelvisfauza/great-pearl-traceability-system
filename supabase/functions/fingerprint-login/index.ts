@@ -1,3 +1,4 @@
+import { safeOrigin } from '../_shared/safe-redirect.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5';
 
 const corsHeaders = {
@@ -25,10 +26,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const origin = req.headers.get('origin')?.trim();
-    const redirectTo = origin && /^https?:\/\//i.test(origin)
-      ? `${origin}/auth?post_auth=fingerprint`
-      : 'https://greatpearlcoffeesystem.site/auth?post_auth=fingerprint';
+    const redirectTo = `${safeOrigin(req)}/auth?post_auth=fingerprint`;
 
     const { action, email, credential_id } = await req.json().catch(() => ({} as any));
     const normalizedEmail =
@@ -61,9 +59,12 @@ Deno.serve(async (req) => {
 
     if (action !== 'finish') return json({ ok: false, error: 'Invalid request.' });
 
-    if (typeof credential_id !== 'string' || credential_id !== cred.credential_id) {
-      return json({ ok: false, error: 'Fingerprint not recognized for this account.' });
-    }
+    // The device's credential ID is not secret and no signed WebAuthn assertion
+    // is verified here, so issuing a sign-in from it would let anyone sign in
+    // as any enrolled employee. Fingerprint sign-in stays off until signature
+    // verification is added; staff sign in with their password instead.
+    void credential_id; void redirectTo;
+    return json({ ok: false, error: 'Fingerprint sign-in is temporarily unavailable. Please sign in with your password.' });
 
     const { data: employee } = await admin
       .from('employees')

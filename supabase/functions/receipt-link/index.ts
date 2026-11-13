@@ -1,3 +1,5 @@
+import { receiptToken, receiptLink } from "../_shared/receipt-token.ts";
+import { requireStaff } from "../_shared/internal-auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
@@ -15,6 +17,16 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Signed-in staff ask for a signed short link for a receipt they just issued.
+  if (req.method === "POST") {
+    const caller = await requireStaff(req, corsHeaders);
+    if (caller instanceof Response) return caller;
+    const body = await req.json().catch(() => ({}));
+    const r = String(body?.ref || "").replace(/[^A-Za-z0-9._-]/g, "");
+    if (!r) return new Response(JSON.stringify({ ok: false, error: "ref required" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ok: true, url: await receiptLink(Deno.env.get("SUPABASE_URL")!, r) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
   try {
     const url = new URL(req.url);
     const refRaw = (url.searchParams.get("ref") || "").trim();
@@ -22,6 +34,10 @@ serve(async (req) => {
     const ref = refRaw.replace(/[^A-Za-z0-9._-]/g, "");
     if (!ref) {
       return new Response("Missing receipt reference", { status: 400, headers: corsHeaders });
+    }
+    const t = (url.searchParams.get("t") || "").trim();
+    if (!t || t !== (await receiptToken(ref))) {
+      return new Response("This receipt link is not valid. Please ask Great Agro Coffee Finance to resend your receipt.", { status: 403, headers: corsHeaders });
     }
 
     const sb = createClient(

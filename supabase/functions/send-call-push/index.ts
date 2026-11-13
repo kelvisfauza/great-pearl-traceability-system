@@ -1,3 +1,4 @@
+import { requireStaff } from "../_shared/internal-auth.ts";
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -60,9 +61,11 @@ async function getAccessToken(): Promise<{ token: string; projectId: string }> {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  const __caller = await requireStaff(req, corsHeaders);
+  if (__caller instanceof Response) return __caller;
   try {
     const body = (await req.json()) as Body;
-    if (!body?.callId || !Array.isArray(body?.calleeUserIds) || body.calleeUserIds.length === 0) {
+    if (!body?.callId || !Array.isArray(body?.calleeUserIds) || body.calleeUserIds.length === 0 || body.calleeUserIds.length > 50) {
       return new Response(
         JSON.stringify({ ok: false, error: 'callId and calleeUserIds[] required' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -95,7 +98,7 @@ Deno.serve(async (req) => {
       callId: body.callId,
       conversationId: body.conversationId ?? '',
       callerName: body.callerName ?? 'Caller',
-      callerId: body.callerId ?? '',
+      callerId: __caller.userId ?? body.callerId ?? '',
       kind: body.kind ?? 'audio',
     };
 

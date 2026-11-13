@@ -1,3 +1,4 @@
+import "./redact-logs.ts";
 /**
  * Yo Payments Uganda - Mobile Money Payout Helper
  * API Docs: https://paymentsapi1.yo.co.ug/ybs/task.php

@@ -1,3 +1,4 @@
+import { requireStaff } from "../_shared/internal-auth.ts";
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 
@@ -74,6 +75,8 @@ const rowsTable = (rows: Array<Record<string, unknown>>) => `
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
+  const __denied = await requireStaff(req, corsHeaders);
+  if (__denied instanceof Response) return __denied;
 
   const json = (body: unknown) =>
     new Response(JSON.stringify(body), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

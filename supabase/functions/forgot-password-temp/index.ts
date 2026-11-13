@@ -1,3 +1,4 @@
+import { safeOrigin } from "../_shared/safe-redirect.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
@@ -55,7 +56,7 @@ serve(async (req) => {
     const genericResponse = {
       ok: true,
       message:
-        "If an account exists for that email, a temporary password has been sent. Check your inbox (and spam folder).",
+        "If an account exists for that email, a password reset link has been sent. Open it from your inbox (and spam folder).",
     };
 
     if (empErr) {
@@ -90,47 +91,12 @@ serve(async (req) => {
       });
     }
 
-    const tempPassword = generateTempPassword();
-
-    // Update password and flag forced change
-    const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(
-      employee.auth_user_id,
-      {
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: {
-          requires_password_change: true,
-          temp_password_set_at: new Date().toISOString(),
-          temp_password_source: "forgot_password_email",
-        },
-      }
-    );
-
-    if (updErr) {
-      console.error("[forgot-password-temp] updateUserById error", updErr);
-      return new Response(
-        JSON.stringify({ ok: false, error: "Failed to reset password. Please try again later." }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Send the temp password by EMAIL only
-    const { error: emailErr } = await supabaseAdmin.functions.invoke(
-      "send-transactional-email",
-      {
-        body: {
-          templateName: "password-reset-temp",
-          recipientEmail: employee.email,
-          idempotencyKey: `pwd-reset-${employee.id}-${Date.now()}`,
-          templateData: {
-            name: employee.name,
-            email: employee.email,
-            tempPassword,
-          },
-        },
-      }
-    );
-
+    // Send a password-reset link to the employee's own inbox. The password
+    // only changes when the owner opens the link, so a stranger who types
+    // someone else's email can no longer change their password.
+    const { error: emailErr } = await supabaseAdmin.auth.resetPasswordForEmail(employee.email, {
+      redirectTo: `${safeOrigin(req)}/reset-password`,
+    });
     if (emailErr) {
       console.error("[forgot-password-temp] email send error", emailErr);
     }
@@ -138,7 +104,7 @@ serve(async (req) => {
     // Send SMS that ONLY tells the user to check email (no password)
     if (employee.phone) {
       try {
-        const smsMessage = `Great Agro Coffee: A password reset was requested for your account. A temporary password has been sent to your email (${employee.email}). Check your inbox now. If this wasn't you, contact IT immediately.`;
+        const smsMessage = `Great Agro Coffee: A password reset was requested for your account. A password reset link has been sent to your email (${employee.email}). Check your inbox now. If this wasn't you, contact IT immediately.`;
         await supabaseAdmin.functions.invoke("send-sms", {
           body: { phone: employee.phone, message: smsMessage },
         });
@@ -153,7 +119,7 @@ serve(async (req) => {
         action: "password_reset_temp_sent",
         table_name: "employees",
         record_id: employee.id,
-        reason: "User-initiated forgot password — temporary password emailed",
+        reason: "User-initiated forgot password — reset link emailed",
         performed_by: "self_service",
         department: "Auth",
         record_data: { email: employee.email, sms_notified: !!employee.phone },

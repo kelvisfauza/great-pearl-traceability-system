@@ -40,6 +40,9 @@ Deno.serve(async (req) => {
     const sourceId = String(body?.sourceId || "");
 
     if (action === "get") {
+      const role = (me?.role || "").toLowerCase();
+      const canView = isFinance || ["administrator", "super admin", "admin", "manager"].includes(role) || perms.includes("\"Finance");
+      if (!canView) return respond(false, { error: "Only Finance can view payment details" });
       const ids: string[] = Array.isArray(body?.sourceIds) ? body.sourceIds.map(String) : [];
       if (!ids.length) return respond(true, { payments: [] });
       const { data } = await db.from("partial_payments").select("*, partial_payment_installments(*)").eq("source_type", sourceType).in("source_id", ids);

@@ -1,3 +1,4 @@
+import { receiptLink } from "../_shared/receipt-token.ts";
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -1101,7 +1102,7 @@ serve(async (req) => {
           if (pdfUrl) {
             try {
               const supaUrl = Deno.env.get("SUPABASE_URL")!;
-              const link = `${supaUrl}/functions/v1/receipt-link?ref=${encodeURIComponent(pdfRef)}`;
+              const link = await receiptLink(supaUrl, pdfRef);
               await supabase.functions.invoke("send-sms", {
                 body: {
                   phone: cleanPhone,
