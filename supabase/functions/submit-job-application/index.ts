@@ -1,3 +1,4 @@
+import { checkUpload } from "../_shared/file-check.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -109,11 +110,13 @@ Deno.serve(async (req) => {
     }
 
     if (bytes) {
-      if (bytes.byteLength > MAX_CV_BYTES) return json({ ok: false, error: "CV file is larger than 8MB" });
-      const safe = originalName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80) || "cv.pdf";
+      const chk = checkUpload(bytes, ["pdf", "doc", "docx", "jpg", "png"], MAX_CV_BYTES);
+      if (!chk.ok) return json({ ok: false, error: `CV not accepted: ${chk.error} Please upload a PDF or Word document.` });
+      const base = originalName.replace(/\.[^.]*$/, "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(-70) || "cv";
+      const safe = `${base}.${chk.kind}`;
       const path = `${refCode}/${Date.now()}-${safe}`;
       const { error: upErr } = await admin.storage.from("job-applications").upload(path, bytes, {
-        contentType: contentTypeFor(safe),
+        contentType: chk.mime,
         upsert: false,
       });
       if (upErr) {

@@ -1,3 +1,4 @@
+import { withIpnSecret } from "../_shared/ipn-auth.ts";
 import "../_shared/redact-logs.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -37,8 +38,8 @@ serve(async (req) => {
     const cleanPhone = normalizePhone(anumbermsisdn);
 
     // Build IPN URLs
-    const successIpnUrl = `${supabaseUrl}/functions/v1/ussd-payment-success`;
-    const failureIpnUrl = `${supabaseUrl}/functions/v1/ussd-payment-failure`;
+    const successIpnUrl = await withIpnSecret(`${supabaseUrl}/functions/v1/ussd-payment-success`);
+    const failureIpnUrl = await withIpnSecret(`${supabaseUrl}/functions/v1/ussd-payment-failure`);
 
     // ── product_key = 1: Pay Milling Fees ──
     if (product_key === "1" || product_key === 1) {

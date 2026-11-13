@@ -1,3 +1,4 @@
+import { checkUpload } from "../_shared/file-check.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -11,7 +12,7 @@ Deno.serve(async (req) => {
 
   try {
     const { session_code, image_base64, content_type } = await req.json();
-    if (!session_code || !image_base64) {
+    if (!session_code || !image_base64 || String(image_base64).length > 21_000_000) {
       return json({ ok: false, error: "session_code and image_base64 required" }, 200);
     }
 
@@ -34,8 +35,11 @@ Deno.serve(async (req) => {
     // Decode base64 (strip data URI prefix if present)
     const cleaned = image_base64.replace(/^data:[^;]+;base64,/, "");
     const bytes = Uint8Array.from(atob(cleaned), (c) => c.charCodeAt(0));
-    const mime = content_type || "image/jpeg";
-    const ext = mime.includes("png") ? "png" : "jpg";
+    void content_type;
+    const chk = checkUpload(bytes, ["jpg", "png", "webp", "pdf"], 15 * 1024 * 1024);
+    if (!chk.ok) return json({ ok: false, error: chk.error }, 200);
+    const mime = chk.mime;
+    const ext = chk.kind;
     const fileName = `weighbridge/${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
 
     const { error: upErr } = await supabase.storage

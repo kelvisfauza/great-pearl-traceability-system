@@ -1,3 +1,4 @@
+import { checkUpload } from "../_shared/file-check.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -11,7 +12,7 @@ Deno.serve(async (req) => {
 
   try {
     const { form_number, image_base64, content_type, file_name } = await req.json();
-    if (!form_number || !image_base64) {
+    if (!form_number || !image_base64 || String(image_base64).length > 21_000_000) {
       return json({ ok: false, error: "form_number and image_base64 required" });
     }
 
@@ -29,8 +30,11 @@ Deno.serve(async (req) => {
 
     const cleaned = String(image_base64).replace(/^data:[^;]+;base64,/, "");
     const bytes = Uint8Array.from(atob(cleaned), (c) => c.charCodeAt(0));
-    const mime = content_type || "image/jpeg";
-    const ext = mime.includes("pdf") ? "pdf" : mime.includes("png") ? "png" : "jpg";
+    void content_type;
+    const chk = checkUpload(bytes, ["jpg", "png", "webp", "pdf"], 15 * 1024 * 1024);
+    if (!chk.ok) return json({ ok: false, error: chk.error });
+    const mime = chk.mime;
+    const ext = chk.kind;
     const path = `dispatch-forms/${form.form_number}_${Date.now()}.${ext}`;
 
     const { error: upErr } = await supabase.storage
@@ -42,7 +46,7 @@ Deno.serve(async (req) => {
     // (A signed URL saved here would expire and break the report link.)
     const attachmentUrl = path;
 
-    const attachmentName = file_name || `${form.form_number}.${ext}`;
+    const attachmentName = String(file_name || `${form.form_number}.${ext}`).replace(/[^A-Za-z0-9._ -]/g, "_").slice(0, 120);
 
     const { error: updErr } = await supabase
       .from("dispatch_monitoring_forms")

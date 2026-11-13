@@ -394,6 +394,10 @@ async function runSendMessage(
   const results: any[] = [];
   for (const to of emails) {
     const emp = byEmail.get(to);
+    if (!emp) {
+      results.push({ to, skipped: "not a staff member — the assistant only messages employees" });
+      continue;
+    }
     if (emp && emp.disabled === true) {
       results.push({ to, skipped: "account disabled" });
       continue;

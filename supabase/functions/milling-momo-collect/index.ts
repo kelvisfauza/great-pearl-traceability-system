@@ -1,3 +1,4 @@
+import { withIpnSecret } from "../_shared/ipn-auth.ts";
 import { requireStaff } from "../_shared/internal-auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -96,7 +97,7 @@ serve(async (req) => {
 
     // Build callback URL
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const callbackUrl = `${supabaseUrl}/functions/v1/milling-momo-callback`;
+    const callbackUrl = await withIpnSecret(`${supabaseUrl}/functions/v1/milling-momo-callback`);
 
     const narrative = isBulk
       ? `Bulk milling collection (${allocations.length} customers)`

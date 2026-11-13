@@ -15,9 +15,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, email, phone, code } = body;
-    
-    console.log('2FA request body:', JSON.stringify(body, null, 2));
+    const { action, email, code } = body;
+    let phone: string | undefined = body.phone;
     console.log('2FA request:', { action, email, phone: phone?.substring(0, 6) + '***' });
     
     // Create Supabase admin client
@@ -31,6 +30,21 @@ Deno.serve(async (req) => {
         },
       }
     );
+
+    // Codes only ever go to the phone saved on the employee's own record,
+    // never to a number supplied in the request.
+    if (action === 'send_code') {
+      const { data: owner } = email
+        ? await supabaseAdmin.from('employees').select('phone, disabled').ilike('email', String(email).trim()).maybeSingle()
+        : { data: null } as any;
+      if (!owner?.phone || owner.disabled === true) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'No phone number is saved for this account. Contact IT.' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      phone = owner.phone;
+    }
 
     // Check if this user can bypass SMS verification (like Timothy in IT)
     if (email) {

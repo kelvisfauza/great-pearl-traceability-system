@@ -1,3 +1,4 @@
+import { withIpnSecret } from "../_shared/ipn-auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { normalizePhone } from "../_shared/yo-payments.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -104,7 +105,7 @@ serve(async (req) => {
     }
 
     // Build callback URL for Yo Payments notification
-    const callbackUrl = `${supabaseUrl}/functions/v1/gosentepay-callback`;
+    const callbackUrl = await withIpnSecret(`${supabaseUrl}/functions/v1/gosentepay-callback`);
 
     // ==============================================================
     // Route small deposits (<= 50,000 UGX) through GosentePay v1 API.

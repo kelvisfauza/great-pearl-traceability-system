@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.allocate_milling_remittance(text,text,numeric,text,text,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.allocate_milling_remittance(text,text,numeric,text,text,text) TO authenticated, service_role;

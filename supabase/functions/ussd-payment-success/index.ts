@@ -14,7 +14,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const blocked = checkIpnSecret(req, corsHeaders);
+  const blocked = await checkIpnSecret(req, corsHeaders);
   if (blocked) return blocked;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";

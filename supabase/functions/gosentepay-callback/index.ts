@@ -1,3 +1,4 @@
+import { resolveYoTransactionStatus } from "../_shared/yo-status.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { checkIpnSecret } from "../_shared/ipn-auth.ts";
@@ -13,8 +14,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const blocked = checkIpnSecret(req, corsHeaders);
-  if (blocked) return blocked;
+  // Callbacks carrying our secret are trusted; any other callback is only acted
+  // on after the status is confirmed directly with GosentePay / Yo below.
+  const trustedCallback = (await checkIpnSecret(req, corsHeaders)) === null;
 
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -124,6 +126,28 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+
+    if (!trustedCallback) {
+      let confirmed: "successful" | "failed" | "pending" = "pending";
+      try {
+        const g = await gosenteStatus(ref);
+        confirmed = interpretGosenteTxStatus((g as any)?.body ?? g);
+      } catch (_) { /* not a GosentePay reference */ }
+      if (confirmed === "pending") {
+        try {
+          const y = await resolveYoTransactionStatus(Deno.env.get("YO_API_USERNAME") ?? "", Deno.env.get("YO_API_PASSWORD") ?? "", [ref]);
+          const rs = String((y as any)?.resolvedStatus || "").toLowerCase();
+          if (rs === "success" || rs === "successful" || rs === "completed") confirmed = "successful";
+          else if (rs === "failed") confirmed = "failed";
+        } catch (_) { /* ignore */ }
+      }
+      if (confirmed === "pending") {
+        return new Response(JSON.stringify({ ok: false, error: "Callback not confirmed with provider" }), {
+          status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      status = confirmed;
+    }
 
     // A bounced GosentePay payout puts its amount + fee back on the tracked
     // balance. Confirmed with GosentePay first so a forged callback can't move it.

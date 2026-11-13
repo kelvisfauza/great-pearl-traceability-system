@@ -1,3 +1,4 @@
+import { withIpnSecret } from "../_shared/ipn-auth.ts";
 // Admin deposits money into the Treasury Pool from their own mobile money
 // number, via Yo Payments or GosentePay. The pool is credited only after the
 // provider confirms the payment (action "status").
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
       providerRef = tag(x, "TransactionReference") || null;
       errMsg = tag(x, "StatusMessage") || tag(x, "ErrorMessage") || "Yo Payments rejected the request";
     } else {
-      const r = await gosenteDeposit({ phone, amount, email, ref: reference, callback: `${url}/functions/v1/gosentepay-callback` });
+      const r = await gosenteDeposit({ phone, amount, email, ref: reference, callback: await withIpnSecret(`${url}/functions/v1/gosentepay-callback`) });
       started = isGosenteSuccess(r.status, r.body);
       errMsg = String(r.body?.data?.message ?? r.body?.message ?? `GosentePay rejected the request (HTTP ${r.status})`);
     }
