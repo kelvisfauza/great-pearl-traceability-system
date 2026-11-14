@@ -2,7 +2,7 @@
 
 ## Kelvis email and Benson withdrawal correction
 - [x] Correct Kelvis Fauza's sign-in and employee email to kelvisfauza@gmail.com without changing account identity; Auth API succeeded and device email synchronized, unauthenticated correction rejected.
-- [ ] Identify Benson's reported UGX 10,000 pending withdrawal — all matching instant withdrawals are already saved as success (latest 22 October), and no matching withdrawal_requests row exists; awaiting screenshot/date/reference. No funds resent or financial records changed.
+- [x] Screenshot identified Admin wallet operations: cancelled the failed unpaid 17:22 attempt after verifying no ledger/gateway activity and the matching completed 17:23 payment. Recorded cancellation audit; successful UGX 10,000 payout and fees untouched, no money resent/refunded. Signed-in queue rendering remains unverified on external Supabase.
 
 ## Admin-first employee per diem requests
 - [x] Add Admin review under Requests with approval/rejection details; block unapproved awards at the saved-request boundary and prevent direct staff award inserts. Preserve Sunday reservations, printed numbers and historical awards.
