@@ -1,5 +1,9 @@
 # Roadmap
 
+## Kelvis email and Benson withdrawal correction
+- [x] Correct Kelvis Fauza's sign-in and employee email to kelvisfauza@gmail.com without changing account identity; Auth API succeeded and device email synchronized, unauthenticated correction rejected.
+- [ ] Identify Benson's reported UGX 10,000 pending withdrawal — all matching instant withdrawals are already saved as success (latest 22 October), and no matching withdrawal_requests row exists; awaiting screenshot/date/reference. No funds resent or financial records changed.
+
 ## Admin-first employee per diem requests
 - [x] Add Admin review under Requests with approval/rejection details; block unapproved awards at the saved-request boundary and prevent direct staff award inserts. Preserve Sunday reservations, printed numbers and historical awards.
 - [x] Six approval-rule tests passed; rolled-back saved-request checks confirmed unapproved awards, self-approval and repeated approval are blocked, approval creates no award, and direct staff inserts/anonymous reviews are denied. No test requests or funds retained; preview build clean.
