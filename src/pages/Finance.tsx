@@ -32,6 +32,7 @@ const WithdrawalRequestsManager = lazy(() => import('@/components/finance/Withdr
 const DayBook = lazy(() => import('@/components/reports/DayBook'));
 const FinanceReports = lazy(() => import('@/components/finance/FinanceReports').then(m => ({ default: m.FinanceReports })));
 const SupplierAdvanceModal = lazy(() => import('@/components/finance/SupplierAdvanceModal'));
+const InstantWithdrawalHistory = lazy(() => import('@/components/finance/InstantWithdrawalHistory'));
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center py-12">
@@ -63,6 +64,7 @@ const HISTORY_VIEWS = [
   { value: 'completed', label: 'Completed' },
   { value: 'payments', label: 'Coffee payments' },
   { value: 'releases', label: 'Released payouts' },
+  { value: 'instant', label: 'Instant withdrawals' },
 ];
 
 const Finance = () => {
@@ -112,7 +114,7 @@ const Finance = () => {
           </div>
         );
       case 'coffee': return <PendingCoffeePayments />;
-      case 'withdrawals': return <WithdrawalRequestsManager />;
+      case 'withdrawals': return <div className="space-y-6"><WithdrawalRequestsManager /><InstantWithdrawalHistory /></div>;
       case 'advances': return <SupplierAdvancesPage />;
       case 'expenses': return <ExpenseManagement />;
       case 'hr': return <HRPayments />;
@@ -123,7 +125,8 @@ const Finance = () => {
           <div className="space-y-4">
             <div className="flex gap-2 overflow-x-auto pb-1">
               {historyViews.map(v => (
-                <button
+                <Button
+                  variant="ghost"
                   key={v.value}
                   onClick={() => setHistoryView(v.value)}
                   className={cn(
@@ -134,12 +137,13 @@ const Finance = () => {
                   )}
                 >
                   {v.label}
-                </button>
+                </Button>
               ))}
             </div>
             {historyView === 'completed' && <CompletedTransactions />}
             {historyView === 'payments' && <PaymentHistory />}
             {historyView === 'releases' && <FinancePaymentHistory />}
+            {historyView === 'instant' && <InstantWithdrawalHistory />}
           </div>
         );
       default: return null;

@@ -1,5 +1,10 @@
 # Roadmap
 
+## Finance instant withdrawal history
+- [x] Add searchable, paginated read-only history to Finance History and Withdrawals; show loading failures rather than false empty results. Two access/pagination tests passed and deployed endpoint rejects signed-out calls; preview build clean.
+- [x] Isolated desktop/mobile history search, detail expansion and second-page navigation passed with no phone overflow; no payment action is offered.
+- [ ] Verify signed-in Finance history with saved records — external unmanaged Supabase provides no staff session; isolated sample-data checks do not verify live staff access.
+
 ## Coffee assessment repair
 - [x] Remove full-system integrity scans from save transactions; private queued checks stop after drain. Rolled-back insertion verified the reported 291 kg Robusta assessment at UGX 11,000 and its matching Finance lot; no real assessment retained. Surface actual save errors. Signed-in UI verification remains blocked by external unmanaged authentication.
 - [x] Select the saved delivery's correct Arabica/Robusta calculator without changing either pricing formula; reset stale edit identity on new delivery selection.
