@@ -563,7 +563,7 @@ export const useQualityControl = () => {
       console.error('Error adding quality assessment:', error);
       toast({
         title: "Error",
-        description: "Failed to save quality assessment",
+        description: error instanceof Error ? error.message : "The assessment could not be saved. Your entries have been kept; please try again.",
         variant: "destructive"
       });
       throw error;

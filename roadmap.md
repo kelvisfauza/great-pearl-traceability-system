@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Coffee assessment repair
+- [x] Remove full-system integrity scans from save transactions; private queued checks stop after drain. Rolled-back insertion verified the reported 291 kg Robusta assessment at UGX 11,000 and its matching Finance lot; no real assessment retained. Surface actual save errors. Signed-in UI verification remains blocked by external unmanaged authentication.
 - [x] Select the saved delivery's correct Arabica/Robusta calculator without changing either pricing formula; reset stale edit identity on new delivery selection.
 - [x] Repair rejection error handling and offline payloads; 11 targeted regressions passed. Preserve actual save error messages for diagnosis.
 - [ ] Verify a real signed-in assessment save — external Supabase has no automated staff session.

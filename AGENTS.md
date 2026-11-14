@@ -59,7 +59,7 @@
 
 - Collect Outlook quality postings through a bounded, database-leased attachment recognizer with immutable deduplication and private files; mailbox events collect arrivals, recent-mail reconciliation has a separate cursor from hourly historical scanning and subscription renewal. Link only unique exact references automatically; date/supplier candidates require administrator confirmation through permission-checked private-schema routines without changing original assessments or deliveries.
 
-- Detect system integrity red flags from explicit record links via change-triggered scans, keep privileged processing in a non-exposed schema, and resolve tasks only when their source issue disappears; administrators claim and annotate tasks without altering source records.
+- Queue system integrity scans per changing transaction in a private schema; a wake-on-enqueue worker stops after drain so full scans cannot block assessment/delivery saves. Resolve flags only when source issues disappear; administrators claim and annotate without altering source records.
  
 - Normalize legacy station-based price SMS at the sending boundary, queue and resender using the shared compact-price-sms helper; preserve original station amounts rather than replacing them with later saved prices, so older installed clients cannot send duplicate buying/reference blocks.
 
