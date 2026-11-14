@@ -31,7 +31,7 @@
 
 - Bind GRN confirmation and post-payment printing to deep-captured lot snapshots, validating the displayed and freshly saved lot identity/figures before payment; enforce saved-payment-to-lot binding in both receipt screens and count only confirmed same-lot payments so queue changes cannot replace receipt figures.
 
-- Issue employee per diem forms as immutable saved request snapshots; employees submit their own print-prepared number once, and Admin/HR awards atomically record the award plus a PER_DIEM wallet credit through existing treasury triggers to prevent duplicate or partial payments.
+- Per diem keeps immutable printed snapshots and Sunday reservations; a different active Admin must approve before atomic Admin/HR awards and treasury-backed PER_DIEM credits. Block direct staff award inserts so approval cannot be bypassed.
 
 - Manage route titles, descriptions and self-referencing canonicals through one Helmet provider and RouteMetadata, preserving static social fallback tags; keep sensitive document/employee and staff routes noindex and out of the static public sitemap.
 

@@ -31,7 +31,7 @@ export default function PerDiemRequestSubmission() {
       if (error) throw error;
       setNumber('');
       await client.invalidateQueries({ queryKey: ['my-per-diem-requests'] });
-      toast({ title: 'Per diem request submitted', description: 'Your request is now awaiting award.' });
+      toast({ title: 'Per diem request submitted', description: 'Your request is now awaiting Admin approval.' });
     } catch (e) {
       toast({ title: 'Request not submitted', description: e instanceof Error ? e.message : (e as { message?: string }).message, variant: 'destructive' });
     } finally { setBusy(false); }
@@ -43,7 +43,8 @@ export default function PerDiemRequestSubmission() {
     {error && <p className="text-sm text-destructive">Unable to load your per diem requests.</p>}
     {requests?.map(r => <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 border-b py-2 text-sm">
       <div><p className="font-mono">{r.document_number}</p><p className="text-muted-foreground">{r.form_data.destination} · UGX {Number(r.amount).toLocaleString()}</p></div>
-      <Badge variant="outline">{r.status === 'draft' ? 'Not submitted' : r.status === 'pending' ? 'Awaiting award' : 'Awarded'}</Badge>
+      {r.status === 'rejected' && <p className="w-full text-destructive">{r.rejection_reason}</p>}
+      <Badge variant="outline">{r.status === 'draft' ? 'Not submitted' : r.status === 'pending' ? (r.approved_at ? 'Approved — awaiting award' : 'Awaiting Admin approval') : r.status === 'rejected' ? 'Rejected' : 'Awarded'}</Badge>
     </div>)}
   </div>;
 }

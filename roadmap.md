@@ -1,5 +1,10 @@
 # Roadmap
 
+## Admin-first employee per diem requests
+- [x] Add Admin review under Requests with approval/rejection details; block unapproved awards at the saved-request boundary and prevent direct staff award inserts. Preserve Sunday reservations, printed numbers and historical awards.
+- [x] Six approval-rule tests passed; rolled-back saved-request checks confirmed unapproved awards, self-approval and repeated approval are blocked, approval creates no award, and direct staff inserts/anonymous reviews are denied. No test requests or funds retained; preview build clean.
+- [ ] Verify signed-in employee submit → Admin review → HR award — external unmanaged Supabase provides no automated staff session.
+
 ## Finance instant withdrawal history
 - [x] Add searchable, paginated read-only history to Finance History and Withdrawals; show loading failures rather than false empty results. Two access/pagination tests passed and deployed endpoint rejects signed-out calls; preview build clean.
 - [x] Isolated desktop/mobile history search, detail expansion and second-page navigation passed with no phone overflow; no payment action is offered.

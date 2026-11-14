@@ -31,7 +31,7 @@ const AwardPerDiemDialog = () => {
   const { data: requests, error: requestsError } = useQuery({
     queryKey: ["pending-per-diem-requests"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("per_diem_requests").select("*").eq("status", "pending").order("submitted_at");
+      const { data, error } = await supabase.from("per_diem_requests").select("*").eq("status", "pending").not("approved_at", "is", null).order("submitted_at");
       if (error) throw error;
       return (data as unknown as PerDiemRequest[]).filter(perDiemAwardable);
     },
@@ -69,7 +69,7 @@ const AwardPerDiemDialog = () => {
       const emp = employees?.find((e) => e.id === selectedEmployee);
       if (!emp) throw new Error("Employee not found");
       const request = requests?.find(r => r.id === requestId);
-      if (!request || !perDiemAwardable(request)) throw new Error("Select a submitted printed request");
+      if (!request || !perDiemAwardable(request)) throw new Error("Select an administrator-approved printed request");
       const reference = request.document_number;
       const { error: awardError } = await supabase.rpc("award_per_diem_request", { p_id: request.id });
       if (awardError) throw awardError;
@@ -154,7 +154,7 @@ const AwardPerDiemDialog = () => {
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div>
-              <Label>Submitted per diem request *</Label>
+              <Label>Admin-approved per diem request *</Label>
               <Select value={requestId} onValueChange={v => {
                 const request = requests?.find(r => r.id === v);
                 if (!request) return;
@@ -168,8 +168,8 @@ const AwardPerDiemDialog = () => {
                 <SelectTrigger><SelectValue placeholder="Select printed request" /></SelectTrigger>
                 <SelectContent>{requests?.map(r => <SelectItem key={r.id} value={r.id}>{r.employee_name} — {r.document_number}</SelectItem>)}</SelectContent>
               </Select>
-              {requestsError && <p className="text-sm text-destructive">Unable to load submitted requests.</p>}
-              {!requestsError && requests?.length === 0 && <p className="text-sm text-muted-foreground mt-2">No per diem requests awaiting award.</p>}
+              {requestsError && <p className="text-sm text-destructive">Unable to load approved requests.</p>}
+              {!requestsError && requests?.length === 0 && <p className="text-sm text-muted-foreground mt-2">No Admin-approved per diem requests awaiting award.</p>}
             </div>
             <div><Label>Printed form number</Label><Input value={refNumber} readOnly className="font-mono" /></div>
             <div><Label>Amount (UGX)</Label><Input value={amount} readOnly /></div>

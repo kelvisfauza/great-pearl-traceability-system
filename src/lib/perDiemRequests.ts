@@ -7,6 +7,9 @@ export interface PerDiemRequest {
   amount: number;
   status: string;
   printed_at: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  rejection_reason?: string | null;
   form_data: Record<string, string>;
 }
 
@@ -16,6 +19,6 @@ export function printedPerDiemNumber(value: string): string {
   return number;
 }
 
-export function perDiemAwardable(request: Pick<PerDiemRequest, 'status' | 'printed_at'>): boolean {
-  return request.status === 'pending' && Boolean(request.printed_at);
+export function perDiemAwardable(request: Pick<PerDiemRequest, 'status' | 'printed_at' | 'approved_at' | 'approved_by'>): boolean {
+  return request.status === 'pending' && Boolean(request.printed_at && request.approved_at && request.approved_by);
 }

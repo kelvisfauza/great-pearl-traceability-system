@@ -9340,6 +9340,8 @@ export type Database = {
       per_diem_requests: {
         Row: {
           amount: number
+          approved_at: string | null
+          approved_by: string | null
           award_id: string | null
           created_at: string
           created_by: string
@@ -9350,12 +9352,17 @@ export type Database = {
           form_data: Json
           id: string
           printed_at: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
           status: string
           submitted_at: string | null
           updated_at: string
         }
         Insert: {
           amount: number
+          approved_at?: string | null
+          approved_by?: string | null
           award_id?: string | null
           created_at?: string
           created_by?: string
@@ -9366,12 +9373,17 @@ export type Database = {
           form_data: Json
           id?: string
           printed_at?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           status?: string
           submitted_at?: string | null
           updated_at?: string
         }
         Update: {
           amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
           award_id?: string | null
           created_at?: string
           created_by?: string
@@ -9382,6 +9394,9 @@ export type Database = {
           form_data?: Json
           id?: string
           printed_at?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           status?: string
           submitted_at?: string | null
           updated_at?: string
@@ -18303,6 +18318,8 @@ export type Database = {
         Args: { p_id: string }
         Returns: {
           amount: number
+          approved_at: string | null
+          approved_by: string | null
           award_id: string | null
           created_at: string
           created_by: string
@@ -18313,6 +18330,9 @@ export type Database = {
           form_data: Json
           id: string
           printed_at: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
           status: string
           submitted_at: string | null
           updated_at: string
@@ -19029,6 +19049,8 @@ export type Database = {
         Args: { p_data: Json }
         Returns: {
           amount: number
+          approved_at: string | null
+          approved_by: string | null
           award_id: string | null
           created_at: string
           created_by: string
@@ -19039,6 +19061,9 @@ export type Database = {
           form_data: Json
           id: string
           printed_at: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
           status: string
           submitted_at: string | null
           updated_at: string
@@ -19339,6 +19364,36 @@ export type Database = {
         Args: { p_admin_reason: string; p_ledger_entry_id: string }
         Returns: Json
       }
+      review_per_diem_request: {
+        Args: { p_approve: boolean; p_id: string; p_reason?: string }
+        Returns: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          award_id: string | null
+          created_at: string
+          created_by: string
+          document_number: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          form_data: Json
+          id: string
+          printed_at: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "per_diem_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       review_quality_posting: {
         Args: { p_id: string; p_notes: string; p_status: string }
         Returns: Json
@@ -19411,6 +19466,8 @@ export type Database = {
         Args: { p_number: string }
         Returns: {
           amount: number
+          approved_at: string | null
+          approved_by: string | null
           award_id: string | null
           created_at: string
           created_by: string
@@ -19421,6 +19478,9 @@ export type Database = {
           form_data: Json
           id: string
           printed_at: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
           status: string
           submitted_at: string | null
           updated_at: string

@@ -10,6 +10,7 @@ import ProviderSubmissionApprovals from '@/components/admin/ProviderSubmissionAp
 import QuickLoans from '@/pages/QuickLoans';
 import BudgetManagement from '@/pages/admin/BudgetManagement';
 import SupportStaffPerDiemSection from '@/components/admin/SupportStaffPerDiemSection';
+import PerDiemRequestApprovals from '@/components/admin/PerDiemRequestApprovals';
 import AdminWalletOperations from '@/components/admin/AdminWalletOperations';
 import BankDepositApprovals from '@/components/admin/BankDepositApprovals';
 import QuotationApprovals from '@/components/quotations/QuotationApprovals';
@@ -94,6 +95,7 @@ const Approvals = () => {
           </TabsList>
 
           <TabsContent value="requests" className="mt-0 space-y-5">
+            <PerDiemRequestApprovals />
             <QuickLoans approvalDesk />
             <ProviderSubmissionApprovals />
             <BudgetManagement approvalDesk />
