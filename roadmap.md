@@ -1,5 +1,10 @@
 # Roadmap
 
+## Coffee assessment repair
+- [x] Select the saved delivery's correct Arabica/Robusta calculator without changing either pricing formula; reset stale edit identity on new delivery selection.
+- [x] Repair rejection error handling and offline payloads; 11 targeted regressions passed. Preserve actual save error messages for diagnosis.
+- [ ] Verify a real signed-in assessment save — external Supabase has no automated staff session.
+
 ## Expired sign-in logout
 - [x] Detect confirmed expired sign-ins across shared app requests; clear current-device access and show a sign-in notice without retrying actions or logging out for unrelated errors.
 - [x] Five expiry/permission/request and error-explanation tests passed; latest preview compilation clean. Public sign-in route remained blank in browser, so real logout UI is not verified.

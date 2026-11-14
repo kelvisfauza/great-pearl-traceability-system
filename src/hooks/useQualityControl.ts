@@ -421,7 +421,10 @@ export const useQualityControl = () => {
         assessed_by: assessment.assessed_by, // This should now contain the actual user's name from the form
         physical_assessment_by: (assessment as any).physical_assessment_by || null,
         system_assessment_by: (assessment as any).system_assessment_by || null,
-        form_number: (assessment as any).form_number || null
+        form_number: (assessment as any).form_number || null,
+        analysis_file_id: assessment.analysis_file_id || null,
+        sampling_order_id: assessment.sampling_order_id || null,
+        sampling_order_number: assessment.sampling_order_number || null,
       };
       
       console.log('Prepared assessment data:', JSON.stringify(assessmentData, null, 2));

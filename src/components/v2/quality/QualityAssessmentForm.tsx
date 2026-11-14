@@ -18,6 +18,7 @@ import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
 import { useQualityRole } from "@/hooks/useQualityRole";
 import { snapshotFromReadings } from "@/lib/qualityPriceCalculator";
 import { coffeeRejectionReason } from '@/lib/coffeeRejectionRules';
+import { assessmentInsertPayload } from '@/lib/assessmentPayload';
 
 interface QualityAssessmentFormProps {
   lot: any;
@@ -125,7 +126,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         perform: async (client_op_id) => {
           const { data: assessment, error: assessError } = await supabase
             .from('quality_assessments')
-            .insert({ ...payload, client_op_id, _coffee_record_status_update: undefined } as any)
+            .insert(assessmentInsertPayload({ ...payload, client_op_id }) as any)
             .select()
             .single();
           if (assessError) throw assessError;
@@ -177,14 +178,6 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
 
   const rejectLot = useMutation({
     mutationFn: async (data: AssessmentForm) => {
-      // Update coffee_records status
-      const { error } = await supabase
-        .from('coffee_records')
-        .update({ status: 'QUALITY_REJECTED' })
-        .eq('id', lot.id);
-
-      if (error) throw error;
-
       // Create a quality assessment record with rejection — include all quality data and suggested price
       // Rejections skip the Quality Manager and go straight to the Admin rejected-lots queue
       const rejectSnapshot = await snapshotFromReadings({
@@ -196,7 +189,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         fm: data.fm_percentage,
         robusta_in_arabica: data.robusta_in_arabica_percentage,
       }, lot.coffee_type);
-      const { data: assessment } = await supabase
+      const { data: assessment, error: assessmentError } = await supabase
         .from('quality_assessments')
         .insert({
           ...(rejectSnapshot || {}),
@@ -222,6 +215,12 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         } as any)
         .select()
         .single();
+      if (assessmentError) throw assessmentError;
+      const { error: statusError } = await supabase
+        .from('coffee_records')
+        .update({ status: 'QUALITY_REJECTED' })
+        .eq('id', lot.id);
+      if (statusError) throw new Error(`The rejected assessment was saved, but the delivery status could not be updated: ${statusError.message}`);
       return assessment;
     },
     onSuccess: (assessment: any) => {

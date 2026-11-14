@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { offlineDb, QueuedOp, newOpId } from './db';
+import { assessmentInsertPayload } from '../assessmentPayload';
 
 /** Returns true if the browser currently believes it is online. */
 export const isOnline = () =>
@@ -96,14 +97,15 @@ async function syncQualityAssessment(op: QueuedOp) {
   const p = op.payload;
   const { error } = await supabase
     .from('quality_assessments')
-    .insert({ ...p } as any);
+    .insert(assessmentInsertPayload(p) as any);
   if (error) throw error;
 
   if (p._coffee_record_status_update) {
-    await supabase
+    const { error: statusError } = await supabase
       .from('coffee_records')
       .update({ status: p._coffee_record_status_update })
       .eq('id', p.store_record_id);
+    if (statusError) throw statusError;
   }
 }
 

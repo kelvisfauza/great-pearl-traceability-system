@@ -61,7 +61,13 @@ interface SavedRobustaAnalysis {
   created_at: string;
 }
 
-const RobustaPriceCalculator = () => {
+interface RobustaPriceCalculatorProps {
+  initialValues?: Partial<RobustaState>;
+  onCalculationChange?: (results: RobustaResults, state: RobustaState) => void;
+  embedded?: boolean;
+}
+
+const RobustaPriceCalculator = ({ initialValues, onCalculationChange, embedded = false }: RobustaPriceCalculatorProps) => {
   const { toast } = useToast();
   const { employee } = useAuth();
   const { createVerification } = useDocumentVerification();
@@ -86,7 +92,8 @@ const RobustaPriceCalculator = () => {
     pods: '',
     husks: '',
     stones: '',
-    discretion: '0'
+    discretion: '0',
+    ...initialValues,
   });
 
   const [results, setResults] = useState<RobustaResults>({
@@ -122,7 +129,7 @@ const RobustaPriceCalculator = () => {
       if (data) {
         const price = data.robusta_buying_price || data.robusta_faq_local || 0;
         setReferencePrice(price);
-        setState(prev => ({ ...prev, refPrice: price.toString() }));
+        setState(prev => ({ ...prev, refPrice: prev.refPrice || price.toString() }));
       }
     } catch (err) {
       console.error('Error fetching prices:', err);
@@ -188,6 +195,10 @@ const RobustaPriceCalculator = () => {
   useEffect(() => {
     calculate();
   }, [state]);
+
+  useEffect(() => {
+    onCalculationChange?.(results, state);
+  }, [results]);
 
   const handleInputChange = (field: keyof RobustaState, value: string) => {
     setState(prev => ({ ...prev, [field]: value }));
@@ -368,10 +379,10 @@ const RobustaPriceCalculator = () => {
             <RefreshCw className="h-4 w-4 mr-2" />
             Reset
           </Button>
-          <Button onClick={handleSaveClick} variant="default" size="sm">
+          {!embedded && <Button onClick={handleSaveClick} variant="default" size="sm">
             <Save className="h-4 w-4 mr-2" />
             Save & Print
-          </Button>
+          </Button>}
         </div>
       </div>
 

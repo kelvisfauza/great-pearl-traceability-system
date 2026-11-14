@@ -54,6 +54,8 @@ import { useSearchHighlight } from "@/hooks/useSearchHighlight";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
 import { openBulkGRNPrintWindow, GRNData } from "@/utils/bulkGRNPrint";
 import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator";
+import RobustaPriceCalculator from "@/components/quality/RobustaPriceCalculator";
+import { isRobustaCoffee } from "@/lib/assessmentPayload";
 import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator";
 import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
 import QualityAnalysisFilesTab from "@/components/v2/quality/tabs/QualityAnalysisFilesTab";
@@ -385,6 +387,7 @@ const QualityControl = () => {
     }
     setSelectedRecord(record);
     setLinkedSamplingOrder(null);
+    setEditingAssessmentId(null);
     setAssessmentForm({
       moisture: '',
       group1_defects: '',
@@ -875,7 +878,7 @@ const QualityControl = () => {
       console.error('Error submitting assessment:', error);
       toast({
         title: "Failed to Save Assessment",
-        description: error instanceof Error ? error.message : "Failed to submit quality assessment to Finance department. Please try again.",
+        description: error instanceof Error ? error.message : (error as { message?: string })?.message || "The assessment could not be saved. Your entries have been kept; please try again.",
         variant: "destructive"
       });
     } finally {
@@ -987,7 +990,7 @@ const QualityControl = () => {
       console.error('Error submitting to admin:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit to admin.",
+        description: error instanceof Error ? error.message : (error as { message?: string })?.message || "The assessment could not be saved. Your entries have been kept; please try again.",
         variant: "destructive"
       });
     } finally {
@@ -1881,7 +1884,46 @@ const QualityControl = () => {
                       System assessment by: <span className="font-medium text-foreground">{employee?.name || employee?.email || 'Quality Controller'}</span>
                     </p>
                   </div>
-                  <ArabicaPriceCalculator 
+                  {isRobustaCoffee(selectedRecord.coffee_type) ? (
+                    <RobustaPriceCalculator
+                      key={selectedRecord.id}
+                      embedded
+                      initialValues={{
+                        refPrice: assessmentForm.ref_price,
+                        moisture: assessmentForm.moisture,
+                        g1Defects: assessmentForm.group1_defects,
+                        g2Defects: assessmentForm.group2_defects,
+                        less12: assessmentForm.below12,
+                        pods: assessmentForm.pods,
+                        husks: assessmentForm.husks,
+                        stones: assessmentForm.stones,
+                        discretion: assessmentForm.discretion || '0',
+                      }}
+                      onCalculationChange={(results, state) => setAssessmentForm(prev => ({
+                        ...prev,
+                        ref_price: state.refPrice,
+                        moisture: state.moisture,
+                        group1_defects: state.g1Defects,
+                        group2_defects: state.g2Defects,
+                        below12: state.less12,
+                        pods: state.pods,
+                        husks: state.husks,
+                        stones: state.stones,
+                        discretion: state.discretion,
+                        fm: results.totalFM,
+                        actual_ott: results.outturn,
+                        clean_d14: 0,
+                        outturn: results.outturn,
+                        outturn_price: 0,
+                        final_price: results.isRejected ? 0 : results.actualPricePerKg,
+                        quality_note: results.isRejected ? 'Rejected by Robusta quality limits' : `Deduction/kg: UGX ${results.deductionPerKg}`,
+                        reject_outturn_price: results.isRejected,
+                        reject_final: results.isRejected,
+                        manual_price: prev.use_manual_price ? prev.manual_price : '',
+                      }))}
+                    />
+                  ) : <ArabicaPriceCalculator
+                    key={selectedRecord.id}
                     initialValues={{
                       refPrice: assessmentForm.ref_price,
                       moisture: assessmentForm.moisture,
@@ -1924,7 +1966,7 @@ const QualityControl = () => {
                         reject_final: results.rejectFinal
                       }));
                     }}
-                  />
+                  />}
                   
                   {/* Price Selection Toggle */}
                   <div className="border rounded-lg p-4 bg-muted/50 space-y-4">
