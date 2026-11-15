@@ -18,9 +18,22 @@ serve(async (req) => {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+  // Only Yo's USSD gateway knows this code (set in Yo's USSD portal callback URL
+  // as ?secret=... or header x-callback-secret). Fail closed when it is missing.
+  const expected = Deno.env.get("USSD_CALLOUT_SECRET") ?? "";
+  const provided = req.headers.get("x-callback-secret") || new URL(req.url).searchParams.get("secret") || "";
+  let diff = expected.length === provided.length && expected.length >= 16 ? 0 : 1;
+  for (let i = 0; i < Math.min(expected.length, provided.length); i++) diff |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
+  if (diff !== 0) {
+    return new Response(JSON.stringify({ validated: false, message: "Service unavailable." }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const body = await req.json();
-    console.log(`[USSD Callout] Incoming request:`, JSON.stringify(body));
+    console.log(`[USSD Callout] Incoming request, product_key:`, body?.product_key);
 
     const { datetime, anumbermsisdn, signature, product_key } = body;
 
