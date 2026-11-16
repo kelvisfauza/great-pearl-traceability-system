@@ -525,12 +525,12 @@ export const useUnifiedApprovalRequests = () => {
           }
 
           // Refund the tiered withdrawal service fee and reverse the treasury
-          // profit entry (fee tiers: <=60k → 1,100; <=500k → 1,700; <=1M → 2,500; >1M → 2,900).
+          // profit entry (fee tiers: <=60k → 1,600; <=500k → 2,200; <=1M → 2,500; >1M → 2,900).
           const wdAmt = Number((currentIW as any).amount) || 0;
           const feeAmt =
             wdAmt < 500 ? 0 :
-            wdAmt <= 60_000 ? 1_100 :
-            wdAmt <= 500_000 ? 1_700 :
+            wdAmt <= 60_000 ? 1_600 :
+            wdAmt <= 500_000 ? 2_200 :
             wdAmt <= 1_000_000 ? 2_500 : 2_900;
           if (feeAmt > 0) {
             const feeRefundRef = `REFUND-WD-FEE-${iwId}`;

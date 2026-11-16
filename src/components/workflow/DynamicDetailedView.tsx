@@ -180,8 +180,8 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
   // withdrawals). Mirrors computeWithdrawFee in the edge function.
   const computeWithdrawFee = (a: number) => {
     if (a < 500) return 0;
-    if (a <= 60_000) return 1_100;
-    if (a <= 500_000) return 1_700;
+    if (a <= 60_000) return 1_600;
+    if (a <= 500_000) return 2_200;
     if (a <= 1_000_000) return 2_500;
     return 2_900;
   };

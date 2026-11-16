@@ -46,8 +46,8 @@ const DEFAULTS: Settings = {
     require_admin_approval: true,
     fee_tiers: [
       { up_to: 500, fee: 0 },
-      { up_to: 60000, fee: 1100 },
-      { up_to: 500000, fee: 1700 },
+      { up_to: 60000, fee: 1600 },
+      { up_to: 500000, fee: 2200 },
       { up_to: 1000000, fee: 2500 },
       { up_to: 9007199254740991, fee: 2900 },
     ],

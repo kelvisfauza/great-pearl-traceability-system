@@ -1067,8 +1067,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   <span className="font-medium text-foreground">Mobile Money (Instant)</span>
                 </div>
                   {parsedAmount >= 500 && (() => {
-                    const fee = parsedAmount <= 60_000 ? 1_100
-                      : parsedAmount <= 500_000 ? 1_700
+                    const fee = parsedAmount <= 60_000 ? 1_600
+                      : parsedAmount <= 500_000 ? 2_200
                       : parsedAmount <= 1_000_000 ? 2_500
                       : 2_900;
                     return (

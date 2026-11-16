@@ -54,7 +54,7 @@ const HTML = (name: string) => `<!doctype html>
             <tr><td style="background:#fffbeb;border:1px solid #fcd34d;padding:16px 18px;border-radius:8px;">
               <div style="font-weight:600;color:#92400e;font-size:14px;margin-bottom:6px;">Important to know</div>
               <div style="font-size:14px;color:#374151;line-height:1.7;">
-                &bull; A <strong>service fee</strong> applies, same tiers as mobile money withdrawals (UGX 1,100 / 1,700 / 2,500 / 2,900 depending on amount).<br/>
+                &bull; A <strong>service fee</strong> applies, same tiers as mobile money withdrawals (UGX 1,600 / 2,200 / 2,500 / 2,900 depending on amount).<br/>
                 &bull; The amount <strong>plus the fee</strong> is deducted from your wallet.<br/>
                 &bull; Requests are reviewed by an administrator, and <strong>final approval and payment is done by the Managing Director</strong>.<br/>
                 &bull; <strong>No money leaves your wallet until the payment is marked as paid.</strong><br/>
@@ -99,7 +99,7 @@ HOW TO REQUEST
 4. Submit for approval.
 
 IMPORTANT
-- A service fee applies (UGX 1,100 / 1,700 / 2,500 / 2,900 depending on amount).
+- A service fee applies (UGX 1,600 / 2,200 / 2,500 / 2,900 depending on amount).
 - The amount plus the fee is deducted from your wallet.
 - An administrator reviews the request; final approval and payment is done by the Managing Director.
 - No money leaves your wallet until the payment is marked as paid.
