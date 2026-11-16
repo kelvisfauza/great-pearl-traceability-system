@@ -3829,6 +3829,208 @@ export type Database = {
           },
         ]
       }
+      erp_finance_events: {
+        Row: {
+          action: string
+          actor_id: string
+          actor_name: string
+          created_at: string
+          id: string
+          note: string | null
+          record_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          actor_name: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          record_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          actor_name?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          record_id?: string
+        }
+        Relationships: []
+      }
+      erp_supplier_payment_requests: {
+        Row: {
+          amount: number
+          approved_by: string | null
+          approved_by_name: string | null
+          created_at: string
+          decision_note: string | null
+          id: string
+          lot_id: string
+          method: Database["public"]["Enums"]["payment_method"]
+          notes: string | null
+          payment_date: string | null
+          posted_by: string | null
+          posted_by_name: string | null
+          posted_payment_id: string | null
+          reference: string | null
+          requested_by: string
+          requested_by_name: string
+          status: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_by?: string | null
+          approved_by_name?: string | null
+          created_at?: string
+          decision_note?: string | null
+          id: string
+          lot_id: string
+          method: Database["public"]["Enums"]["payment_method"]
+          notes?: string | null
+          payment_date?: string | null
+          posted_by?: string | null
+          posted_by_name?: string | null
+          posted_payment_id?: string | null
+          reference?: string | null
+          requested_by: string
+          requested_by_name: string
+          status?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_by?: string | null
+          approved_by_name?: string | null
+          created_at?: string
+          decision_note?: string | null
+          id?: string
+          lot_id?: string
+          method?: Database["public"]["Enums"]["payment_method"]
+          notes?: string | null
+          payment_date?: string | null
+          posted_by?: string | null
+          posted_by_name?: string | null
+          posted_payment_id?: string | null
+          reference?: string | null
+          requested_by?: string
+          requested_by_name?: string
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_supplier_payment_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "finance_coffee_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "pending_payments_aging"
+            referencedColumns: ["lot_id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_posted_payment_id_fkey"
+            columns: ["posted_payment_id"]
+            isOneToOne: true
+            referencedRelation: "supplier_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_posted_payment_id_fkey"
+            columns: ["posted_payment_id"]
+            isOneToOne: true
+            referencedRelation: "supplier_payments_report"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_supplier_payment_requests_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eudr_batch_sales: {
         Row: {
           attached_by: string
@@ -18588,11 +18790,31 @@ export type Database = {
         Args: { p_coffee_record_id: string }
         Returns: Json
       }
+      erp_department_action: {
+        Args: {
+          p_action: string
+          p_expected_updated_at: string
+          p_fields: Json
+          p_id: string
+          p_kind: string
+        }
+        Returns: Json
+      }
       erp_employee_directory: { Args: { p_access?: boolean }; Returns: Json }
       erp_eudr_action: {
         Args: { p_action: string; p_data: Json }
         Returns: Json
       }
+      erp_finance_action: {
+        Args: {
+          p_action: string
+          p_fields: Json
+          p_id: string
+          p_version: string
+        }
+        Returns: Json
+      }
+      erp_procurement_tracking: { Args: { p_kind: string }; Returns: Json }
       erp_set_employee_enabled: {
         Args: {
           p_employee_id: string
