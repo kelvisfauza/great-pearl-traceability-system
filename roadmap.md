@@ -1,9 +1,10 @@
 # Roadmap
 
 ## Wallet account numbers
-- [ ] Assign immutable unique numbers to existing and future employee wallets without changing ledger identities or balances.
-- [ ] Show names and numbers in wallets, transfers, statements and administrator support views; enable number search.
-- [ ] Test number allocation, immutability and access; verify available UI flows.
+- [x] Assign immutable unique numbers to all 26 existing employee wallets and future wallets without changing ledger identities or balances.
+- [x] Show names and numbers in wallets, transfer selection/confirmation, printed/PDF/CSV statements, HR balances and administrator support views; enable number search in transfers and account directories.
+- [x] Recipient search test and rollback-only database checks passed for coverage, uniqueness, automatic assignment, immutable numbers and denied anonymous lookup; preview build clean. No test employee retained or funds moved.
+- [ ] Verify real signed-in wallet → recipient selection → statement flow — external unmanaged Supabase provides no staff session; browser stops at the location-permission gate.
 
 ## Kelvis email and Benson withdrawal correction
 - [x] Correct Kelvis Fauza's sign-in and employee email to kelvisfauza@gmail.com without changing account identity; Auth API succeeded and device email synchronized, unauthenticated correction rejected.
