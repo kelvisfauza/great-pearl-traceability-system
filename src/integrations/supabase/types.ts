@@ -3643,6 +3643,7 @@ export type Database = {
           training_progress: number | null
           tribe: string | null
           updated_at: string
+          wallet_account_number: string
           wallet_frozen: boolean | null
           wallet_frozen_at: string | null
           wallet_frozen_by: string | null
@@ -3703,6 +3704,7 @@ export type Database = {
           training_progress?: number | null
           tribe?: string | null
           updated_at?: string
+          wallet_account_number?: string
           wallet_frozen?: boolean | null
           wallet_frozen_at?: string | null
           wallet_frozen_by?: string | null
@@ -3763,6 +3765,7 @@ export type Database = {
           training_progress?: number | null
           tribe?: string | null
           updated_at?: string
+          wallet_account_number?: string
           wallet_frozen?: boolean | null
           wallet_frozen_at?: string | null
           wallet_frozen_by?: string | null
@@ -18194,6 +18197,7 @@ export type Database = {
           training_progress: number | null
           tribe: string | null
           updated_at: string
+          wallet_account_number: string
           wallet_frozen: boolean | null
           wallet_frozen_at: string | null
           wallet_frozen_by: string | null
@@ -18671,6 +18675,7 @@ export type Database = {
           training_progress: number | null
           tribe: string | null
           updated_at: string
+          wallet_account_number: string
           wallet_frozen: boolean | null
           wallet_frozen_at: string | null
           wallet_frozen_by: string | null
@@ -18922,6 +18927,13 @@ export type Database = {
             Args: { _user_id: string }
             Returns: Database["public"]["Enums"]["app_role"]
           }
+      get_wallet_account_identity: {
+        Args: { p_email?: string }
+        Returns: {
+          name: string
+          wallet_account_number: string
+        }[]
+      }
       get_wallet_balance: { Args: { user_uuid: string }; Returns: number }
       get_wallet_balance_before: {
         Args: { p_before: string; p_user_id: string }
@@ -18932,6 +18944,16 @@ export type Database = {
       get_wallet_ledger_balance: {
         Args: { p_user_id: string }
         Returns: number
+      }
+      get_wallet_transfer_recipients: {
+        Args: never
+        Returns: {
+          email: string
+          id: string
+          name: string
+          phone: string
+          wallet_account_number: string
+        }[]
       }
       get_yo_payments_audit: {
         Args: {

@@ -25,6 +25,7 @@ import { InvestmentModal } from './InvestmentModal';
 import { InvestmentsCard } from './InvestmentsCard';
 import { SalaryAutoInvestCard } from './SalaryAutoInvestCard';
 import { format } from 'date-fns';
+import { WalletAccountIdentity } from './WalletAccountIdentity';
 
 const ACTIVITY_LABELS: Record<string, string> = {
   data_entry: 'Data Entry',
@@ -359,6 +360,7 @@ export const AccountButton = () => {
 
   const panelContent = (
           <div className="mt-2 space-y-5">
+            <WalletAccountIdentity />
             {/* Balance Card */}
             <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
               <CardHeader className="pb-2">

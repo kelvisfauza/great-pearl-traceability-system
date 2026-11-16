@@ -13,6 +13,7 @@ interface EmployeeLoyalty {
   id: string;
   name: string;
   email: string;
+  wallet_account_number: string;
   department: string;
   totalEarned: number;
   totalWithdrawn: number;
@@ -28,7 +29,7 @@ const LoyaltyBalances = () => {
       // Get all active employees
       const { data: empData, error: empError } = await supabase
         .from("employees")
-        .select("id, name, email, department, auth_user_id")
+        .select("id, name, email, department, auth_user_id, wallet_account_number")
         .eq("status", "Active")
         .order("name");
 
@@ -88,6 +89,7 @@ const LoyaltyBalances = () => {
           id: emp.id,
           name: emp.name,
           email: emp.email,
+          wallet_account_number: emp.wallet_account_number,
           department: emp.department,
           totalEarned,
           totalWithdrawn,
@@ -104,6 +106,7 @@ const LoyaltyBalances = () => {
     (e) =>
       e.name.toLowerCase().includes(search.toLowerCase()) ||
       e.email.toLowerCase().includes(search.toLowerCase()) ||
+      e.wallet_account_number.toLowerCase().includes(search.toLowerCase()) ||
       e.department.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -163,7 +166,7 @@ const LoyaltyBalances = () => {
                 <div className="relative mt-2">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by name, email or department..."
+                    placeholder="Search name, wallet account or department..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-9"
@@ -191,6 +194,7 @@ const LoyaltyBalances = () => {
                             <TableCell>
                               <div>
                                 <p className="font-medium">{emp.name}</p>
+                                <p className="text-xs font-mono text-muted-foreground">{emp.wallet_account_number}</p>
                                 <p className="text-xs text-muted-foreground">{emp.email}</p>
                               </div>
                             </TableCell>

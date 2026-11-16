@@ -22,7 +22,7 @@ const SUPER_ADMIN_EMAILS = [
   "nickscott@greatpearlcoffee.com",
 ];
 
-interface Employee { id: string; name: string; email: string; phone: string | null; role?: string }
+interface Employee { id: string; name: string; email: string; phone: string | null; role?: string; wallet_account_number: string }
 
 interface Operation {
   id: string;
@@ -73,7 +73,7 @@ export default function AdminWalletOperations() {
   const loadData = async () => {
     setLoading(true);
     const [empRes, opsRes] = await Promise.all([
-      supabase.from("employees").select("id, name, email, phone, role").eq("status", "Active").order("name"),
+      supabase.from("employees").select("id, name, email, phone, role, wallet_account_number").eq("status", "Active").order("name"),
       supabase.from("admin_wallet_operations").select("*").order("created_at", { ascending: false }).limit(50),
     ]);
     setEmployees((empRes.data || []) as Employee[]);
@@ -236,7 +236,7 @@ export default function AdminWalletOperations() {
                     <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
                     <SelectContent>
                       {employees.filter(e => !!e.email).map(e => (
-                        <SelectItem key={e.email} value={e.email}>{e.name} — {e.email}</SelectItem>
+                        <SelectItem key={e.email} value={e.email}>{e.name} — {e.wallet_account_number}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -257,7 +257,7 @@ export default function AdminWalletOperations() {
                       <SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger>
                       <SelectContent>
                         {employees.filter(e => !!e.email && e.email !== targetEmail).map(e => (
-                          <SelectItem key={e.email} value={e.email}>{e.name} — {e.email}</SelectItem>
+                          <SelectItem key={e.email} value={e.email}>{e.name} — {e.wallet_account_number}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -361,6 +361,7 @@ export default function AdminWalletOperations() {
                     {op.operation_type === "transfer" && <> → {op.destination_name || op.destination_email}</>}
                     {op.operation_type === "withdraw" && <> → {op.destination_phone} ({op.payout_provider})</>}
                   </p>
+                  <p className="text-xs font-mono text-muted-foreground">{employees.find(e => e.email === op.target_email)?.wallet_account_number}{op.destination_email && <> → {employees.find(e => e.email === op.destination_email)?.wallet_account_number}</>}</p>
                   <p className="text-xs text-muted-foreground">{op.reason}</p>
                   <p className="text-xs text-muted-foreground">Initiated by {op.initiated_by_name || op.initiated_by_email}</p>
                   {isOtp && op.target_phone && (

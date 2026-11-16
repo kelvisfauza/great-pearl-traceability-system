@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { STATEMENT_FEE_PER_PAGE, STATEMENT_PRINT_FEE, statementFeeForPages } from '@/lib/statementFees';
+import { useWalletIdentity } from '@/hooks/useWalletIdentity';
+import { WalletAccountIdentity } from './WalletAccountIdentity';
 
 interface LedgerEntry {
   id: string;
@@ -155,6 +157,7 @@ const DISPLAY_LIMIT = 10;
 export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, spendableBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
   const { user, employee } = useAuth();
   const { toast } = useToast();
+  const { data: walletIdentity } = useWalletIdentity();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [reverseEntry, setReverseEntry] = useState<LedgerEntry | null>(null);
@@ -187,6 +190,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
 
   const printStatement = async () => {
     if (!user?.email) return;
+    if (!walletIdentity) { toast({ title: 'Wait for your wallet account number before printing', variant: 'destructive' }); return; }
     // Reserve the print window synchronously so the browser doesn't block it
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -239,6 +243,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           <h3 style="margin:0 0 16px;font-weight:normal;color:#555">Transaction Statement</h3>
           <div style="margin-bottom:12px;font-size:13px">
             <strong>Employee:</strong> ${employee?.name || user?.email || 'N/A'}<br/>
+            <strong>Wallet account:</strong> ${walletIdentity.wallet_account_number}<br/>
             <strong>Date:</strong> ${format(new Date(), 'MMMM dd, yyyy')}<br/>
             <strong>Balance from last month:</strong> UGX ${balanceBroughtForward.toLocaleString()}<br/>
             <strong>This month:</strong> UGX ${thisMonthEarnings.toLocaleString()}<br/>
@@ -302,6 +307,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
 
   const handleSendStatement = async () => {
     if (!user?.email || !dateFrom || !dateTo) return;
+    if (!walletIdentity) { toast({ title: 'Wait for your wallet account number before sending', variant: 'destructive' }); return; }
     setSendingEmail(true);
     try {
       const { data: userIdData } = await supabase
@@ -419,6 +425,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         doc.text('Employee:', margin, y);
         doc.setFont('helvetica', 'normal');
         doc.text(empName, margin + 25, y);
+        y += 5;
+        doc.text(`Wallet account: ${walletIdentity.wallet_account_number}`, margin, y);
         y += 5;
         doc.setFont('helvetica', 'bold');
         doc.text('Period:', margin, y);
@@ -627,6 +635,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(50);
         doc.text(`Account Holder : ${empName}`, margin, sy); sy += 5;
+        doc.text(`Wallet Account : ${walletIdentity.wallet_account_number}`, margin, sy); sy += 5;
         doc.text(`Currency       : UGX`, margin, sy); sy += 5;
         doc.text(`Account Type   : WALLET`, margin, sy); sy += 8;
 
@@ -919,6 +928,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       </div>
 
       <div className="text-sm space-y-0.5">
+        <WalletAccountIdentity />
         <div className="flex justify-between text-muted-foreground">
           <span>Balance from last month:</span>
           <span className="font-medium text-foreground">UGX {balanceBroughtForward.toLocaleString()}</span>

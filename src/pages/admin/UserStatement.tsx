@@ -83,7 +83,7 @@ const UserStatement = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("employees")
-        .select("id, name, email, department, auth_user_id, status")
+        .select("id, name, email, department, auth_user_id, status, wallet_account_number")
         .order("name");
       // Don't drop employees missing auth_user_id — we resolve via email
       // through get_unified_user_id so they still get a statement.
@@ -99,6 +99,7 @@ const UserStatement = () => {
       !q ||
       e.name?.toLowerCase().includes(q) ||
       e.email?.toLowerCase().includes(q) ||
+      e.wallet_account_number?.toLowerCase().includes(q) ||
       e.department?.toLowerCase().includes(q)
     );
   }, [employees, search]);
@@ -382,6 +383,7 @@ const UserStatement = () => {
       <div>${selectedEmployee.name}</div>
       <div>${selectedEmployee.department || ""}</div>
       <div>${selectedEmployee.email}</div>
+      <div>Wallet account: ${selectedEmployee.wallet_account_number}</div>
     </div>
     <div class="right" style="text-align:right">
       <div>Statement Period: <strong>${periodLabel}</strong></div>
@@ -445,8 +447,10 @@ const UserStatement = () => {
 
   const exportCsv = () => {
     if (!selectedEmployee) return;
-    const header = ["Date", "Type", "Source", "Description", "Reference", "Amount", "Running"];
+    const header = ["Wallet account", "Account holder", "Date", "Type", "Source", "Description", "Reference", "Amount", "Running"];
     const rows = totals.enriched.map((e) => [
+      selectedEmployee.wallet_account_number,
+      selectedEmployee.name?.replace(/"/g, '""'),
       new Date(e.created_at).toISOString(),
       e.entry_type,
       e.source_category || "",
@@ -487,7 +491,7 @@ const UserStatement = () => {
               <div className="relative mt-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search..."
+                  placeholder="Name or wallet account"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9"
@@ -512,6 +516,7 @@ const UserStatement = () => {
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground truncate">{e.email}</div>
+                  <div className="text-xs font-mono text-muted-foreground">{e.wallet_account_number}</div>
                 </button>
               ))}
               {filteredEmployees.length === 0 && (
@@ -536,6 +541,7 @@ const UserStatement = () => {
                       <div>
                         <CardTitle>{selectedEmployee.name}</CardTitle>
                         <p className="text-sm text-muted-foreground">{selectedEmployee.email}</p>
+                        <p className="text-sm font-mono">Wallet account: {selectedEmployee.wallet_account_number}</p>
                         <Badge variant="outline" className="mt-2">{selectedEmployee.department}</Badge>
                       </div>
                       <div className="flex gap-2">
@@ -554,6 +560,7 @@ const UserStatement = () => {
                                 `We have reviewed your wallet statement following your inquiry about the negative balances appearing in your transaction history.`,
                                 ``,
                                 `SUMMARY OF YOUR ACCOUNT`,
+                                `- Wallet account: ${selectedEmployee.wallet_account_number}`,
                                 `- Total Credits: ${fmt(totals.credits)}`,
                                 `- Total Debits: ${fmt(totals.debits)}`,
                                 `- Current Net Balance: ${fmt(totals.net)}`,

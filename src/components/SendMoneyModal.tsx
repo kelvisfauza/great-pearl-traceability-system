@@ -15,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
 import { AlertTriangle } from 'lucide-react';
 import { withdrawalServiceCharge } from '@/lib/withdrawalServiceCharge';
+import { filterWalletRecipients, WalletRecipient } from '@/lib/walletAccounts';
+import { WalletAccountIdentity } from './WalletAccountIdentity';
 
 interface SendMoneyModalProps {
   open: boolean;
@@ -38,7 +40,10 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   const EMPLOYEE_CAP_RESTRICTED = 50000;
   const [tab, setTab] = useState<'employee' | 'mobile'>('employee');
   // Employee transfer state
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<WalletRecipient[]>([]);
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const [recipientError, setRecipientError] = useState('');
+  const [recipientsLoading, setRecipientsLoading] = useState(false);
   const [recipientId, setRecipientId] = useState('');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -56,6 +61,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   useEffect(() => {
     if (!open) return;
     setRecipientId('');
+    setRecipientSearch('');
     setAmount('');
     setMobilePhone('');
     setMobileAmount('');
@@ -66,8 +72,12 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
     setOverdraftConfirmedMobile(false);
     setTab(restricted ? 'employee' : 'employee');
     const fetchEmployees = async () => {
-      const { data } = await supabase.rpc('get_guarantor_candidates');
+      setRecipientsLoading(true);
+      setRecipientError('');
+      const { data, error } = await supabase.rpc('get_wallet_transfer_recipients');
+      if (error) { setEmployees([]); setRecipientError('Could not load wallet recipients. Close and reopen to retry.'); setRecipientsLoading(false); return; }
       setEmployees((data || []).filter(e => e.email !== (employee?.email || user?.email)));
+      setRecipientsLoading(false);
     };
     fetchEmployees();
   }, [open, employee?.email, user?.email, restricted]);
@@ -197,7 +207,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
       });
 
       setTxRef(ref);
-      setSuccessMessage(`UGX ${parsedAmount.toLocaleString()} sent to ${selectedRecipient.name}`);
+      setSuccessMessage(`UGX ${parsedAmount.toLocaleString()} sent to ${selectedRecipient.name} · ${selectedRecipient.wallet_account_number}`);
       setSuccess(true);
       toast({
         title: 'Money Sent Successfully!',
@@ -329,6 +339,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
+            <WalletAccountIdentity />
             <Card className="bg-muted/50">
               <CardContent className="p-4">
                 <div className="flex justify-between text-sm">
@@ -372,17 +383,19 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
               <TabsContent value="employee" className="space-y-4 mt-4">
                 <div>
                   <Label>Recipient</Label>
+                  <Input aria-label="Search wallet recipient" placeholder="Search name or wallet account number" value={recipientSearch} onChange={e => setRecipientSearch(e.target.value)} className="mb-2" />
+                  {recipientError && <p role="alert" className="text-sm text-destructive mb-2">{recipientError}</p>}
                   <Select value={recipientId} onValueChange={setRecipientId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select employee to send to" />
+                      <SelectValue placeholder={recipientsLoading ? 'Loading wallet recipients…' : 'Select employee to send to'} />
                     </SelectTrigger>
                     <SelectContent>
                       {employees.length === 0 && (
                         <div className="p-2 text-sm text-muted-foreground text-center">No employees found</div>
                       )}
-                      {employees.map(emp => (
+                      {filterWalletRecipients(employees, recipientSearch).map(emp => (
                         <SelectItem key={emp.id} value={emp.id}>
-                          {emp.name} — {emp.email}
+                          {emp.name} — {emp.wallet_account_number}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -408,7 +421,8 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                   <Card className="border-primary/30 bg-primary/5">
                     <CardContent className="p-3 text-sm space-y-1">
                       <div className="flex justify-between"><span>Sending:</span><span className="font-semibold">UGX {parsedAmount.toLocaleString()}</span></div>
-                      <div className="flex justify-between"><span>To:</span><span className="font-semibold">{selectedRecipient.name}</span></div>
+                      <div className="flex justify-between gap-2"><span>To:</span><span className="font-semibold text-right break-words">{selectedRecipient.name}</span></div>
+                      <div className="flex justify-between gap-2"><span>Wallet account:</span><span className="font-mono">{selectedRecipient.wallet_account_number}</span></div>
                       {employeeOdPortion > 0 && (
                         <>
                           <div className="flex justify-between text-muted-foreground"><span>From wallet:</span><span>UGX {Math.min(parsedAmount, walletOnly).toLocaleString()}</span></div>

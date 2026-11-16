@@ -1,5 +1,10 @@
 # Roadmap
 
+## Wallet account numbers
+- [ ] Assign immutable unique numbers to existing and future employee wallets without changing ledger identities or balances.
+- [ ] Show names and numbers in wallets, transfers, statements and administrator support views; enable number search.
+- [ ] Test number allocation, immutability and access; verify available UI flows.
+
 ## Kelvis email and Benson withdrawal correction
 - [x] Correct Kelvis Fauza's sign-in and employee email to kelvisfauza@gmail.com without changing account identity; Auth API succeeded and device email synchronized, unauthenticated correction rejected.
 - [x] Screenshot identified Admin wallet operations: cancelled the failed unpaid 17:22 attempt after verifying no ledger/gateway activity and the matching completed 17:23 payment. Recorded cancellation audit; successful UGX 10,000 payout and fees untouched, no money resent/refunded. Signed-in queue rendering remains unverified on external Supabase.
