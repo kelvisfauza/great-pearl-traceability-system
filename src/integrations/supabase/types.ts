@@ -18532,6 +18532,16 @@ export type Database = {
         Args: { p_coffee_record_id: string }
         Returns: Json
       }
+      erp_employee_directory: { Args: { p_access?: boolean }; Returns: Json }
+      erp_update_employee_access: {
+        Args: {
+          p_employee_id: string
+          p_expected_updated_at: string
+          p_permissions: string[]
+          p_role: string
+        }
+        Returns: Json
+      }
       expire_old_bookings: { Args: never; Returns: undefined }
       finalize_bank_deposit_request: {
         Args: { p_payment_reference?: string; p_request_id: string }
