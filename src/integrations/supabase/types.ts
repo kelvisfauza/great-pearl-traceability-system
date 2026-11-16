@@ -3777,6 +3777,58 @@ export type Database = {
         }
         Relationships: []
       }
+      erp_admin_account_events: {
+        Row: {
+          action: string
+          actor_email: string
+          actor_user_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          action: string
+          actor_email: string
+          actor_user_id: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          reason: string
+        }
+        Update: {
+          action?: string
+          actor_email?: string
+          actor_user_id?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_admin_account_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_admin_account_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_admin_account_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eudr_batch_sales: {
         Row: {
           attached_by: string
@@ -18537,6 +18589,19 @@ export type Database = {
         Returns: Json
       }
       erp_employee_directory: { Args: { p_access?: boolean }; Returns: Json }
+      erp_eudr_action: {
+        Args: { p_action: string; p_data: Json }
+        Returns: Json
+      }
+      erp_set_employee_enabled: {
+        Args: {
+          p_employee_id: string
+          p_enabled: boolean
+          p_expected_updated_at: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       erp_update_employee_access: {
         Args: {
           p_employee_id: string
