@@ -1,5 +1,10 @@
 # Roadmap
 
+## Business-loan evaluation checks
+- [x] Evaluate paginated saved wallet transactions and completed calendar-month tenure; block missing/future joining dates, absent transaction evidence and negative wallets. Debt/history read failures stop evaluation rather than imply clean history.
+- [x] Preserve approval stages and product ceilings; retain existing risk reductions in the saved business maximum and enforce them after AI. Joining date and transaction totals appear in the evaluation and printed report. Six evidence-rule tests passed; function deployed and preview build clean; no funds moved.
+- [ ] Verify real signed-in business-loan evaluation — external unmanaged Supabase supplies no automated staff session; live applicant evaluation remains unverified.
+
 ## Wallet account numbers
 - [x] Display the signed-in user's name and large, copyable account number at the top of My Vault, even while the balance vault is locked; retain identity in other wallet views.
 - [x] Assign immutable unique numbers to all 26 existing employee wallets and future wallets without changing ledger identities or balances.

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireStaff } from "../_shared/internal-auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { accountEvidence, employmentEvidence, enforceBusinessVerdict } from "../_shared/business-account-evidence.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,7 +35,7 @@ serve(async (req) => {
     // Employee
     const { data: emp } = await supabase
       .from("employees")
-      .select("id, name, email, salary, join_date, auth_user_id")
+      .select("id, name, email, salary, join_date, auth_user_id, created_at, wallet_account_number")
       .eq("email", employee_email)
       .single();
     if (!emp) {
@@ -70,13 +71,25 @@ serve(async (req) => {
     // Unified id
     const { data: unifiedId } = await supabase.rpc("get_unified_user_id", { input_email: employee_email });
     const userId = unifiedId || emp.auth_user_id;
+    if (!userId) throw new Error("Wallet identity could not be verified. Please contact HR before evaluating.");
+
+    // Read all evidence pages; an unreadable history is not a clean history.
+    async function readAll(buildQuery: () => any) {
+      const rows: any[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await buildQuery().range(offset, offset + 499);
+        if (error) throw new Error("Account history could not be verified. Please retry the evaluation.");
+        rows.push(...(data || []));
+        if ((data || []).length < 500) return rows;
+      }
+    }
 
     // Loan history
-    const { data: loanHistory } = await supabase
+    const loanHistory = await readAll(() => supabase
       .from("loans")
-      .select("id, loan_amount, remaining_balance, status, duration_months, paid_amount, total_repayable, created_at, is_defaulted, guarantor_email")
+      .select("id, loan_amount, remaining_balance, status, duration_months, paid_amount, total_repayable, created_at, is_defaulted, guarantor_email, loan_type, missed_installments, penalty_amount")
       .eq("employee_email", employee_email)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }).order("id"));
     const loans = loanHistory || [];
     const completed = loans.filter((l: any) => l.status === "completed").length;
     // Only TRUE defaults count as hard denials. "overdue" is treated as a risk factor, not an auto-deny.
@@ -92,10 +105,10 @@ serve(async (req) => {
     const loanIds = loans.map((l: any) => l.id);
     let repayOnTime = 0, repayLate = 0, repayOverdueOpen = 0, totalRepaymentPenalty = 0;
     if (loanIds.length) {
-      const { data: schedule } = await supabase
+      const schedule = await readAll(() => supabase
         .from("loan_repayments")
         .select("status, due_date, paid_date, overdue_days, penalty_applied")
-        .in("loan_id", loanIds);
+        .in("loan_id", loanIds).order("id"));
       for (const r of (schedule || []) as any[]) {
         totalRepaymentPenalty += Number(r.penalty_applied || 0);
         if (r.status === 'paid') {
@@ -110,11 +123,12 @@ serve(async (req) => {
     const onTimeRatio = totalPaidInstallments > 0 ? repayOnTime / totalPaidInstallments : 1;
 
     // Overdraft posture
-    const { data: overdraft } = await supabase
+    const { data: overdraft, error: overdraftError } = await supabase
       .from("overdraft_accounts")
       .select("status, outstanding_balance, approved_limit, frozen, first_negative_at, total_recovered, total_drawn")
       .eq("employee_email", employee_email)
       .maybeSingle();
+    if (overdraftError) throw new Error("Overdraft history could not be verified. Please retry.");
     const overdraftActive = !!overdraft && overdraft.status === 'active';
     const overdraftOutstanding = Number(overdraft?.outstanding_balance || 0);
     const overdraftFrozen = !!overdraft?.frozen;
@@ -123,19 +137,19 @@ serve(async (req) => {
       : 0;
 
     // Salary advances (active / outstanding)
-    const { data: salAdv } = await supabase
+    const salAdv = await readAll(() => supabase
       .from("employee_salary_advances")
       .select("status, remaining_balance, original_amount")
-      .eq("employee_email", employee_email);
+      .eq("employee_email", employee_email).order("id"));
     const activeSalAdv = (salAdv || []).filter((s: any) => ['active','pending','approved'].includes(s.status));
     const salaryAdvanceOutstanding = activeSalAdv.reduce((s: number, a: any) => s + Number(a.remaining_balance || a.original_amount || 0), 0);
 
     // Guarantor defaults — instances where THIS user's loan caused their guarantor's wallet to be debited
-    const { data: guarantorDeducts } = await supabase
+    const guarantorDeducts = await readAll(() => supabase
       .from("ledger_entries")
       .select("amount, reference, metadata, created_at")
       .like("reference", "LOAN-GUARANTOR-%")
-      .lt("amount", 0);
+      .lt("amount", 0).order("id"));
     const myLoanIds = new Set(loans.map((l: any) => String(l.id)));
     const guarantorHits = (guarantorDeducts || []).filter((e: any) => {
       // reference format: LOAN-GUARANTOR-<loanId>-<n>
@@ -146,21 +160,21 @@ serve(async (req) => {
     const guarantorDefaultAmount = guarantorHits.reduce((s: number, e: any) => s + Math.abs(Number(e.amount)), 0);
 
     // Times the borrower acted as GUARANTOR for others and was debited (signal of poor judgement / risky circle)
-    const { data: actedAsGuarantor } = await supabase
+    const actedAsGuarantor = await readAll(() => supabase
       .from("ledger_entries")
       .select("amount, reference")
       .eq("user_id", userId)
       .like("reference", "LOAN-GUARANTOR-%")
-      .lt("amount", 0);
+      .lt("amount", 0).order("id"));
     const timesDebitedAsGuarantor = (actedAsGuarantor || []).length;
 
     // Full guarantor portfolio — every loan where THIS employee stood as guarantor.
     // We measure: total guaranteed, still-active exposure, completed cleanly,
     // and how many of THEIR guaranteed loans went bad or overdue.
-    const { data: guaranteedLoans } = await supabase
+    const guaranteedLoans = await readAll(() => supabase
       .from("loans")
       .select("id, loan_amount, remaining_balance, status, is_defaulted, employee_email")
-      .eq("guarantor_email", employee_email);
+      .eq("guarantor_email", employee_email).order("id"));
     const guarList = guaranteedLoans || [];
     const guaranteedActive = guarList.filter((l: any) => ["active", "pending_guarantor", "pending_admin"].includes(l.status));
     const guaranteedActiveCount = guaranteedActive.length;
@@ -178,24 +192,34 @@ serve(async (req) => {
 
     // Wallet snapshot — use server-side RPC to avoid the 1000-row PostgREST cap
     // that silently truncated the ledger sum for high-volume users.
-    const { data: walletBalRaw } = await supabase.rpc("get_effective_wallet_balance", { p_user_id: userId });
+    const { data: walletBalRaw, error: walletError } = await supabase.rpc("get_effective_wallet_balance", { p_user_id: userId });
+    if (walletError || walletBalRaw === null || !Number.isFinite(Number(walletBalRaw))) {
+      throw new Error("Wallet balance could not be verified. Please retry the evaluation.");
+    }
     const walletBalance = Number(walletBalRaw ?? 0);
 
     // Repayment quality (last 6 months)
     const sixMo = new Date(); sixMo.setMonth(sixMo.getMonth() - 6);
-    const { data: repays } = await supabase
+    const repays = await readAll(() => supabase
       .from("ledger_entries")
       .select("amount, reference, created_at")
       .eq("user_id", userId)
       .like("reference", "LOAN-REPAY%")
-      .gte("created_at", sixMo.toISOString());
+      .gte("created_at", sixMo.toISOString()).order("created_at").order("id"));
     const repayCount = (repays || []).length;
     const repayTotal = (repays || []).reduce((s: number, e: any) => s + Math.abs(Number(e.amount)), 0);
 
     // Tenure
-    const tenureMonths = emp.join_date
-      ? Math.max(1, Math.round((Date.now() - new Date(emp.join_date).getTime()) / (30.44 * 86400000)))
-      : 1;
+    const evaluatedAt = new Date();
+    const tenureMonths = isBusinessLoan
+      ? employmentEvidence(emp.join_date, evaluatedAt).tenure_months
+      : emp.join_date ? Math.max(1, Math.round((Date.now() - new Date(emp.join_date).getTime()) / (30.44 * 86400000))) : 1;
+    const walletTransactions = isBusinessLoan ? await readAll(() => supabase
+      .from("ledger_entries").select("amount, source_category, reference, created_at")
+      .eq("user_id", String(userId)).gte("created_at", sixMo.toISOString())
+      .lte("created_at", evaluatedAt.toISOString()).order("created_at").order("id")) : [];
+    const businessAccount = isBusinessLoan
+      ? accountEvidence(walletTransactions, walletBalance, emp.join_date, evaluatedAt) : null;
 
     const requested = Number(requested_amount || 0);
 
@@ -218,21 +242,22 @@ serve(async (req) => {
       const gUserId = gUid || gEmp.auth_user_id;
       let gWallet = 0;
       if (gUserId) {
-        const { data: gBal } = await supabase.rpc("get_effective_wallet_balance", { p_user_id: gUserId });
-        gWallet = Number(gBal ?? 0);
+        const { data: gBal, error: gBalanceError } = await supabase.rpc("get_effective_wallet_balance", { p_user_id: gUserId });
+        if (gBalanceError || gBal === null) throw new Error("Guarantor wallet could not be verified. Please retry.");
+        gWallet = Number(gBal);
       }
-      const { data: gGuaranteed } = await supabase
+      const gGuaranteed = await readAll(() => supabase
         .from("loans")
         .select("id, loan_amount, remaining_balance, status, is_defaulted")
-        .eq("guarantor_email", gEmail);
+        .eq("guarantor_email", gEmail).order("id"));
       const gList = gGuaranteed || [];
       const gActive = gList.filter((l: any) => ["active", "pending_guarantor", "pending_admin"].includes(l.status));
       const gExposure = gActive.reduce((s: number, l: any) => s + Number(l.remaining_balance || l.loan_amount || 0), 0);
       const gBadGuarantees = gList.filter((l: any) => l.is_defaulted === true || l.status === "defaulted").length;
-      const { data: gOwn } = await supabase
+      const gOwn = await readAll(() => supabase
         .from("loans")
         .select("id, remaining_balance, loan_amount, status, is_defaulted")
-        .eq("employee_email", gEmail);
+        .eq("employee_email", gEmail).order("id"));
       const gOwnList = gOwn || [];
       const gOwnDefaults = gOwnList.filter((l: any) => l.is_defaulted === true || l.status === "defaulted").length;
       const gOwnOverdue = gOwnList.filter((l: any) => l.status === "overdue").length;
@@ -243,11 +268,11 @@ serve(async (req) => {
       // Has this guarantor ever been debited because someone they backed failed?
       let gRecoveryHits = 0;
       if (gUserId) {
-        const { data: gRec } = await supabase
+        const gRec = await readAll(() => supabase
           .from("ledger_entries")
           .select("id")
           .eq("user_id", String(gUserId))
-          .like("reference", "LOAN-GUARANTOR-%");
+          .like("reference", "LOAN-GUARANTOR-%").order("id"));
         gRecoveryHits = (gRec || []).length;
       }
 
@@ -291,7 +316,8 @@ serve(async (req) => {
     // not undercut the other loan products for everyone.
     let businessDenyReason: string | null = null;
     if (isBusinessLoan) {
-      if (tenureMonths < 6) businessDenyReason = `Tenure ${tenureMonths} month(s) — business loans require at least 6 months of employment`;
+      if (businessAccount?.blocking_reasons.length) businessDenyReason = businessAccount.blocking_reasons.join("; ");
+      else if (tenureMonths < 6) businessDenyReason = `Tenure ${tenureMonths} month(s) — business loans require at least 6 months of employment`;
       else if (completed < 1) businessDenyReason = "No completed loan on record — must successfully finish a smaller loan first";
       else if (defaulted > 0) businessDenyReason = "Prior default on record";
       else if (debtToSalaryRatio >= 2) businessDenyReason = `Debt-to-salary ratio ${debtToSalaryRatio.toFixed(2)}× — too leveraged for a business facility`;
@@ -476,11 +502,11 @@ serve(async (req) => {
     }
     if (hasActive && fallbackDecision !== "deny") {
       fallbackDecision = "top_up";
-      fallbackAmount = Math.max(0, maxLimit - outstanding);
+      fallbackAmount = Math.max(0, (isBusinessLoan ? fallbackAmount : maxLimit) - outstanding);
       fallbackFactors.push(`Existing active loan – top-up only (outstanding: UGX ${outstanding.toLocaleString()})`);
     }
     // Reward clean repayment history with full entitlement
-    if (completed >= 1 && defaulted === 0 && guarantorDefaultCount === 0 && fallbackDecision === "approve") {
+    if (!isBusinessLoan && completed >= 1 && defaulted === 0 && guarantorDefaultCount === 0 && fallbackDecision === "approve") {
       fallbackAmount = maxLimit;
       fallbackFactors.push(
         isBusinessLoan
@@ -510,6 +536,9 @@ serve(async (req) => {
         fallbackAmount = 0;
         fallbackFactors.push("One of the guarantors cannot carry this loan (no capacity or bad record)");
       }
+      // The saved enforceable ceiling must retain all deterministic reductions.
+      maxLimit = Math.max(0, Math.min(maxLimit, fallbackAmount));
+      fallbackFactors.push(...(businessAccount?.blocking_reasons || []));
     }
 
     let decision = fallbackDecision;
@@ -544,6 +573,10 @@ EMPLOYEE
 - Monthly Salary (UGX): ${salary}
 - Tenure (months): ${tenureMonths}
 - Wallet balance (UGX): ${walletBalance.toFixed(0)}
+${businessAccount ? `- Joining date (verified employee record): ${businessAccount.join_date || "UNVERIFIED"}
+- Wallet evidence over the last 6 months: ${JSON.stringify(businessAccount)}
+- Loan disbursements and internal transfers are NOT proof of business income. Do not infer business turnover from wallet credits.
+- Deterministic decision: ${fallbackDecision}; this cannot be relaxed by AI.` : ""}
 
 LOAN HISTORY
 - Completed loans: ${completed}
@@ -684,6 +717,12 @@ Return only JSON via the tool call.`;
         if (businessDenyReason) factors = [businessDenyReason, ...factors].filter(Boolean).slice(0, 6);
       }
       recommendedAmount = Math.min(recommendedAmount, guarantorCapacityTotal);
+      const enforced = enforceBusinessVerdict(decision, recommendedAmount, maxLimit,
+        fallbackDecision === "deny" ? fallbackFactors : businessAccount?.blocking_reasons || []);
+      decision = enforced.decision as typeof decision;
+      recommendedAmount = enforced.amount;
+      maxLimit = enforced.limit;
+      factors = [...new Set([...fallbackFactors, ...factors])];
     }
 
     // Persist report
@@ -706,6 +745,12 @@ Return only JSON via the tool call.`;
           active_loans: active.length,
           outstanding,
           tenure_months: tenureMonths,
+          ...(businessAccount ? {
+            employment_join_date: businessAccount.join_date,
+            employee_record_created_at: emp.created_at,
+            wallet_account_number: emp.wallet_account_number,
+            account_transactions_6mo: businessAccount,
+          } : {}),
           wallet_balance: walletBalance,
           repayments_6mo_count: repayCount,
           repayments_6mo_total: repayTotal,

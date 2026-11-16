@@ -767,15 +767,16 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
         <tr><th>Email</th><td>${r.employee_email}</td></tr>
         <tr><th>Monthly Salary</th><td>UGX ${Number(r.salary).toLocaleString()}</td></tr>
         <tr><th>Tenure</th><td>${h.tenure_months || 0} month(s)</td></tr>
+        ${h.account_transactions_6mo ? `<tr><th>Company joining date</th><td>${h.employment_join_date ? new Date(h.employment_join_date).toLocaleDateString() : 'Not verified'}</td></tr>` : ''}
       </table>
 
       <div class="verdict ${r.decision}">VERDICT: ${r.decision === 'approve' ? 'APPROVED' : r.decision === 'top_up' ? 'TOP-UP RECOMMENDED' : 'DENIED'}</div>
 
       <h2>Evaluation Result</h2>
       <table>
-        <tr><th>Maximum Limit (3× salary)</th><td>UGX ${Number(r.max_limit).toLocaleString()}</td></tr>
+        <tr><th>Maximum Limit</th><td>UGX ${Number(r.max_limit).toLocaleString()}</td></tr>
         <tr><th>Recommended Amount</th><td><strong>UGX ${Number(r.recommended_amount).toLocaleString()}</strong></td></tr>
-        <tr><th>Recommended Loan Type</th><td>${r.recommended_loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan'}</td></tr>
+        <tr><th>Recommended Loan Type</th><td>${r.recommended_loan_type === 'business' ? 'Employee Business Loan' : r.recommended_loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan'}</td></tr>
         <tr><th>Recommended Duration</th><td>${r.recommended_duration_months} month(s)</td></tr>
         <tr><th>Risk Score</th><td>${r.risk_score}/100</td></tr>
       </table>
@@ -791,6 +792,14 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
       </table>
 
       <h2>Factors Considered</h2>
+      ${h.account_transactions_6mo ? `<h2>Wallet activity — last six months</h2><table>
+        <tr><th>Transactions checked</th><td>${Number(h.account_transactions_6mo.transaction_count)}</td></tr>
+        <tr><th>Months with activity</th><td>${Number(h.account_transactions_6mo.active_months)}</td></tr>
+        <tr><th>Money received</th><td>UGX ${Number(h.account_transactions_6mo.credits).toLocaleString()}</td></tr>
+        <tr><th>Money taken out</th><td>UGX ${Number(h.account_transactions_6mo.debits).toLocaleString()}</td></tr>
+        <tr><th>Recorded salary credits</th><td>UGX ${Number(h.account_transactions_6mo.salary_credits).toLocaleString()}</td></tr>
+        <tr><th>Loan credits (not business income)</th><td>UGX ${Number(h.account_transactions_6mo.loan_disbursement_credits).toLocaleString()}</td></tr>
+      </table>` : ''}
       <ul class="factors">${(r.factors || []).map((f: string) => `<li>${f}</li>`).join('')}</ul>
 
       <h2>Evaluation Fee</h2>
@@ -2464,14 +2473,22 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
                         </div>
                         <div className="flex justify-between"><span>Maximum Limit:</span><span className="font-semibold">UGX {Number(evaluation.max_limit).toLocaleString()}</span></div>
                         <div className="flex justify-between"><span>Recommended Amount:</span><span className="font-semibold">UGX {Number(evaluation.recommended_amount).toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span>Recommended Type:</span><span>{evaluation.recommended_loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</span></div>
+                        <div className="flex justify-between"><span>Recommended Type:</span><span>{evaluation.recommended_loan_type === 'business' ? 'Employee Business' : evaluation.recommended_loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</span></div>
+                        {evaluation.history_summary?.account_transactions_6mo && (
+                          <dl className="grid grid-cols-1 gap-2 border-t pt-2 text-xs sm:grid-cols-2">
+                            <div><dt className="text-muted-foreground">Company joining date</dt><dd>{evaluation.history_summary.employment_join_date ? new Date(evaluation.history_summary.employment_join_date).toLocaleDateString() : 'Not verified'}</dd></div>
+                            <div><dt className="text-muted-foreground">Completed employment months</dt><dd>{evaluation.history_summary.tenure_months}</dd></div>
+                            <div><dt className="text-muted-foreground">Wallet transactions · last 6 months</dt><dd>{evaluation.history_summary.account_transactions_6mo.transaction_count}</dd></div>
+                            <div><dt className="text-muted-foreground">Money received / taken out</dt><dd>UGX {Number(evaluation.history_summary.account_transactions_6mo.credits).toLocaleString()} / {Number(evaluation.history_summary.account_transactions_6mo.debits).toLocaleString()}</dd></div>
+                          </dl>
+                        )}
                         <p className="text-[11px] text-muted-foreground italic">
                           The recommended amount is a suggestion. You may request any amount up to your maximum limit of UGX {Number(evaluation.max_limit).toLocaleString()}.
                         </p>
                         <div className="text-xs text-muted-foreground border-t pt-2">
                           <strong>Factors:</strong>
                           <ul className="list-disc pl-4 mt-1">
-                            {(evaluation.factors || []).slice(0, 4).map((f: string, i: number) => <li key={i}>{f}</li>)}
+                            {(evaluation.factors || []).map((f: string, i: number) => <li key={i}>{f}</li>)}
                           </ul>
                         </div>
                         <div className="flex gap-2 pt-2">
