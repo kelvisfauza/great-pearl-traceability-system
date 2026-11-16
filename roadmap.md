@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Wallet account numbers
+- [x] Display the signed-in user's name and large, copyable account number at the top of My Vault, even while the balance vault is locked; retain identity in other wallet views.
 - [x] Assign immutable unique numbers to all 26 existing employee wallets and future wallets without changing ledger identities or balances.
 - [x] Show names and numbers in wallets, transfer selection/confirmation, printed/PDF/CSV statements, HR balances and administrator support views; enable number search in transfers and account directories.
 - [x] Recipient search test and rollback-only database checks passed for coverage, uniqueness, automatic assignment, immutable numbers and denied anonymous lookup; preview build clean. No test employee retained or funds moved.

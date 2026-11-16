@@ -48,7 +48,7 @@ const parseLedgerMetadata = (metadata: unknown) => {
   return metadata;
 };
 
-export const AccountButton = () => {
+export const AccountButton = ({ showIdentity = true }: { showIdentity?: boolean }) => {
   const { account, moneyRequests, withdrawalRequests, loading } = useUserAccount();
   const { stats, loading: statsLoading } = useLoyaltyStats();
   const { bonusData } = useBonusBalance();
@@ -360,7 +360,7 @@ export const AccountButton = () => {
 
   const panelContent = (
           <div className="mt-2 space-y-5">
-            <WalletAccountIdentity />
+            {showIdentity && <WalletAccountIdentity />}
             {/* Balance Card */}
             <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
               <CardHeader className="pb-2">

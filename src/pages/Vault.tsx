@@ -6,6 +6,7 @@ import { AccountButton as WalletPanel } from '@/components/AccountButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useVaultLock } from '@/hooks/useVaultLock';
+import { WalletAccountIdentity } from '@/components/WalletAccountIdentity';
 import { Landmark, HandCoins, CreditCard, Lock, ShieldCheck } from 'lucide-react';
 
 const SHORTCUTS = [
@@ -52,7 +53,7 @@ const VaultInner = () => {
       </div>
 
       <div className="card-modern p-5">
-        <WalletPanel />
+        <WalletPanel showIdentity={false} />
       </div>
     </div>
   );
@@ -60,6 +61,9 @@ const VaultInner = () => {
 
 const Vault = () => (
   <DashboardLayout title="My Vault" subtitle="Wallet, loans, advances and savings — all in one protected place">
+    <div className="mb-5">
+      <WalletAccountIdentity />
+    </div>
     <VaultGate>
       <VaultInner />
     </VaultGate>
