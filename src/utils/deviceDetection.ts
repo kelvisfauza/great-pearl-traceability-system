@@ -65,6 +65,27 @@ export const generateDeviceFingerprint = (): string => {
   }
 };
 
+/**
+ * Version-free hardware signature: survives browser updates and a lost saved ID
+ * (cleared site data, different web address), so a known device is still recognised.
+ */
+export const generateHardwareSignature = (): string => {
+  try {
+    const { browser, os } = parseUserAgent(navigator.userAgent);
+    const [a, b] = [screen.width, screen.height].sort((x, y) => x - y);
+    const parts = [
+      os, browser, `${a}x${b}`, screen.colorDepth, window.devicePixelRatio || 1,
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+      navigator.hardwareConcurrency || 'u', (navigator as any).deviceMemory || 'u',
+      navigator.maxTouchPoints || 0, (navigator as any).platform || '',
+    ];
+    let hash = 0;
+    const str = parts.join('|');
+    for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; }
+    return 'hw-' + Math.abs(hash).toString(36);
+  } catch { return ''; }
+};
+
 /** Move an old hash-based record onto the stable ID so trusted devices stay trusted. */
 const adoptLegacyRecord = async (userEmail: string, stableId: string) => {
   const legacy = generateLegacyFingerprint();
@@ -220,20 +241,38 @@ export const checkDeviceTrust = async (
       supabase.from('device_sessions').update(details).eq('id', rowId)
     ).catch(() => null);
   await adoptLegacyRecord(userEmail, fingerprint).catch(() => null);
+  const hw = generateHardwareSignature();
 
   // Check if this device is already trusted
-  const { data: existing } = await supabase
+  let { data: existing } = await supabase
     .from('device_sessions')
     .select('id, is_trusted, rejected_at')
     .eq('user_email', userEmail)
     .eq('device_fingerprint', fingerprint)
     .maybeSingle();
 
+  // Saved ID lost? Recognise a trusted device by its hardware signature and re-attach the new ID.
+  if (!existing && hw) {
+    const { data: hwMatch } = await supabase
+      .from('device_sessions')
+      .select('id, is_trusted, rejected_at')
+      .eq('user_email', userEmail)
+      .eq('hardware_signature', hw)
+      .eq('is_trusted', true)
+      .order('last_seen_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (hwMatch) {
+      await supabase.from('device_sessions').update({ device_fingerprint: fingerprint }).eq('id', hwMatch.id);
+      existing = hwMatch;
+    }
+  }
+
   if (existing?.is_trusted) {
     // Update last_seen now; refresh device details (model, OS version, location) in the background
     await supabase
       .from('device_sessions')
-      .update({ last_seen_at: new Date().toISOString() })
+      .update({ last_seen_at: new Date().toISOString(), ...(hw ? { hardware_signature: hw } : {}) } as any)
       .eq('id', existing.id);
     applyDetails(existing.id);
     return { trusted: true };
@@ -268,6 +307,7 @@ export const checkDeviceTrust = async (
       user_email: userEmail,
       auth_user_id: authUserId || null,
       device_fingerprint: fingerprint,
+      hardware_signature: hw || null,
       user_agent: navigator.userAgent.substring(0, 500),
       browser,
       os,
@@ -349,6 +389,7 @@ export const trustFirstDevice = async (userEmail: string, authUserId?: string) =
       user_email: userEmail,
       auth_user_id: authUserId || null,
       device_fingerprint: fingerprint,
+      hardware_signature: generateHardwareSignature() || null,
       user_agent: navigator.userAgent.substring(0, 500),
       browser,
       os,
