@@ -91,6 +91,8 @@ class GlobalErrorCaptureService {
       const subject = `[Daily Error Digest] ${who}: ${groups.size} kind(s) of problem — ${todayKey}`;
       const idem = `client-digest-${todayKey}-${this.userContext.email || 'anon'}`;
 
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess?.session) return; // signed out: email needs a staff session
       for (const recipient of RECIPIENTS) {
         try {
           await supabase.functions.invoke('send-transactional-email', {

@@ -308,6 +308,9 @@ export const sendNewDeviceAlertEmail = async (
     timeZone: 'Africa/Kampala'
   });
 
+  const { data: sess } = await supabase.auth.getSession();
+  if (!sess?.session) return; // email requires a signed-in staff session
+
   try {
     await supabase.functions.invoke('send-transactional-email', {
       body: {
