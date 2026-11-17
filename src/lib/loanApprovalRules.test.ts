@@ -29,4 +29,7 @@ test('unsigned or declined revised terms prevent approval', () => {
 test('completed, guarantor-pending and already approved loans cannot be approved again', () => {
   for (const status of ['active', 'completed', 'pending_guarantor', 'revision_pending_signature']) assert.ok(loanApprovalBlock({ ...loan, status }, 'reviewer@example.com', true));
   assert.ok(loanApprovalBlock({ ...loan, admin_approved: true }, 'reviewer@example.com', true));
+});test('a business loan top-up goes through with one guarantor', () => {
+  assert.equal(loanApprovalBlock({ ...loan, loan_type: 'business', is_topup: true }, 'reviewer@example.com', true), null);
+  assert.ok(loanApprovalBlock({ ...loan, loan_type: 'business', is_topup: true, guarantor_approved: false }, 'reviewer@example.com', true));
 });

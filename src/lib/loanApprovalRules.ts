@@ -10,7 +10,8 @@ export function loanApprovalBlock(loan: any, actorEmail: string | undefined, adm
   if (loan.status !== 'pending_admin' || loan.admin_approved) return 'This loan is not awaiting administrator approval.';
   const type = (loan.loan_type || 'quick') as LoanType;
   if (!['quick', 'long_term', 'business', 'pure_salary'].includes(type)) return 'The loan type needs review.';
-  const required = getGuarantorsRequired(type);
+  // Top-ups need only one guarantor, whatever the loan type.
+  const required = loan.is_topup ? Math.min(1, getGuarantorsRequired(type)) : getGuarantorsRequired(type);
   if (required >= 1 && (!loan.guarantor_email || !loan.guarantor_approved || loan.guarantor_declined || loan.guarantor_email.toLowerCase() === loan.employee_email?.toLowerCase())) return 'The required guarantor must approve first.';
   if (required >= 2 && (!loan.guarantor2_email || !loan.guarantor2_approved || loan.guarantor2_declined || [loan.employee_email, loan.guarantor_email].some(email => email?.toLowerCase() === loan.guarantor2_email.toLowerCase()))) return 'Both distinct guarantors must approve first.';
   if (!loan.terms_accepted || !loan.terms_signature?.trim()) return 'The borrower must sign the loan terms first.';
