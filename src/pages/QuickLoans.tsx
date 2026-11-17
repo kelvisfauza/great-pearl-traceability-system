@@ -86,6 +86,7 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
   const [loading, setLoading] = useState(true);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [signTermsLoan, setSignTermsLoan] = useState<any>(null);
   const [termsApplication, setTermsApplication] = useState<LoanTermsApplication | null>(null);
   const [showEarlyPayDialog, setShowEarlyPayDialog] = useState(false);
   const [selectedLoanForPayment, setSelectedLoanForPayment] = useState<any>(null);
@@ -2531,6 +2532,64 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
             </Dialog>
 
             <LoanTermsDialog
+              open={!!signTermsLoan}
+              onOpenChange={(o) => { if (!o) setSignTermsLoan(null); }}
+              submitting={submitting}
+              application={signTermsLoan && employee ? (() => {
+                const l: any = signTermsLoan;
+                const freq = l.repayment_frequency || 'monthly';
+                const inst = Number(l.weekly_installment || l.monthly_installment || 0);
+                const total = Number(l.total_repayable || 0);
+                const principal = Number(l.loan_amount || 0);
+                return {
+                  loanTypeLabel: (LOAN_TYPE_CONFIG as any)[l.loan_type]?.label || 'Loan',
+                  loanType: l.loan_type || 'quick',
+                  requestedAmount: Number(l.original_loan_amount || principal),
+                  evaluationFee: 0,
+                  principal,
+                  monthlyRate: Number(l.interest_rate || 0),
+                  dailyRate: Number(l.daily_interest_rate || 0),
+                  maxRate: (LOAN_TYPE_CONFIG as any)[l.loan_type]?.maxRate || 0,
+                  durationMonths: Number(l.duration_months || 0),
+                  frequency: freq === 'bullet' ? 'Bullet (one final payment)' : freq === 'weekly' ? 'Weekly' : 'Monthly',
+                  numInstallments: inst > 0 ? Math.ceil(total / inst) : 1,
+                  installmentAmount: inst,
+                  totalInterest: Math.max(0, total - principal),
+                  totalRepayable: total,
+                  firstRepaymentDate: getFirstRepaymentDate(new Date(), freq as RepaymentFrequency).toLocaleDateString(),
+                  borrowerName: employee.name,
+                  borrowerEmail: employee.email,
+                  borrowerPhone: (employee as any).phone || '',
+                  borrowerPosition: (employee as any).position || '',
+                  borrowerDepartment: (employee as any).department || '',
+                  borrowerSalary: Number((employee as any).salary || 0),
+                  guarantors: [l.guarantor_name ? { name: l.guarantor_name, email: l.guarantor_email, phone: l.guarantor_phone } : null, l.guarantor2_name ? { name: l.guarantor2_name, email: l.guarantor2_email, phone: l.guarantor2_phone } : null].filter(Boolean) as any,
+                } as LoanTermsApplication;
+              })() : null}
+              onAccept={async (meta) => {
+                if (!signTermsLoan) return;
+                setSubmitting(true);
+                try {
+                  const { data, error } = await supabase.from('loans').update({
+                    terms_accepted: true,
+                    terms_accepted_at: meta.acceptedAt,
+                    terms_version: meta.version,
+                    terms_signature: meta.signature,
+                  } as any).eq('id', signTermsLoan.id).eq('employee_email', employee?.email || '').select('id');
+                  if (error) throw error;
+                  if (!data || data.length === 0) throw new Error('Your signature could not be saved. Please try again.');
+                  toast({ title: 'Terms signed', description: 'An Admin can now approve your loan.' });
+                  setSignTermsLoan(null);
+                  fetchLoans();
+                } catch (err: any) {
+                  toast({ title: 'Error', description: err.message || 'Could not save signature', variant: 'destructive' });
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+            />
+
+            <LoanTermsDialog
               open={showTermsDialog}
               onOpenChange={(o) => { setShowTermsDialog(o); if (!o) setTermsApplication(null); }}
               application={termsApplication}
@@ -3084,6 +3143,26 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
                         <Eye className="mr-1 h-4 w-4" /> Review & Respond
                       </Button>
                     </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Unsigned loan terms (e.g. top-ups) — borrower signature required */}
+          {myLoans.filter(l => ['pending_guarantor', 'pending_admin'].includes(l.status) && !(l as any).terms_signature).map(loan => (
+            <Card key={`sign-${loan.id}`} className="border-primary bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <FileSignature className="h-6 w-6 text-primary mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">{(loan as any).is_topup ? 'Loan top-up' : 'Loan'} — your signature is required</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Sign the loan terms for UGX {Number(loan.loan_amount || 0).toLocaleString()} (total repayable UGX {Number(loan.total_repayable || 0).toLocaleString()}) so an Admin can approve it.
+                    </p>
+                    <Button size="sm" className="mt-3" onClick={() => setSignTermsLoan(loan)}>
+                      <Eye className="mr-1 h-4 w-4" /> Review & Sign Terms
+                    </Button>
                   </div>
                 </div>
               </CardContent>
