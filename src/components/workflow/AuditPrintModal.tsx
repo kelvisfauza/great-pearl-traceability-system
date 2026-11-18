@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Printer, X } from 'lucide-react';
 import { useDocumentVerification } from '@/hooks/useDocumentVerification';
 import { getVerificationQRUrl } from '@/utils/verificationCode';
+import { RequestAuditTimeline } from './RequestAuditTimeline';
 
 interface AuditPrintModalProps {
   open: boolean;
@@ -99,6 +100,8 @@ export const AuditPrintModal: React.FC<AuditPrintModalProps> = ({
               </div>
             )}
           </div>
+
+          <RequestAuditTimeline requestId={requestId} />
 
           {workflowData && workflowData.supplier && (
             <>
