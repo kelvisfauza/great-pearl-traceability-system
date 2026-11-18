@@ -594,7 +594,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       console.error('Error submitting withdrawal:', error);
       toast({
         title: "Error",
-        description: "Failed to submit withdrawal request. Please try again.",
+        description: (error as any)?.message || "Failed to submit withdrawal request. Please try again.",
         variant: "destructive",
       });
     } finally {
