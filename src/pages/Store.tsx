@@ -328,7 +328,7 @@ const Store = () => {
           toast.error(`Supplier "${existing.name}" already exists in the system.`);
           return;
         }
-        const linked = coffeeRecords.find((r: any) => r.id === newSupplierRecordId);
+        const linked = newSupplierRecordId ? coffeeRecords.find((r: any) => r.id === newSupplierRecordId) : undefined;
         const check = validatePendingSupplier({
           name: newSupplier.name,
           origin: newSupplier.origin,
