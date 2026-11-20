@@ -57,7 +57,7 @@
 - Issue print verification before browser printing, PDF serialization, and Word packing; resolve the employee name from the authenticated account and add a registered QR footer, reserving space rather than covering original content. Queue reprints identify the current printing employee; verification confirms issuance, not payment, approval, or later edits.
 - Resolve numbered form verification through the public verification RPC against issued-number registries with space/hyphen normalization; expose issuance-only metadata and prioritize registered verification status so existing printed forms work without revealing assessment data.
 
-- Extract Outlook lab readings into source postings; only reviewed, explicitly linked readings accompany GRNs and QR-stamped reports. Preserve original scans, saved assessments and prices; secure scheduled collection backfills legacy readings without duplicate postings.
+- Extract Outlook lab readings into source postings; reviewed linked samples print on separate QR-stamped analysis pages after each GRN's single saved-assessment summary. Preserve scans, assessments and prices; secure collection backfills legacy readings without duplicate postings.
 
 - Queue system integrity scans per changing transaction in a private schema; a wake-on-enqueue worker stops after drain so full scans cannot block assessment/delivery saves. Resolve flags only when source issues disappear; administrators claim and annotate without altering source records.
  

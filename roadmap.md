@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Outlook lab reports on GRNs
+- [x] Keep one saved-assessment summary on the GRN and print source/sample details and lab results on a separate accompanying analysis page, including bulk/queue output. Two-page browser check confirmed exact readings, unchanged prices and shared verification footer; nine regression tests passed. Real staff issuance remains blocked by external unmanaged authentication.
 - [x] Restore secure Outlook collection with incoming-mail notifications and hourly reconciliation; live HTTP 200 extracted GAC QA 2611-0114, retaining its scan and delivery link and returning new readings for review.
 - [x] Generate QR-stamped reports from reviewed linked postings; individual and bulk GRNs include separate lab readings without changing prices or assessments. GRN sample visibly checked; extraction/link and scanner tests passed, preview build clean.
 - [ ] Verify real staff review → linked report → QR issuance/GRN printing — external unmanaged Supabase has no automated staff session; source PDF issuance is wired but authenticated printing remains unverified.

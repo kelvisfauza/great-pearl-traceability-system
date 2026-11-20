@@ -779,7 +779,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
         </tr>
       </table>
 
-      <div class="gac-grn-quality-caption">Quality Analysis: (Electronic quality summary attached below)</div>
+      <div class="gac-grn-quality-caption">Quality summary — saved purchase assessment</div>
 
       <table class="gac-grn-quality-table">
         <thead>
@@ -799,15 +799,6 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
           `).join("")}
         </tbody>
       </table>
-
-      ${(data.labReports || []).map(p => `
-        <div class="gac-grn-quality-caption">OUTLOOK LAB RESULTS · ${escapeHtml(p.form_number || 'Lab report')} · ${escapeHtml(p.analysis_date || '')} · ${escapeHtml(p.sender_name || p.sender_email || '')}</div>
-        <table class="gac-grn-quality-table"><tbody>${labRows(p).reduce<string[]>((rows, [label, value], index, all) => {
-          if (index % 2 === 0) rows.push(`<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td><td>${escapeHtml(all[index + 1]?.[0] || '')}</td><td>${escapeHtml(all[index + 1]?.[1] || '')}</td></tr>`);
-          return rows;
-        }, []).join('')}</tbody></table>
-        ${p.lab_results?.comments ? `<div class="gac-grn-note">Lab comments: ${escapeHtml(String(p.lab_results.comments))}</div>` : ''}
-      `).join('')}
 
       ${data.calculatorComments ? `
         <div style="margin-top:8px;font-size:10px;">
@@ -905,9 +896,47 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
   `;
 }
 
+/** Each source sample gets its own analysis page; purchase figures never get overwritten by lab scans. */
+export function getGRNAnalysisMarkup(data: GRNDocumentData): string {
+  const reports: LabPosting[] = data.labReports?.length ? data.labReports : [{
+    id: data.batchNumber || data.grnNumber,
+    status: 'saved_assessment',
+    analysis_date: data.assessmentDate,
+    lab_results: {
+      moisture: data.moisture, group1_defects: data.group1_defects, group2_defects: data.group2_defects,
+      below12: data.below12, pods: data.pods, husks: data.husks, stones: data.stones, outturn: data.outturn,
+      physical_assessment_by: data.physicalAssessmentBy, comments: data.calculatorComments,
+    },
+  }];
+  return reports.map(p => `
+    <div class="gac-grn-page gac-analysis-page">
+      <table class="gac-grn-top-table"><tr>
+        <td class="gac-grn-logo-cell"><img src="${LOGO_URL}" alt="Great Agro Coffee" class="gac-grn-logo" /></td>
+        <td class="gac-grn-title-cell"><div class="gac-grn-official-title">QUALITY ANALYSIS REPORT</div><div class="gac-grn-official-subtitle">GREAT AGRO COFFEE</div></td>
+      </tr></table>
+      <div class="gac-grn-company-strip" style="text-align:center">a member of YEDA COFFEE COMPANY LIMITED<br/>P.O Box 431420, Kasese, Uganda</div>
+      <table class="gac-grn-quality-table"><tbody>
+        <tr><th colspan="4">SAMPLE DETAILS</th></tr>
+        <tr><td>Supplier</td><td>${displayValue(data.supplierName)}</td><td>Supplier code</td><td>${displayValue(data.supplierCode)}</td></tr>
+        <tr><td>GRN / delivery</td><td>${displayValue(data.grnNumber)}</td><td>Coffee type</td><td>${displayValue(data.coffeeType)}</td></tr>
+        <tr><td>Batch / delivery number</td><td>${displayValue(data.batchNumber || data.grnNumber)}</td><td>Delivery date</td><td>${displayValue(formatDate(data.deliveryDate))}</td></tr>
+        <tr><td>Delivery weight</td><td>${displayValue(data.totalKgs)} kg</td><td>Delivery bags</td><td>${displayValue(data.numberOfBags)}</td></tr>
+        <tr><td>Sample / source form</td><td>${displayValue(p.form_number)}</td><td>Analysis date</td><td>${displayValue(p.analysis_date)}</td></tr>
+        <tr><td>Physical analyst</td><td>${displayValue(String(p.lab_results?.physical_assessment_by || data.physicalAssessmentBy || ''))}</td><td>Posted by</td><td>${displayValue(p.sender_name || p.sender_email)}</td></tr>
+        <tr><td>Results source</td><td colspan="3">${p.status === 'saved_assessment' ? 'Saved system assessment — no reviewed Outlook lab report attached' : 'Reviewed Outlook lab posting'}</td></tr>
+      </tbody></table>
+      <div class="gac-grn-quality-caption">LAB RESULTS</div>
+      <table class="gac-grn-quality-table"><thead><tr><th>Parameter</th><th>Result</th></tr></thead><tbody>
+        ${labRows(p).map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join('')}
+      </tbody></table>
+      ${p.lab_results?.comments ? `<div class="gac-grn-note"><strong>Lab comments:</strong> ${escapeHtml(String(p.lab_results.comments))}</div>` : ''}
+      <table class="gac-grn-sign-table"><tr><td class="gac-grn-sign-cell">Physical analysis: ${displayValue(String(p.lab_results?.physical_assessment_by || data.physicalAssessmentBy || ''))}<div class="gac-grn-sign-line">&nbsp;</div></td><td class="gac-grn-sign-cell">System assessment: ${displayValue(data.assessedBy)}<div class="gac-grn-sign-line">&nbsp;</div></td></tr></table>
+    </div>`).join('');
+}
+
 export function getGRNPreviewHTML(data: GRNDocumentData, options?: { includeFinanceCopy?: boolean }): string {
   const includeFinance = options?.includeFinanceCopy === true;
-  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${includeFinance ? getPaymentOrderMarkup(data) : ""}</div>`;
+  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${getGRNAnalysisMarkup(data)}${includeFinance ? getPaymentOrderMarkup(data) : ""}</div>`;
 }
 
 /**
@@ -956,7 +985,7 @@ export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string, 
       </head>
       <body>
         <div class="gac-grn-preview-shell">
-          ${data.map((item) => options?.paymentOrderOnly ? getPaymentOrderMarkup(item) : `${getGRNDocumentMarkup(item, "supplier")}${includeFinance ? getPaymentOrderMarkup(item) : ""}`).join("")}
+          ${data.map((item) => options?.paymentOrderOnly ? getPaymentOrderMarkup(item) : `${getGRNDocumentMarkup(item, "supplier")}${getGRNAnalysisMarkup(item)}${includeFinance ? getPaymentOrderMarkup(item) : ""}`).join("")}
         </div>
         <script>
           ${getGRNFitScript()}
