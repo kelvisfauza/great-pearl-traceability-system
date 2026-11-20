@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Landmark, ArrowLeftRight, Smartphone, HandCoins, Users, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Landmark, ArrowLeftRight, Smartphone, HandCoins, Users, ShieldCheck, TrendingUp } from "lucide-react";
+import TreasuryInvestments from "@/components/admin/TreasuryInvestments";
 import TreasuryAccountsPanel from "@/components/admin/TreasuryAccountsPanel";
 import TreasuryTransactions from "@/components/admin/TreasuryTransactions";
 import TreasuryStaffAccounts from "@/components/admin/TreasuryStaffAccounts";
@@ -15,6 +16,7 @@ const sections = [
   { id: "deposits", label: "Deposits", icon: Smartphone },
   { id: "loans", label: "Loans & profiles", icon: HandCoins },
   { id: "staff", label: "Salaries & wallets", icon: Users },
+  { id: "investments", label: "Invest & Earn", icon: TrendingUp },
   { id: "reconciliation", label: "Reconciliation", icon: ShieldCheck },
 ];
 
@@ -34,6 +36,7 @@ export default function Treasury() {
       <TabsContent value="deposits" className="mt-6"><PoolMomoDepositsPanel canDeposit /></TabsContent>
       <TabsContent value="loans" className="mt-6"><TreasuryWorkflows area="loans" /></TabsContent>
       <TabsContent value="staff" className="mt-6 space-y-6"><TreasuryWorkflows area="staff" /><TreasuryStaffAccounts /></TabsContent>
+      <TabsContent value="investments" className="mt-6"><TreasuryInvestments /></TabsContent>
       <TabsContent value="reconciliation" className="mt-6"><TreasuryAccountsPanel view="reconciliation" /></TabsContent>
     </Tabs>
   </div>;
