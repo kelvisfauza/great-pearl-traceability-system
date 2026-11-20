@@ -1,5 +1,9 @@
 # Roadmap
 
+## Treasury list filters
+- [x] Put the Treasury movements and employee-account filters in a labelled panel and show the applied account, movement, reference, dates or search term as removable chips with Clear all; the chosen inputs stay highlighted and an empty list says it matched filters. Six filter-rule tests passed; preview build and typecheck clean.
+- [ ] Verify real staff filtering on the signed-in Treasury page — external unmanaged Supabase supplies no automated staff session; the browser stops at the sign-in gate.
+
 ## Outlook lab reports on GRNs
 - [x] Keep one saved-assessment summary on the GRN and print source/sample details and lab results on a separate accompanying analysis page, including bulk/queue output. Two-page browser check confirmed exact readings, unchanged prices and shared verification footer; nine regression tests passed. Real staff issuance remains blocked by external unmanaged authentication.
 - [x] Restore secure Outlook collection with incoming-mail notifications and hourly reconciliation; live HTTP 200 extracted GAC QA 2611-0114, retaining its scan and delivery link and returning new readings for review.

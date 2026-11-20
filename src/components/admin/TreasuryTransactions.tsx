@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { RefreshCw, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import ActiveFilterChips from "@/components/admin/ActiveFilterChips";
+import { activeTreasuryTransactionFilters, DEFAULT_TREASURY_TRANSACTION_FILTERS } from "@/lib/treasuryFilters";
 
 const PAGE_SIZE = 50;
 const dateTime = (value: string) => new Date(value).toLocaleString("en-GB", { timeZone: "Africa/Kampala" });
@@ -53,15 +55,45 @@ export default function TreasuryTransactions() {
     return () => { active = false; };
   }, [account, direction, reference, from, to, page, refresh]);
   const name = (code: string) => accounts.find(a => a.code === code)?.name || code;
+  const filters = activeTreasuryTransactionFilters({ account, direction, reference, from, to }, name);
+  const clearFilter = (key: string) => {
+    setPage(0);
+    if (key === "account") setAccount("all");
+    else if (key === "direction") setDirection("all");
+    else if (key === "reference") setReference("");
+    else if (key === "from") setFrom("");
+    else if (key === "to") setTo("");
+  };
+  const clearAll = () => {
+    setPage(0);
+    setAccount(DEFAULT_TREASURY_TRANSACTION_FILTERS.account);
+    setDirection(DEFAULT_TREASURY_TRANSACTION_FILTERS.direction);
+    setReference(DEFAULT_TREASURY_TRANSACTION_FILTERS.reference);
+    setFrom(DEFAULT_TREASURY_TRANSACTION_FILTERS.from);
+    setTo(DEFAULT_TREASURY_TRANSACTION_FILTERS.to);
+  };
+  const picked = (on: boolean) => (on ? "border-primary ring-1 ring-primary/25" : "");
   return <div className="space-y-4">
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-      <div className="space-y-1"><Label>Account</Label><Select value={account} onValueChange={v => { setAccount(v); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map(a => <SelectItem key={a.code} value={a.code}>{a.name}</SelectItem>)}</SelectContent></Select></div>
-      <div className="space-y-1"><Label>Movement</Label><Select value={direction} onValueChange={v => { setDirection(v); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All movements</SelectItem><SelectItem value="credit">Credits</SelectItem><SelectItem value="debit">Debits</SelectItem></SelectContent></Select></div>
-      <div className="space-y-1"><Label htmlFor="treasury-reference">Reference</Label><Input id="treasury-reference" value={reference} placeholder="Search reference" onChange={e => { setReference(e.target.value); setPage(0); }} /></div>
-      <div className="space-y-1"><Label htmlFor="treasury-from">From · Kampala</Label><Input id="treasury-from" type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(0); }} /></div>
-      <div className="space-y-1"><Label htmlFor="treasury-to">To · Kampala</Label><Input id="treasury-to" type="date" value={to} onChange={e => { setTo(e.target.value); setPage(0); }} /></div>
+    <div className="space-y-3 rounded-lg border bg-card p-4">
+      <div className="flex items-center gap-2">
+        <SlidersHorizontal className="h-4 w-4 shrink-0 text-primary" />
+        <div>
+          <h3 className="text-sm font-semibold">Filter account movements</h3>
+          <p className="text-xs text-muted-foreground">Combine any of these — the ones you have chosen stay highlighted below.</p>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="space-y-1"><Label>Account</Label><Select value={account} onValueChange={v => { setAccount(v); setPage(0); }}><SelectTrigger className={picked(account !== "all")}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map(a => <SelectItem key={a.code} value={a.code}>{a.name}</SelectItem>)}</SelectContent></Select></div>
+        <div className="space-y-1"><Label>Movement</Label><Select value={direction} onValueChange={v => { setDirection(v); setPage(0); }}><SelectTrigger className={picked(direction !== "all")}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All movements</SelectItem><SelectItem value="credit">Credits</SelectItem><SelectItem value="debit">Debits</SelectItem></SelectContent></Select></div>
+        <div className="space-y-1"><Label htmlFor="treasury-reference">Reference</Label><Input id="treasury-reference" value={reference} placeholder="Search reference" className={picked(reference.trim() !== "")} onChange={e => { setReference(e.target.value); setPage(0); }} /></div>
+        <div className="space-y-1"><Label htmlFor="treasury-from">From · Kampala</Label><Input id="treasury-from" type="date" value={from} className={picked(from !== "")} onChange={e => { setFrom(e.target.value); setPage(0); }} /></div>
+        <div className="space-y-1"><Label htmlFor="treasury-to">To · Kampala</Label><Input id="treasury-to" type="date" value={to} className={picked(to !== "")} onChange={e => { setTo(e.target.value); setPage(0); }} /></div>
+      </div>
+      <div className="border-t pt-3">
+        <ActiveFilterChips filters={filters} onClear={clearFilter} onClearAll={clearAll} emptyLabel="No filters applied — showing every account movement." />
+      </div>
     </div>
-    <div className="flex justify-between items-center gap-3"><span className="text-sm text-muted-foreground">{count.toLocaleString()} account movements</span><Button variant="outline" size="sm" disabled={busy} onClick={() => setRefresh(v => v + 1)}><RefreshCw className={`mr-2 h-4 w-4 ${busy ? "animate-spin" : ""}`} />Refresh</Button></div>
+    <div className="flex justify-between items-center gap-3"><span className="text-sm text-muted-foreground">{count.toLocaleString()} {filters.length ? "movements matching your filters" : "account movements"}</span><Button variant="outline" size="sm" disabled={busy} onClick={() => setRefresh(v => v + 1)}><RefreshCw className={`mr-2 h-4 w-4 ${busy ? "animate-spin" : ""}`} />Refresh</Button></div>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     <div className="overflow-x-auto border rounded-md"><Table><TableHeader><TableRow><TableHead>Date · Kampala</TableHead><TableHead>Account / counterparty</TableHead><TableHead>Reference / details</TableHead><TableHead>Employee</TableHead><TableHead>Done by</TableHead><TableHead className="text-right">Amount · UGX</TableHead><TableHead className="text-right">Balance after · UGX</TableHead></TableRow></TableHeader><TableBody>
       {busy ? <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Loading movements…</TableCell></TableRow> : rows.map(r => <TableRow key={r.id}>

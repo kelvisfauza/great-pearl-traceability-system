@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileText, RefreshCw, UserRound } from "lucide-react";
+import ActiveFilterChips from "@/components/admin/ActiveFilterChips";
+import { activeSearchFilter } from "@/lib/treasuryFilters";
 
 const money = (n: number | null | undefined) => n == null ? "—" : `UGX ${Number(n).toLocaleString()}`;
 export default function TreasuryStaffAccounts() {
@@ -51,12 +53,18 @@ export default function TreasuryStaffAccounts() {
     return () => { active = false; };
   }, [refresh]);
   const filtered = rows.filter(e => `${e.name} ${e.email} ${e.department} ${e.wallet_account_number}`.toLowerCase().includes(search.toLowerCase()));
+  const filters = activeSearchFilter("search", "Search", search);
   return <div className="space-y-4">
-    <div className="flex gap-3 items-center flex-wrap"><Input aria-label="Search employee accounts" placeholder="Search name, wallet account or department" value={search} onChange={e => setSearch(e.target.value)} className="max-w-md" /><span className="text-sm text-muted-foreground">{filtered.length} employee profiles</span><Button variant="outline" size="sm" disabled={busy} onClick={() => setRefresh(v => v + 1)}><RefreshCw className={`h-4 w-4 mr-2 ${busy ? "animate-spin" : ""}`} />Refresh</Button></div>
+    <div className="space-y-3 rounded-lg border bg-card p-4">
+      <div className="flex gap-3 items-center flex-wrap"><Input aria-label="Search employee accounts" placeholder="Search name, wallet account or department" value={search} className={`max-w-md ${filters.length ? "border-primary ring-1 ring-primary/25" : ""}`} onChange={e => setSearch(e.target.value)} /><span className="text-sm text-muted-foreground">{filtered.length} {filters.length ? "matching employee profiles" : "employee profiles"}</span><Button variant="outline" size="sm" disabled={busy} onClick={() => setRefresh(v => v + 1)}><RefreshCw className={`h-4 w-4 mr-2 ${busy ? "animate-spin" : ""}`} />Refresh</Button></div>
+      <div className="border-t pt-3">
+        <ActiveFilterChips filters={filters} onClear={() => setSearch("")} emptyLabel="No filters applied — showing every employee account." />
+      </div>
+    </div>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     <div className="overflow-x-auto rounded-md border"><Table><TableHeader><TableRow><TableHead>Employee</TableHead><TableHead>Department</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Wallet balance</TableHead><TableHead className="text-right">Monthly salary</TableHead><TableHead>Bank details</TableHead><TableHead /></TableRow></TableHeader><TableBody>
       {busy ? <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading employee accounts…</TableCell></TableRow> : filtered.map(e => <TableRow key={e.id}><TableCell><div className="font-medium">{e.name}</div><div className="text-xs font-mono text-muted-foreground">{e.wallet_account_number}</div><div className="text-xs text-muted-foreground">{e.email}</div></TableCell><TableCell className="text-sm">{e.department || "—"}</TableCell><TableCell><Badge variant={e.disabled ? "destructive" : "secondary"}>{e.disabled ? "Blocked" : "Active"}</Badge></TableCell><TableCell className={`text-right font-mono whitespace-nowrap text-xs ${e.wallet < 0 ? "text-destructive" : ""}`}>{money(e.wallet)}</TableCell><TableCell className="text-right whitespace-nowrap text-xs">{money(e.salary)}</TableCell><TableCell className="text-sm">{e.bank_name && e.account_number ? e.bank_name : "Missing details"}</TableCell><TableCell><Button variant="ghost" size="icon" aria-label={`View ${e.name} profile`} onClick={() => setSelected(e)}><UserRound className="h-4 w-4" /></Button></TableCell></TableRow>)}
-      {!busy && !error && filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No employee accounts found.</TableCell></TableRow>}
+      {!busy && !error && filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{filters.length ? "No employee accounts match this search." : "No employee accounts found."}</TableCell></TableRow>}
     </TableBody></Table></div>
     <Dialog open={!!selected} onOpenChange={open => { if (!open) setSelected(null); }}><DialogContent><DialogHeader><DialogTitle>{selected?.name} — financial profile</DialogTitle></DialogHeader>{selected && <div className="space-y-5"><dl className="grid grid-cols-2 gap-4 text-sm">{[["Wallet account", selected.wallet_account_number], ["Email", selected.email], ["Department", selected.department], ["Wallet balance", money(selected.wallet)], ["Monthly salary", money(selected.salary)], ["Bank", selected.bank_name], ["Bank account number", selected.account_number], ["Phone", selected.phone], ["Status", selected.disabled ? "Blocked" : "Active"]].map(([k, v]) => <div key={k}><dt className="text-muted-foreground text-xs">{k}</dt><dd className="font-medium break-all">{v || "—"}</dd></div>)}</dl><Button variant="outline" onClick={() => navigate("/admin/user-statement")}><FileText className="h-4 w-4 mr-2" />Employee statements</Button><Button variant="outline" onClick={() => navigate("/quick-loans")} className="ml-2">Loan applications</Button></div>}</DialogContent></Dialog>
   </div>;
