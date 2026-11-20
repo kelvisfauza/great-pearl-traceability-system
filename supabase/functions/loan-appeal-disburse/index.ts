@@ -256,6 +256,8 @@ serve(async (req) => {
         entry_type: "DEPOSIT",
         amount: principal,
         reference: "LOAN-APPEAL-DISBURSE-" + loanId,
+        // Loan money is lent from Treasury's Loans & Overdrafts account, never the loyalty fund.
+        source_category: "LOAN_DISBURSEMENT",
         metadata: {
           loan_id: loanId,
           appeal_id: appeal.id,
