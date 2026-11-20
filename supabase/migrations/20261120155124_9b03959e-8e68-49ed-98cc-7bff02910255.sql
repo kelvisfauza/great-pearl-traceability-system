@@ -1,0 +1,3 @@
+UPDATE public.quality_outlook_sync_state SET paused=false,pause_reason=null,last_error=null,updated_at=now() WHERE id='outlook';
+SELECT cron.schedule('quality-outlook-reconcile','0 * * * *', $$ SELECT net.http_post(url := 'https://pudfybkyfedeggmokhco.supabase.co/functions/v1/quality-outlook-sync',headers := private_edge.header() || '{"Content-Type":"application/json"}'::jsonb,body := '{"action":"scheduled"}'::jsonb,timeout_milliseconds := 120000); $$);
+SELECT net.http_post(url := 'https://pudfybkyfedeggmokhco.supabase.co/functions/v1/quality-outlook-sync',headers := private_edge.header() || '{"Content-Type":"application/json"}'::jsonb,body := '{"action":"scheduled"}'::jsonb,timeout_milliseconds := 120000);
