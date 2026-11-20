@@ -1,6 +1,7 @@
 import { getVerificationQRUrl, getVerificationUrl } from "./verificationCode";
 import { getGrnScanQrUrl, getGrnScanUrl } from "./grnScanUrl";
 import { formatPayCode } from "./grnPayCode";
+import { labRows, type LabPosting } from '@/lib/qualityLabReport';
 
 export interface GRNDocumentData {
   grnNumber: string;
@@ -56,6 +57,7 @@ export interface GRNDocumentData {
   discretionBy?: string;
   inventoryBatchId?: string;
   batchNumber?: string;
+  labReports?: LabPosting[];
   recoveries?: Array<{
     type: "advance" | "expense";
     description: string;
@@ -797,6 +799,15 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
           `).join("")}
         </tbody>
       </table>
+
+      ${(data.labReports || []).map(p => `
+        <div class="gac-grn-quality-caption">OUTLOOK LAB RESULTS · ${escapeHtml(p.form_number || 'Lab report')} · ${escapeHtml(p.analysis_date || '')} · ${escapeHtml(p.sender_name || p.sender_email || '')}</div>
+        <table class="gac-grn-quality-table"><tbody>${labRows(p).reduce<string[]>((rows, [label, value], index, all) => {
+          if (index % 2 === 0) rows.push(`<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td><td>${escapeHtml(all[index + 1]?.[0] || '')}</td><td>${escapeHtml(all[index + 1]?.[1] || '')}</td></tr>`);
+          return rows;
+        }, []).join('')}</tbody></table>
+        ${p.lab_results?.comments ? `<div class="gac-grn-note">Lab comments: ${escapeHtml(String(p.lab_results.comments))}</div>` : ''}
+      `).join('')}
 
       ${data.calculatorComments ? `
         <div style="margin-top:8px;font-size:10px;">

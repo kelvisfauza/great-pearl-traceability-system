@@ -13,6 +13,8 @@ import { getGrnPayCode } from '@/utils/grnPayCode';
 import { getGrnScanQrDataUrl } from '@/utils/grnScanUrl';
 import { getGrnBarcodeDataUrl } from '@/utils/grnBarcode';
 import { recordGrnPrintsByBatch } from '@/utils/grnPrintLog';
+import { fetchDeliveryLabReports } from '@/utils/deliveryLabReports';
+import type { LabPosting } from '@/lib/qualityLabReport';
 
 
 interface GRNPrintModalProps {
@@ -42,6 +44,19 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
   const { trackActivity } = useActivityTracker();
   const [payCode, setPayCode] = useState<string | undefined>(undefined);
   const [qrDataUrl, setQrDataUrl] = useState<string | undefined>(undefined);
+  const [labReports, setLabReports] = useState<LabPosting[]>([]);
+  const [labError, setLabError] = useState('');
+  const [labLoading, setLabLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    setLabReports([]); setLabError(''); setLabLoading(true);
+    if (!open || !grnData) return;
+    fetchDeliveryLabReports(null, grnData.batchNumber || grnData.grnNumber)
+      .then(data => { if (!cancelled) setLabReports(data); })
+      .catch(error => { if (!cancelled) setLabError(error.message); })
+      .finally(() => { if (!cancelled) setLabLoading(false); });
+    return () => { cancelled = true; };
+  }, [open, grnData?.batchNumber, grnData?.grnNumber]);
 
   // Guarantee every printed GRN carries a scannable QR (generated locally, no network needed)
   useEffect(() => {
@@ -212,6 +227,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
     if (!grnData) return null;
     return {
       ...grnData,
+      labReports,
       payCode: grnData.payCode || payCode,
       qrDataUrl: grnData.qrDataUrl || qrDataUrl,
       barcodeDataUrl:
@@ -227,7 +243,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
       supplierAccountNumber: supplierInfo?.account_number || undefined,
       recoveries,
     };
-  }, [grnData, verificationCode, supplierInfo, recoveries, payCode, qrDataUrl]);
+  }, [grnData, verificationCode, supplierInfo, recoveries, payCode, qrDataUrl, labReports]);
 
   const previewHtml = useMemo(() => {
     if (!previewData) return '';
@@ -235,7 +251,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
   }, [previewData, hideFinanceCopy]);
 
   const handlePrint = () => {
-    if (!previewData) return;
+    if (!previewData || labLoading || labError) return;
 
     trackActivity('report_generation', `printing GRN ${previewData.grnNumber}`, {
       form_name: 'Goods Received Note',
@@ -252,7 +268,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
   };
 
   const handleQueue = async () => {
-    if (!previewData) return;
+    if (!previewData || labLoading || labError) return;
     const job = await addToPrintQueue({
       title: `GRN - ${previewData.grnNumber}`,
       docType: 'Goods Received Note',
@@ -283,12 +299,13 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
         />
 
         <div className="mt-3 flex justify-end gap-2">
+          {labError && <p role="alert" className="text-destructive text-sm">{labError}</p>}
           <Button variant="outline" onClick={onClose}>Close</Button>
-          <Button variant="secondary" onClick={handleQueue} className="gap-2">
+          <Button variant="secondary" onClick={handleQueue} disabled={labLoading || !!labError} className="gap-2">
             <Printer className="h-4 w-4" />
             Add to print queue
           </Button>
-          <Button onClick={handlePrint} className="gap-2">
+          <Button onClick={handlePrint} disabled={labLoading || !!labError} className="gap-2">
             <Printer className="h-4 w-4" />
             Print GRN
           </Button>

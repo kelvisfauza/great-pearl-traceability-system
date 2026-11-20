@@ -14,6 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { printSamplingOrder } from '@/components/v2/quality/tabs/SamplingOrdersTab';
 import { RefreshCw, Mail, Eye, Loader2, Download, Save } from 'lucide-react';
+import { labRows } from '@/lib/qualityLabReport';
+import { SystemAnalysisFormButton } from '@/components/quality/SystemAnalysisFormButton';
 
 const labels: Record<string,string> = {pending:'Awaiting review',reviewed:'Reviewed',needs_correction:'Needs correction'};
 export default function QualityAnalysisPostings() {
@@ -135,6 +137,12 @@ export default function QualityAnalysisPostings() {
       <Select value={deliveryId} onValueChange={setDeliveryId}><SelectTrigger aria-label="Linked delivery"><SelectValue placeholder="Delivery"/></SelectTrigger><SelectContent><SelectItem value="none">No delivery</SelectItem>{deliveryId!=='none' && !candidates.data?.deliveries?.some((d:any)=>d.id===deliveryId) && <SelectItem value={deliveryId}>Linked delivery · {deliveryId}</SelectItem>}{candidates.data?.deliveries?.map((d:any)=><SelectItem key={d.id} value={d.id}>{d.batch_number} · {d.supplier_name} · {d.date} · {d.kilograms} kg · {d.reason}</SelectItem>)}</SelectContent></Select><Button variant="outline" disabled={busy || candidates.isLoading} onClick={link}><Save className="mr-2 h-4 w-4"/>Confirm links</Button>{orderId==='none' && <Button variant="secondary" disabled={busy || candidates.isLoading || deliveryId==='none'} title={deliveryId==='none'?'Pick the delivery first':undefined} onClick={quickCreate}>Quick create sampling order & print</Button>}{orderId==='none' && deliveryId==='none' && <p className="text-xs text-muted-foreground w-full">Pick the delivery first to quick-create a sampling order.</p>}</> : <p className="text-sm break-words">Order: {selected.linked_sampling_order_id || 'Not linked'} · Delivery: {selected.linked_delivery_id || 'Not linked'}</p>}
       </div>
       {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+      <div className="border-t pt-3"><h3 className="font-semibold">Scanned lab results</h3>
+        {selected.lab_extracted_at ? <><Table><TableBody>{labRows(selected).map(([label,value]) => <TableRow key={label}><TableCell>{label}</TableCell><TableCell>{value}</TableCell></TableRow>)}</TableBody></Table>
+          {selected.lab_results?.comments && <p className="text-sm">{selected.lab_results.comments}</p>}
+          {selected.status === 'reviewed' && selected.linked_delivery_id && <SystemAnalysisFormButton recordId={selected.linked_delivery_id} />}
+        </> : <p className="text-sm text-muted-foreground">Awaiting lab scan</p>}
+      </div>
       {fileUrl && <><Button asChild variant="outline"><a href={fileUrl} target="_blank" rel="noopener noreferrer"><Download className="mr-2 h-4 w-4"/>{selected.filename}</a></Button>{selected.mime_type.startsWith('image/')?<img src={fileUrl} alt="Quality analysis form" className="max-h-[50vh] w-full object-contain"/>:<iframe src={fileUrl} title="Quality analysis attachment" className="w-full h-[50vh] border rounded-md"/>}</>}
       {isAdmin()?<><Select value={review} onValueChange={setReview}><SelectTrigger aria-label="Review status"><SelectValue/></SelectTrigger><SelectContent>{Object.entries(labels).map(([value,label])=><SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select><Textarea aria-label="Administrator review notes" placeholder="Review notes" maxLength={4000} value={notes} onChange={e=>setNotes(e.target.value)}/><Button disabled={busy} onClick={save}><Save className="mr-2 h-4 w-4"/>Save review</Button></>:<p className="text-sm">{selected.review_notes || 'No administrator notes yet.'}</p>}</>}
     </DialogContent></Dialog>

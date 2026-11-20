@@ -5,6 +5,7 @@ import { getGrnScanQrDataUrl } from "@/utils/grnScanUrl";
 import { getGrnBarcodeDataUrl } from "@/utils/grnBarcode";
 
 import { stripLegacySupplierSuffix } from "@/utils/supplierDisplay";
+import { fetchDeliveryLabReports } from '@/utils/deliveryLabReports';
 
 type SupplierRow = {
   id: string;
@@ -140,6 +141,7 @@ export async function enrichGRNWithSupplier(
   grn: GRNDocumentData & { supplierId?: string | null },
 ): Promise<GRNDocumentData> {
   const supplier = await lookupSupplier(grn.supplierId, grn.supplierName);
+  const labReports = await fetchDeliveryLabReports(null, grn.batchNumber || grn.grnNumber);
   const recoveries = supplier?.id ? await fetchRecoveries(supplier.id) : grn.recoveries || [];
   const payCode = grn.payCode || (await getGrnPayCode(grn.grnNumber)) || undefined;
   const qrDataUrl = grn.qrDataUrl || (await getGrnScanQrDataUrl(grn.grnNumber, 220, payCode));
@@ -147,6 +149,7 @@ export async function enrichGRNWithSupplier(
 
   return {
     ...grn,
+    labReports,
     payCode,
     qrDataUrl,
     barcodeDataUrl,

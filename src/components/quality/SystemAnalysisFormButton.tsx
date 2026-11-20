@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { printSystemAnalysisForm } from '@/utils/systemAnalysisFormPdf';
+import { fetchDeliveryLabReports } from '@/utils/deliveryLabReports';
+import { printOutlookLabReports } from '@/utils/outlookLabReportPdf';
 
 /** Opens the system-generated analysis form for a delivery, built from its saved quality assessment. */
 export function SystemAnalysisFormButton({ recordId, batchNumber, assessment }: { recordId?: string | null; batchNumber?: string | null; assessment?: any }) {
@@ -15,6 +17,14 @@ export function SystemAnalysisFormButton({ recordId, batchNumber, assessment }: 
     win.document.title = 'Preparing analysis form';
     setBusy(true);
     try {
+      const reports = await fetchDeliveryLabReports(recordId, batchNumber);
+      if (reports.length) {
+        const rid = recordId || reports[0]?.linked_delivery_id;
+        const { data: delivery, error } = await (supabase as any).from('coffee_records').select('batch_number,date,kilograms,bags,supplier_name,coffee_type').eq('id', rid).maybeSingle();
+        if (error) throw error;
+        await printOutlookLabReports(reports, delivery, win);
+        return;
+      }
       let a = assessment;
       if (!a) {
         let q = (supabase as any).from('quality_assessments').select('*').order('created_at', { ascending: false }).limit(1);

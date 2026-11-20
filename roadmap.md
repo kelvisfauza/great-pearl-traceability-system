@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Outlook lab reports on GRNs
-- [ ] Restore secure Outlook collection and extract saved lab readings, retaining original scans and review/link safeguards.
-- [ ] Generate QR-verified reports from linked postings and show lab readings separately on individual and bulk GRNs, without changing prices or assessments.
-- [ ] Test extraction/link rules, deploy and verify live scanner; verify staff printing where authentication permits.
+- [x] Restore secure Outlook collection with incoming-mail notifications and hourly reconciliation; live HTTP 200 extracted GAC QA 2611-0114, retaining its scan and delivery link and returning new readings for review.
+- [x] Generate QR-stamped reports from reviewed linked postings; individual and bulk GRNs include separate lab readings without changing prices or assessments. GRN sample visibly checked; extraction/link and scanner tests passed, preview build clean.
+- [ ] Verify real staff review → linked report → QR issuance/GRN printing — external unmanaged Supabase has no automated staff session; source PDF issuance is wired but authenticated printing remains unverified.
 
 ## Business-loan evaluation checks
 - [x] Evaluate paginated saved wallet transactions and completed calendar-month tenure; block missing/future joining dates, absent transaction evidence and negative wallets. Debt/history read failures stop evaluation rather than imply clean history.
