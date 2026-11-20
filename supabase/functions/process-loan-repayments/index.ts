@@ -178,6 +178,8 @@ Deno.serve(async (req) => {
               entry_type: 'ADJUSTMENT',
               amount: -g.taken,
               reference: `LOAN-GUARANTOR-${loan.id}-${repayment.installment_number}${g.slot === 2 ? '-G2' : ''}`,
+              // LOAN_REPAYMENT so Treasury credits Loans & Overdrafts with the recovered money.
+              source_category: 'LOAN_REPAYMENT',
               metadata: {
                 loan_id: loan.id,
                 installment: repayment.installment_number,
@@ -259,7 +261,6 @@ Deno.serve(async (req) => {
               source: 'overdraft_recovery',
               penalty_included: penaltyAmount,
               bypass_treasury_check: true,
-              bypass_treasury_accounts: true,
               description: `Loan recovery (overdraft) – Installment #${repayment.installment_number}. Wallet stays negative until the next deposit.`
             }
           })

@@ -388,9 +388,8 @@ serve(async (req) => {
               reference: `LOAN-MOMO-REPAY-${loanId}-${ts}`,
               source_category: "LOAN_REPAYMENT",
               metadata: {
-                // Net-zero pair with the MoMo DEPOSIT above: no treasury float is spent.
+                // Repayment must reach Loans & Overdrafts in Treasury; float check skipped.
                 bypass_treasury_check: true,
-                bypass_treasury_accounts: true,
                 description: `Applied to Loan ${loanId.substring(0, 8)} via MoMo`,
                 source: "momo_loan_repayment_out",
                 loan_id: loanId,
