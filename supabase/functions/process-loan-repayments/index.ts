@@ -244,149 +244,31 @@ Deno.serve(async (req) => {
         // paid this month yet — deducted from next payroll
         // ═══════════════════════════════════════════════════
         if (remainingAmount > 0) {
-          console.log(`  💼 Attempting salary recovery for UGX ${remainingAmount}...`)
-
-          // Check if employee has already been paid salary this month
-          const { data: salaryThisMonth } = await supabase
-            .from('employee_salary_payments')
-            .select('id, status')
-            .eq('employee_email', borrowerEmail)
-            .eq('payment_month', currentMonth)
-            .in('status', ['completed', 'processing'])
-            .limit(1)
-
-          const alreadyPaid = salaryThisMonth && salaryThisMonth.length > 0
-
-          if (alreadyPaid) {
-            // Salary already paid — force overdraft on wallet (negative balance)
-            console.log(`  🔴 Salary already paid for ${currentMonth} — forcing wallet overdraft for UGX ${remainingAmount}`)
-
-            await supabase.from('ledger_entries').insert({
-              user_id: borrowerUserId,
-              entry_type: 'WITHDRAWAL',
-              amount: -remainingAmount,
-              reference: `LOAN-OVERDRAFT-${loan.id}-${repayment.installment_number}`,
-              metadata: {
-                loan_id: loan.id,
-                installment: repayment.installment_number,
-                source: 'overdraft_recovery',
-                penalty_included: penaltyAmount,
-                bypass_treasury_check: true,
-                description: `Loan recovery (overdraft) – salary already paid. Installment #${repayment.installment_number}. Wallet will remain negative until next deposit.`
-              }
-            })
-
-            const overdraftAmount = remainingAmount
-            deductionSources.push(`Overdraft: UGX ${overdraftAmount.toLocaleString()} (wallet negative)`)
-            deductedFromWallet += overdraftAmount
-            remainingAmount = 0
-            console.log(`  ✅ Forced overdraft of UGX ${overdraftAmount} — wallet now negative`)
-          } else {
-            // Get employee's gross salary to determine available headroom
-            const { data: employeeRecord } = await supabase
-              .from('employees')
-              .select('name, salary')
-              .eq('email', borrowerEmail)
-              .single()
-
-            const grossSalary = employeeRecord?.salary || 0
-
-            if (grossSalary > 0) {
-              // Check existing active salary advances to calculate remaining salary headroom
-              const { data: existingAdvances } = await supabase
-                .from('employee_salary_advances')
-                .select('remaining_balance, minimum_payment')
-                .eq('employee_email', borrowerEmail)
-                .eq('status', 'active')
-
-              const totalExistingAdvanceDeductions = (existingAdvances || []).reduce(
-                (sum: number, a: any) => sum + (a.minimum_payment || 0), 0
-              )
-
-              // Standard deductions (PAYE, NSSF etc) — use employees table
-              const { data: companyEmp } = await supabase
-                .from('employees')
-                .select('salary')
-                .ilike('name', `%${(employeeRecord?.name || '').split(' ').pop()}%`)
-                .limit(1)
-
-              const standardDeductions = 0
-
-              // Net available from salary = gross - standard deductions - existing advance payments
-              const netAvailable = grossSalary - standardDeductions - totalExistingAdvanceDeductions
-              
-              // Cap salary recovery at what's actually available (minimum UGX 5,000 to be meaningful)
-              const salaryRecoveryAmount = Math.min(remainingAmount, Math.max(0, netAvailable))
-
-              if (salaryRecoveryAmount >= 5000) {
-                // Create an auto salary advance for the loan recovery amount
-                const { data: newAdvance, error: advanceErr } = await supabase
-                  .from('employee_salary_advances')
-                  .insert({
-                    employee_email: borrowerEmail,
-                    employee_name: loan.employee_name,
-                    original_amount: salaryRecoveryAmount,
-                    remaining_balance: salaryRecoveryAmount,
-                    minimum_payment: salaryRecoveryAmount, // full deduction in one month
-                    reason: `Auto loan recovery – Loan installment #${repayment.installment_number} (${loan.loan_type}). Ref: ${loan.id.slice(0, 8)}`,
-                    status: 'active',
-                    created_by: 'System (Loan Recovery)',
-                  })
-                  .select()
-                  .single()
-
-                if (advanceErr) {
-                  console.error(`  ❌ Failed to create salary advance:`, advanceErr)
-                } else {
-                  deductedFromSalary = salaryRecoveryAmount
-                  remainingAmount -= salaryRecoveryAmount
-                  salaryAdvanceCreated = true
-                  deductionSources.push(`Salary Advance: UGX ${salaryRecoveryAmount.toLocaleString()} (deducted from ${currentMonth} payroll)`)
-                  console.log(`  ✅ Created salary advance of UGX ${salaryRecoveryAmount} (advance ID: ${newAdvance.id})`)
-
-                  // Note: No wallet credit here — this is a future salary deduction, not a wallet movement.
-                  // The amount will be deducted when payroll runs on the 27th.
-                }
-              } else {
-                // Salary headroom too low — force overdraft for the rest
-                console.log(`  ⚠️ Salary headroom too low (UGX ${Math.max(0, netAvailable)}) — forcing overdraft for UGX ${remainingAmount}`)
-                await supabase.from('ledger_entries').insert({
-                  user_id: borrowerUserId,
-                  entry_type: 'WITHDRAWAL',
-                  amount: -remainingAmount,
-                  reference: `LOAN-OVERDRAFT-${loan.id}-${repayment.installment_number}`,
-                  metadata: {
-                    loan_id: loan.id,
-                    installment: repayment.installment_number,
-                    source: 'overdraft_no_headroom',
-                  bypass_treasury_check: true,
-                    description: `Loan recovery (overdraft) – salary headroom exhausted. Installment #${repayment.installment_number}.`
-                  }
-                })
-                deductionSources.push(`Overdraft: UGX ${remainingAmount.toLocaleString()} (wallet negative)`)
-                deductedFromWallet += remainingAmount
-                remainingAmount = 0
-              }
-            } else {
-              // No salary record — force overdraft
-              console.log(`  ⚠️ No salary record for ${borrowerEmail} — forcing overdraft for UGX ${remainingAmount}`)
-              await supabase.from('ledger_entries').insert({
-                user_id: borrowerUserId,
-                entry_type: 'WITHDRAWAL',
-                amount: -remainingAmount,
-                reference: `LOAN-OVERDRAFT-${loan.id}-${repayment.installment_number}`,
-                metadata: {
-                  loan_id: loan.id,
-                  installment: repayment.installment_number,
-                  source: 'overdraft_no_salary',
-                bypass_treasury_check: true,
-                  description: `Loan recovery (overdraft) – no salary on file. Installment #${repayment.installment_number}.`
-                }
-              })
-              deductionSources.push(`Overdraft: UGX ${remainingAmount.toLocaleString()} (wallet negative)`)
-              deductedFromWallet += remainingAmount
-              remainingAmount = 0
+          // Owner decision (20 Nov 2026): never push loan shortfalls to payroll
+          // as salary advances; overdraw the borrower's wallet instead.
+          console.log(`  🔴 Forcing wallet overdraft for UGX ${remainingAmount}`)
+          const { error: odErr } = await supabase.from('ledger_entries').insert({
+            user_id: borrowerUserId,
+            entry_type: 'WITHDRAWAL',
+            amount: -remainingAmount,
+            reference: `LOAN-OVERDRAFT-${loan.id}-${repayment.installment_number}`,
+            source_category: 'LOAN_REPAYMENT',
+            metadata: {
+              loan_id: loan.id,
+              installment: repayment.installment_number,
+              source: 'overdraft_recovery',
+              penalty_included: penaltyAmount,
+              bypass_treasury_check: true,
+              bypass_treasury_accounts: true,
+              description: `Loan recovery (overdraft) – Installment #${repayment.installment_number}. Wallet stays negative until the next deposit.`
             }
+          })
+          if (odErr) {
+            console.error('  ❌ Overdraft recovery failed:', odErr)
+          } else {
+            deductionSources.push(`Overdraft: UGX ${remainingAmount.toLocaleString()} (wallet negative)`)
+            deductedFromWallet += remainingAmount
+            remainingAmount = 0
           }
         }
 

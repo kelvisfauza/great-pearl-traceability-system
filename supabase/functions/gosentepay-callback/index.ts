@@ -381,12 +381,16 @@ serve(async (req) => {
             });
 
             // 2) LOAN_REPAYMENT — applied to the loan (negative)
-            await supabaseClient.from("ledger_entries").insert({
+            const { error: repayLedgerErr } = await supabaseClient.from("ledger_entries").insert({
               user_id: ledgerUserId,
               entry_type: "LOAN_REPAYMENT",
               amount: -depositAmount,
               reference: `LOAN-MOMO-REPAY-${loanId}-${ts}`,
+              source_category: "LOAN_REPAYMENT",
               metadata: {
+                // Net-zero pair with the MoMo DEPOSIT above: no treasury float is spent.
+                bypass_treasury_check: true,
+                bypass_treasury_accounts: true,
                 description: `Applied to Loan ${loanId.substring(0, 8)} via MoMo`,
                 source: "momo_loan_repayment_out",
                 loan_id: loanId,
@@ -397,6 +401,9 @@ serve(async (req) => {
                 pair: "loan_repayment_out",
               },
             });
+            if (repayLedgerErr) {
+              console.error(`❌ Loan repayment debit failed for ${ref} — wallet would keep the MoMo money:`, repayLedgerErr);
+            }
           }
 
           console.log(`Loan repayment processed successfully for loan ${loanId}`);
