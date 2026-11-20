@@ -57,6 +57,7 @@ import { useQualityControl } from "@/hooks/useQualityControl";
 import { useProcessingOperations } from "@/hooks/useProcessingOperations";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePendingSuppliers } from "@/hooks/usePendingSuppliers";
+import { SystemAnalysisFormButton } from "@/components/quality/SystemAnalysisFormButton";
 import { canDirectlyAddSupplier, validatePendingSupplier } from "@/lib/pendingSupplierRules";
 
 import { toast } from "sonner";
@@ -852,6 +853,7 @@ const Store = () => {
                                     <Printer className="h-3 w-3 sm:mr-1" />
                                     <span className="hidden sm:inline">GRN</span>
                                   </Button>
+                                  <SystemAnalysisFormButton recordId={record.id} batchNumber={record.batchNumber} />
 
                                   {canEditOrDelete(record) && (
                                     <>

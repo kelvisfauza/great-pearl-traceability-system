@@ -1,4 +1,5 @@
 import { useSearchParams } from "react-router-dom";
+import { SystemAnalysisFormButton } from '@/components/quality/SystemAnalysisFormButton';
 import OverdueAssessmentsBar from "@/components/quality/OverdueAssessmentsBar";
 import QualityAnalysisPostings from "@/components/quality/QualityAnalysisPostings";
 import { useQualityPostingCounts } from "@/components/quality/useQualityPostingCounts";
@@ -1616,7 +1617,7 @@ const QualityControl = () => {
                               }}
                             />
                           </TableCell>
-                          <TableCell className="font-medium">{assessment.batch_number}</TableCell>
+                          <TableCell className="font-medium"><div className="flex flex-col gap-1 items-start">{assessment.batch_number}<SystemAnalysisFormButton assessment={assessment} recordId={assessment.store_record_id} /></div></TableCell>
                           <TableCell>
                             <div className="space-y-0.5">
                               <div className="font-medium">{assessment.supplier_name || 'Unknown'}</div>
