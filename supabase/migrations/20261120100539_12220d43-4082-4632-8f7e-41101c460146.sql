@@ -1,0 +1,13 @@
+ALTER TABLE public.quality_analysis_postings ADD COLUMN lab_results jsonb, ADD COLUMN lab_extracted_at timestamptz;
+ALTER TABLE public.quality_analysis_postings ADD CONSTRAINT quality_lab_results_object CHECK (lab_results IS NULL OR jsonb_typeof(lab_results)='object');
+CREATE OR REPLACE FUNCTION quality_postings_private.delivery_lab_reports(p_delivery_id text DEFAULT NULL,p_batch_number text DEFAULT NULL) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE delivery text; matches text[];
+BEGIN
+IF auth.role() IS DISTINCT FROM 'service_role' AND NOT (auth.uid() IS NOT NULL AND EXISTS (SELECT 1 FROM public.employees e WHERE lower(e.email)=lower(public.current_user_email()) AND lower(e.status)='active' AND NOT coalesce(e.disabled,false)) AND (public.can_view_quality_postings() OR public.user_has_permission('Store Management') OR public.user_has_permission('Finance') OR public.user_has_permission('Procurement'))) THEN RAISE EXCEPTION 'Delivery report access required'; END IF;
+IF p_delivery_id IS NOT NULL THEN SELECT id INTO delivery FROM public.coffee_records WHERE id=p_delivery_id AND (p_batch_number IS NULL OR batch_number=p_batch_number); ELSE SELECT array_agg(id) INTO matches FROM public.coffee_records WHERE batch_number=p_batch_number; IF cardinality(matches)=1 THEN delivery:=matches[1]; END IF; END IF;
+IF delivery IS NULL THEN RETURN '[]'::jsonb; END IF;
+RETURN coalesce((SELECT jsonb_agg(jsonb_build_object('id',p.id,'form_number',p.form_number,'supplier_name',p.supplier_name,'analysis_date',p.analysis_date,'sender_name',p.sender_name,'sender_email',p.sender_email,'received_at',p.received_at,'status',p.status,'linked_delivery_id',p.linked_delivery_id,'lab_results',p.lab_results) ORDER BY p.received_at DESC) FROM public.quality_analysis_postings p WHERE p.linked_delivery_id=delivery AND p.status='reviewed' AND p.lab_results IS NOT NULL AND p.link_method IS NOT NULL),'[]'::jsonb);
+END; $$;
+REVOKE ALL ON FUNCTION quality_postings_private.delivery_lab_reports(text,text) FROM PUBLIC,anon; GRANT EXECUTE ON FUNCTION quality_postings_private.delivery_lab_reports(text,text) TO authenticated,service_role;
+CREATE OR REPLACE FUNCTION public.delivery_lab_reports(p_delivery_id text DEFAULT NULL,p_batch_number text DEFAULT NULL) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path=public AS $$ SELECT quality_postings_private.delivery_lab_reports(p_delivery_id,p_batch_number); $$;
+REVOKE ALL ON FUNCTION public.delivery_lab_reports(text,text) FROM PUBLIC,anon; GRANT EXECUTE ON FUNCTION public.delivery_lab_reports(text,text) TO authenticated,service_role;

@@ -10731,6 +10731,8 @@ export type Database = {
           filename: string
           form_number: string | null
           id: string
+          lab_extracted_at: string | null
+          lab_results: Json | null
           link_method: string | null
           linked_at: string | null
           linked_by: string | null
@@ -10759,6 +10761,8 @@ export type Database = {
           filename: string
           form_number?: string | null
           id?: string
+          lab_extracted_at?: string | null
+          lab_results?: Json | null
           link_method?: string | null
           linked_at?: string | null
           linked_by?: string | null
@@ -10787,6 +10791,8 @@ export type Database = {
           filename?: string
           form_number?: string | null
           id?: string
+          lab_extracted_at?: string | null
+          lab_results?: Json | null
           link_method?: string | null
           linked_at?: string | null
           linked_by?: string | null
@@ -18775,6 +18781,10 @@ export type Database = {
       }
       delete_duplicate_coffee_record: {
         Args: { p_reason?: string; p_record_id: string }
+        Returns: Json
+      }
+      delivery_lab_reports: {
+        Args: { p_batch_number?: string; p_delivery_id?: string }
         Returns: Json
       }
       display_public_prices: { Args: never; Returns: Json }

@@ -1,5 +1,10 @@
 # Roadmap
 
+## Outlook lab reports on GRNs
+- [ ] Restore secure Outlook collection and extract saved lab readings, retaining original scans and review/link safeguards.
+- [ ] Generate QR-verified reports from linked postings and show lab readings separately on individual and bulk GRNs, without changing prices or assessments.
+- [ ] Test extraction/link rules, deploy and verify live scanner; verify staff printing where authentication permits.
+
 ## Business-loan evaluation checks
 - [x] Evaluate paginated saved wallet transactions and completed calendar-month tenure; block missing/future joining dates, absent transaction evidence and negative wallets. Debt/history read failures stop evaluation rather than imply clean history.
 - [x] Preserve approval stages and product ceilings; retain existing risk reductions in the saved business maximum and enforce them after AI. Joining date and transaction totals appear in the evaluation and printed report. Six evidence-rule tests passed; function deployed and preview build clean; no funds moved.
