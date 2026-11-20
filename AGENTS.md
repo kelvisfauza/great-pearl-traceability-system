@@ -57,7 +57,7 @@
 - Issue print verification before browser printing, PDF serialization, and Word packing; resolve the employee name from the authenticated account and add a registered QR footer, reserving space rather than covering original content. Queue reprints identify the current printing employee; verification confirms issuance, not payment, approval, or later edits.
 - Resolve numbered form verification through the public verification RPC against issued-number registries with space/hyphen normalization; expose issuance-only metadata and prioritize registered verification status so existing printed forms work without revealing assessment data.
 
-- Collect Outlook quality postings through a bounded, database-leased attachment recognizer with immutable deduplication and private files; mailbox events collect arrivals, recent-mail reconciliation has a separate cursor from hourly historical scanning and subscription renewal. Link only unique exact references automatically; date/supplier candidates require administrator confirmation through permission-checked private-schema routines without changing original assessments or deliveries.
+- Generate delivery analysis forms from the saved quality assessment (SystemAnalysisFormButton, delivery-derived form number, shared print footer) instead of collecting uploaded scans; the Outlook collector stays paused and unscheduled, its past postings kept read-only.
 
 - Queue system integrity scans per changing transaction in a private schema; a wake-on-enqueue worker stops after drain so full scans cannot block assessment/delivery saves. Resolve flags only when source issues disappear; administrators claim and annotate without altering source records.
  
