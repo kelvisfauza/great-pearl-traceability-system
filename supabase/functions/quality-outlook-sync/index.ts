@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
         const bytes=new Uint8Array(await source.data.arrayBuffer());
         let binary=''; for(const b of bytes) binary+=String.fromCharCode(b);
         const decision=await recognise(btoa(binary),p.filename,p.mime_type,`Previously saved posting: ${p.subject}`);
-        const saved=await db.from('quality_analysis_postings').update({lab_results:decision.is_quality_analysis?decision.lab_results:null,lab_extracted_at:new Date().toISOString(),status:'pending',reviewed_at:null,reviewed_by:null,updated_at:new Date().toISOString()}).eq('id',p.id).is('lab_extracted_at',null);
+        const saved=await db.from('quality_analysis_postings').update({lab_results:decision.is_quality_analysis?decision.lab_results:null,lab_extracted_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',p.id).is('lab_extracted_at',null);
         if(saved.error) throw saved.error; extracted++;
       }
     }
