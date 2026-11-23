@@ -53,6 +53,7 @@ type Section = {
 const SECTIONS: Section[] = [
   { value: 'action', label: 'Action needed', hint: 'Payouts waiting for you', icon: Zap, tone: 'bg-destructive/10 text-destructive' },
   { value: 'coffee', label: 'Coffee payments', hint: 'Supplier lots to pay', icon: Coffee, tone: 'bg-primary/10 text-primary' },
+  { value: 'receipts', label: 'Payment receipts', hint: 'Find & print receipts', icon: Receipt, tone: 'bg-primary/10 text-primary' },
   { value: 'withdrawals', label: 'Withdrawals', hint: 'Staff wallet requests', icon: Wallet, tone: 'bg-accent/15 text-accent-foreground' },
   { value: 'supplier-accounts', label: 'Supplier accounts', hint: 'Kgs, payments & balances', icon: BookOpen, tone: 'bg-primary/10 text-primary' },
   { value: 'advances', label: 'Advances', hint: 'Supplier advances', icon: HandCoins, tone: 'bg-warning/15 text-warning' },
@@ -117,6 +118,7 @@ const Finance = () => {
           </div>
         );
       case 'coffee': return <PendingCoffeePayments />;
+      case 'receipts': return <FinanceReceiptLookup />;
       case 'withdrawals': return <div className="space-y-6"><WithdrawalRequestsManager /><InstantWithdrawalHistory /></div>;
       case 'supplier-accounts': return <SupplierLedgers />;
       case 'advances': return <SupplierAdvancesPage />;
@@ -127,7 +129,6 @@ const Finance = () => {
       case 'history':
         return (
           <div className="space-y-4">
-            {!scanOnly && <FinanceReceiptLookup />}
             <div className="flex gap-2 overflow-x-auto pb-1">
               {historyViews.map(v => (
                 <Button
