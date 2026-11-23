@@ -1,5 +1,13 @@
 # Roadmap
 
+## Quality posting waiting status
+- [x] Distinguish confirmed delivery links from saved administrator review, keep review open after linking, and align waiting counts across Quality views without automatically approving old postings. Live reads found 11 reviewed, 377 pending (84 linked) and three pending scans sharing reviewed form numbers but different source files/deliveries; no decisions changed.
+- [x] Add saved-decision read-back checks; six review/report regressions pass and preview build is clean.
+- [ ] Verify real staff link → administrator review → refreshed queue — external unmanaged Supabase provides no browser session and the staff page did not render in the signed-out browser check.
+
+## Treasury drift investigation
+- [ ] Reconcile UGX 328,876 only after confirming whether Benson's UGX 280,000 account debit represented a real payout and obtaining provider evidence for Timothy's marked-sent UGX 65,000 payout; balances unchanged.
+
 ## Treasury list filters
 - [x] Put the Treasury movements and employee-account filters in a labelled panel and show the applied account, movement, reference, dates or search term as removable chips with Clear all; the chosen inputs stay highlighted and an empty list says it matched filters. Six filter-rule tests passed; preview build and typecheck clean.
 - [ ] Verify real staff filtering on the signed-in Treasury page — external unmanaged Supabase supplies no automated staff session; the browser stops at the sign-in gate.

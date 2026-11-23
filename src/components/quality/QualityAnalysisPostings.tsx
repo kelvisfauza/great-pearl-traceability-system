@@ -16,8 +16,10 @@ import { printSamplingOrder } from '@/components/v2/quality/tabs/SamplingOrdersT
 import { RefreshCw, Mail, Eye, Loader2, Download, Save } from 'lucide-react';
 import { labRows } from '@/lib/qualityLabReport';
 import { SystemAnalysisFormButton } from '@/components/quality/SystemAnalysisFormButton';
+import { postingReviewStage, hasSavedPostingReview } from '@/lib/qualityPostingReview';
 
 const labels: Record<string,string> = {pending:'Awaiting review',reviewed:'Reviewed',needs_correction:'Needs correction'};
+const stageLabels: Record<string,string> = {awaiting_links:'Awaiting link confirmation',awaiting_admin:'Awaiting administrator review',reviewed:'Administrator reviewed',needs_correction:'Needs correction'};
 export default function QualityAnalysisPostings() {
   const { isAdmin, employee } = useAuth();
   const canLink = isAdmin() || ['tumwinealex@greatpearlcoffee.com','nuwagabagadaffi@greatpearlcoffee.com'].includes((employee?.email||'').toLowerCase());
@@ -63,24 +65,31 @@ export default function QualityAnalysisPostings() {
       const res=await (supabase as any).rpc('link_quality_posting',{p_id:selected.id,p_order_id:ins.data.id,p_delivery_id:deliveryId});
       if(res.error)throw res.error;
       printSamplingOrder(ins.data, w);
-      setSelected(null);await refresh();
+      await reloadSelected(selected.id);await refresh();
     }catch(e:any){w?.close();setError(e.message);}finally{setBusy(false);}
   };
   const link=async()=>{
     if(!selected)return;setBusy(true);setError('');
-    try{const res=await (supabase as any).rpc('link_quality_posting',{p_id:selected.id,p_order_id:orderId==='none'?null:orderId,p_delivery_id:deliveryId==='none'?null:deliveryId});if(res.error)throw res.error;setSelected(null);await refresh();}
+    try{const res=await (supabase as any).rpc('link_quality_posting',{p_id:selected.id,p_order_id:orderId==='none'?null:orderId,p_delivery_id:deliveryId==='none'?null:deliveryId});if(res.error)throw res.error;if(res.data?.ok!==true)throw new Error(res.data?.error||'Links were not confirmed');await reloadSelected(selected.id);await refresh();}
     catch(e:any){setError(e.message);}finally{setBusy(false);}
   };
   const rows = useQuery({queryKey:['quality-outlook-postings',filter,page,isAdmin()],refetchInterval:60_000,queryFn:async()=>{
     let q=(supabase as any).from('quality_analysis_postings').select('*',{count:'exact'}).order('received_at',{ascending:false}).range(page*25,page*25+24);
-    if(filter!=='all') q=q.eq('status',filter); if(filter==='pending' && !isAdmin()) q=q.is('linked_delivery_id',null);
+    if(filter!=='all') q=q.eq('status',filter);
     const res=await q; if(res.error) throw res.error; return {items:res.data as any[],count:res.count as number};
   }});
   const status=useQuery({queryKey:['quality-outlook-status'],refetchInterval:60_000,queryFn:async()=>{
     const res=await (supabase as any).rpc('quality_outlook_status'); if(res.error) throw res.error; return res.data;
   }});
-  const counts=useQualityPostingCounts(isAdmin());
+  const counts=useQualityPostingCounts();
   const refresh=async()=>{await Promise.all([rows.refetch(),status.refetch(),counts.refetch()]);};
+  const reloadSelected=async(id:string)=>{
+    const res=await (supabase as any).from('quality_analysis_postings').select('*').eq('id',id).single();
+    if(res.error)throw res.error;
+    setSelected(res.data);setOrderId(res.data.linked_sampling_order_id||'none');setDeliveryId(res.data.linked_delivery_id||'none');
+    setNotes(res.data.review_notes??'');setReview(res.data.status==='pending'?'reviewed':res.data.status);
+    return res.data;
+  };
   const sync=async(action='sync')=>{
     setBusy(true);setError('');
     try {const res=await supabase.functions.invoke('quality-outlook-sync',{body:{action}});
@@ -97,7 +106,7 @@ export default function QualityAnalysisPostings() {
   };
   const save=async()=>{
     if(!selected)return;setBusy(true);setError('');
-    try{const res=await (supabase as any).rpc('review_quality_posting',{p_id:selected.id,p_status:review,p_notes:notes});if(res.error)throw res.error;setSelected(null);await refresh();}
+    try{const res=await (supabase as any).rpc('review_quality_posting',{p_id:selected.id,p_status:review,p_notes:notes});if(res.error)throw res.error;if(res.data?.ok!==true)throw new Error(res.data?.error||'Review was not saved');const saved=await reloadSelected(selected.id);if(!hasSavedPostingReview(saved,review))throw new Error('The saved review could not be confirmed. Refresh this posting before trying again.');setSelected(null);await refresh();}
     catch(e:any){setError(e.message);}finally{setBusy(false);}
   };
   const visible=rows.data?.items.filter(item=>[item.subject,item.sender_name,item.sender_email,item.form_number,item.supplier_name,item.batch_number,item.filename].join(' ').toLowerCase().includes(search.toLowerCase())) ?? [];
@@ -111,10 +120,10 @@ export default function QualityAnalysisPostings() {
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {([{key:'all',label:'Total postings',value:counts.data?.total},{key:'pending',label:'Awaiting review',value:counts.data?.pending},{key:'reviewed',label:'Reviewed',value:counts.data?.reviewed},{key:'needs_correction',label:'Needs correction',value:counts.data?.needs_correction}] as const).map(tile=>
-        <button key={tile.key} type="button" onClick={()=>{setFilter(tile.key);setPage(0);}} aria-pressed={filter===tile.key} className={`rounded-md border bg-card p-3 text-left transition-colors hover:border-primary/60 ${filter===tile.key?'border-primary ring-1 ring-primary/40':''}`}>
+        <Button variant="outline" key={tile.key} type="button" onClick={()=>{setFilter(tile.key);setPage(0);}} aria-pressed={filter===tile.key} className={`h-auto flex-col items-start whitespace-normal rounded-md border bg-card p-3 text-left transition-colors hover:border-primary/60 ${filter===tile.key?'border-primary ring-1 ring-primary/40':''}`}>
           <div className="text-2xl font-semibold tabular-nums">{counts.isLoading?<Loader2 className="h-5 w-5 animate-spin"/>:(tile.value ?? 0)}</div>
           <div className="text-sm text-muted-foreground">{tile.label}</div>
-        </button>)}
+        </Button>)}
     </div>
     {(error || rows.error || status.error || status.data?.last_error) && <Alert variant="destructive"><AlertDescription className="break-words">{error || (rows.error as Error)?.message || (status.error as Error)?.message || status.data?.last_error}</AlertDescription></Alert>}
     <div className="flex flex-wrap gap-3"><Input className="max-w-sm" placeholder="Search this page" aria-label="Search postings" value={search} onChange={e=>setSearch(e.target.value)}/>
@@ -124,12 +133,13 @@ export default function QualityAnalysisPostings() {
       <TableCell><div>{new Date(item.received_at).toLocaleDateString()}</div><div className="text-sm text-muted-foreground">{item.sender_name || item.sender_email}</div></TableCell>
       <TableCell><div>{item.form_number || 'Number not recorded'}</div><div className="text-sm text-muted-foreground max-w-64 break-words">{item.subject}</div></TableCell>
       <TableCell>{item.supplier_name || 'Not recorded'}<div className="text-sm text-muted-foreground">{item.batch_number || 'Batch not recorded'}</div><Badge variant="outline">{item.link_method ? (item.link_method==='admin_confirmed'?'Links confirmed':'Exact reference linked') : 'Unlinked'}</Badge></TableCell>
-      <TableCell><Badge variant={item.status==='needs_correction'?'destructive':'secondary'}>{labels[item.status] ?? item.status}</Badge></TableCell>
+      <TableCell><Badge variant={item.status==='needs_correction'?'destructive':'secondary'}>{stageLabels[postingReviewStage(item)]}</Badge>{item.reviewed_at && <div className="text-xs text-muted-foreground mt-1">Review saved · {new Date(item.reviewed_at).toLocaleString()}</div>}</TableCell>
       <TableCell><Button size="sm" variant="outline" onClick={()=>{ if(reviewers[item.id] && !window.confirm(`${reviewers[item.id]} is already reviewing this posting. Open it anyway?`)) return; open(item); }}><Eye className="mr-2 h-4 w-4"/>Review</Button>{reviewers[item.id] && <div className="mt-1"><Badge variant="destructive">Being reviewed by {reviewers[item.id]}</Badge></div>}</TableCell>
     </TableRow>)}</TableBody></Table></div>
     <div className="flex justify-between items-center gap-3"><span className="text-sm text-muted-foreground">{rows.data?.count ?? 0} postings · Page {page+1}</span><div className="flex gap-2"><Button size="sm" variant="outline" disabled={page===0} onClick={()=>setPage(p=>p-1)}>Previous</Button><Button size="sm" variant="outline" disabled={(page+1)*25 >= (rows.data?.count ?? 0)} onClick={()=>setPage(p=>p+1)}>Next</Button></div></div>
     <Dialog open={!!selected} onOpenChange={v=>{if(!v)setSelected(null);}}><DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>Quality Analysis Posting</DialogTitle></DialogHeader>
       {selected && <>{reviewers[selected.id] && <Alert variant="destructive"><AlertDescription>{reviewers[selected.id]} is also reviewing this posting right now.</AlertDescription></Alert>}<div className="space-y-1 break-words"><p className="font-medium">{selected.subject}</p><p className="text-sm text-muted-foreground">{selected.sender_name} · {selected.sender_email}</p><p className="text-sm">Form: {selected.form_number || 'Not recorded'} · Analysis date: {selected.analysis_date || 'Not recorded'}</p></div>
+      <div className="flex flex-wrap gap-2"><Badge variant="outline">{selected.linked_delivery_id?'Delivery linked':'Delivery not linked'}</Badge><Badge variant={selected.status==='needs_correction'?'destructive':'secondary'}>{stageLabels[postingReviewStage(selected)]}</Badge>{selected.reviewed_at && <span className="text-sm text-muted-foreground">Review saved · {new Date(selected.reviewed_at).toLocaleString()}</span>}</div>
       <div className="space-y-3 border-t pt-3"><h3 className="font-semibold">Sampling order & delivery</h3>
       {candidates.error && <Alert variant="destructive"><AlertDescription>{(candidates.error as Error).message}</AlertDescription></Alert>}
       <p className="text-sm">Sampling reference: {selected.sampling_order_number || 'Not recorded'} · {selected.link_method || 'Not linked'}</p>
@@ -144,7 +154,7 @@ export default function QualityAnalysisPostings() {
         </> : <p className="text-sm text-muted-foreground">Awaiting lab scan</p>}
       </div>
       {fileUrl && <><Button asChild variant="outline"><a href={fileUrl} target="_blank" rel="noopener noreferrer"><Download className="mr-2 h-4 w-4"/>{selected.filename}</a></Button>{selected.mime_type.startsWith('image/')?<img src={fileUrl} alt="Quality analysis form" className="max-h-[50vh] w-full object-contain"/>:<iframe src={fileUrl} title="Quality analysis attachment" className="w-full h-[50vh] border rounded-md"/>}</>}
-      {isAdmin()?<><Select value={review} onValueChange={setReview}><SelectTrigger aria-label="Review status"><SelectValue/></SelectTrigger><SelectContent>{Object.entries(labels).map(([value,label])=><SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select><Textarea aria-label="Administrator review notes" placeholder="Review notes" maxLength={4000} value={notes} onChange={e=>setNotes(e.target.value)}/><Button disabled={busy} onClick={save}><Save className="mr-2 h-4 w-4"/>Save review</Button></>:<p className="text-sm">{selected.review_notes || 'No administrator notes yet.'}</p>}</>}
+      {isAdmin()?<><h3 className="font-semibold border-t pt-3">Administrator review</h3><Select value={review} onValueChange={setReview}><SelectTrigger aria-label="Review status"><SelectValue/></SelectTrigger><SelectContent>{Object.entries(labels).map(([value,label])=><SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select><Textarea aria-label="Administrator review notes" placeholder="Review notes" maxLength={4000} value={notes} onChange={e=>setNotes(e.target.value)}/><Button disabled={busy} onClick={save}><Save className="mr-2 h-4 w-4"/>{busy?'Saving…':'Save administrator review'}</Button></>:<p className="text-sm">{selected.review_notes || 'No administrator notes yet.'}</p>}</>}
     </DialogContent></Dialog>
   </section>;
 }
