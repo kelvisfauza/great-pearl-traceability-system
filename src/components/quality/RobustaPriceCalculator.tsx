@@ -170,9 +170,10 @@ const RobustaPriceCalculator = ({ initialValues, onCalculationChange, embedded =
     const moistureDiff = moisture - TARGET_MOISTURE;
     const moistureDeductionPercent = moistureDiff > 0 ? moistureDiff : 0;
 
-    // Total deduction percentage (less12 + pods + husks + stones + moisture affect price)
+    // Excess G1/G2 defects and moisture combine with Less12 and foreign matter.
     // Less 12 has equal deductions as pods (affects both outturn AND price)
-    const totalDeductionPercent = less12 + totalFM + moistureDeductionPercent;
+    const totalDeductionPercent = less12 + totalFM + moistureDeductionPercent
+      + Math.max(0, g1Defects - 3) + Math.max(0, g2Defects - 8);
 
     // Deduction per kg = refPrice × totalDeductionPercent / 100
     const deductionPerKg = (refPrice * totalDeductionPercent) / 100 + discretion;

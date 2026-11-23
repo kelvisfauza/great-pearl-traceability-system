@@ -113,7 +113,8 @@ export const calculateQualityPrice = (
     const totalDefects = gp1 + gp2 + less12 + totalFm;
     const outturn = 100 - totalDefects;
     const moistureDeductionPercent = Math.max(0, moisture - 14);
-    const totalDeductionPercent = less12 + totalFm + moistureDeductionPercent;
+    const totalDeductionPercent = less12 + totalFm + moistureDeductionPercent
+      + Math.max(0, gp1 - 3) + Math.max(0, gp2 - 8);
     const deductionPerKg = (refPrice * totalDeductionPercent) / 100 + discretion;
     const actualPricePerKg = Math.max(0, refPrice - deductionPerKg);
     const rejectionReason = coffeeRejectionReason({ moisture, gp1, gp2, less12, pods, husks, stones }, false);

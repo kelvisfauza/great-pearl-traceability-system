@@ -21,16 +21,33 @@ for (const coffeeType of ['arabica', 'robusta']) {
     assert.equal(result.rejectFinal, false);
   });
 }
-test('Arabica deductions stay unchanged while Robusta uses the 14% moisture target', () => {
+test('Arabica deductions stay unchanged while Robusta uses confirmed excess deductions', () => {
   const inputs = { ...defaultCalculatorInputs, refPrice: '15000', moisture: '18', gp1: '14', gp2: '28', less12: '4', pods: '4', husks: '4', stones: '4' };
   assert.equal(calculateQualityPrice(inputs, 'arabica').finalPrice, 10570);
-  assert.equal(calculateQualityPrice(inputs, 'robusta').finalPrice, 12000);
+  assert.equal(calculateQualityPrice(inputs, 'robusta').finalPrice, 7350);
 });
 test('Robusta moisture at 14% has no deduction and 15% deducts 1% of reference price', () => {
   const inputs = { ...defaultCalculatorInputs, refPrice: '10900', moisture: '14' };
   assert.equal(calculateQualityPrice(inputs, 'robusta').finalPrice, 10900);
   assert.equal(calculateQualityPrice({ ...inputs, moisture: '15' }, 'robusta').finalPrice, 10791);
   assert.equal(calculateQualityPrice({ ...inputs, moisture: '13' }, 'robusta').finalPrice, 10900);
+});
+test('Robusta G1 deducts 1% of reference for each point above 3%, not the full reading', () => {
+  const inputs = { ...defaultCalculatorInputs, refPrice: '10900', moisture: '14', gp1: '3' };
+  assert.equal(calculateQualityPrice(inputs, 'robusta').finalPrice, 10900);
+  assert.equal(calculateQualityPrice({ ...inputs, gp1: '4' }, 'robusta').finalPrice, 10791);
+  assert.equal(calculateQualityPrice({ ...inputs, gp1: '2' }, 'robusta').finalPrice, 10900);
+});
+test('Robusta G2 deducts 1% of reference for each point above 8%, not the full reading', () => {
+  const inputs = { ...defaultCalculatorInputs, refPrice: '10900', moisture: '14', gp2: '8' };
+  assert.equal(calculateQualityPrice(inputs, 'robusta').finalPrice, 10900);
+  assert.equal(calculateQualityPrice({ ...inputs, gp2: '12' }, 'robusta').finalPrice, 10464);
+  assert.equal(calculateQualityPrice({ ...inputs, gp2: '7' }, 'robusta').finalPrice, 10900);
+});
+test('Robusta combines moisture, excess G1/G2, Less12 and foreign matter once', () => {
+  const inputs = { ...defaultCalculatorInputs, refPrice: '10900', moisture: '15', gp1: '4', gp2: '12', less12: '1', pods: '1', husks: '1', stones: '1' };
+  assert.equal(calculateQualityPrice(inputs, 'robusta').finalPrice, 9810);
+  assert.equal(calculateQualityPrice(inputs, 'robusta').outturn, 80);
 });
 test('saved below12 and explicit stones are used rather than replaced by zeros', () => {
   const inputs = buildCalculatorInputs({ below12: 4.1, stones: 4.1, fm: 0 }, 'arabica', 15000);
