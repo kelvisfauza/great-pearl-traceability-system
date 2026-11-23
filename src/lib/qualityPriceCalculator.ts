@@ -112,7 +112,7 @@ export const calculateQualityPrice = (
   if (!isArabica) {
     const totalDefects = gp1 + gp2 + less12 + totalFm;
     const outturn = 100 - totalDefects;
-    const moistureDeductionPercent = Math.max(0, moisture - 15);
+    const moistureDeductionPercent = Math.max(0, moisture - 14);
     const totalDeductionPercent = less12 + totalFm + moistureDeductionPercent;
     const deductionPerKg = (refPrice * totalDeductionPercent) / 100 + discretion;
     const actualPricePerKg = Math.max(0, refPrice - deductionPerKg);

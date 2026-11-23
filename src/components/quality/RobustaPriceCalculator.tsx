@@ -80,7 +80,7 @@ const RobustaPriceCalculator = ({ initialValues, onCalculationChange, embedded =
   const [verificationCode, setVerificationCode] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
-  const TARGET_MOISTURE = 15; // Fixed target moisture
+  const TARGET_MOISTURE = 14;
 
 
   const [state, setState] = useState<RobustaState>({
@@ -166,7 +166,7 @@ const RobustaPriceCalculator = ({ initialValues, onCalculationChange, embedded =
     const totalDefects = g1Defects + g2Defects + less12 + totalFM;
     const outturn = 100 - totalDefects;
 
-    // Calculate moisture deduction percentage (using fixed target moisture of 15)
+    // Deduct only moisture above the agreed Robusta target.
     const moistureDiff = moisture - TARGET_MOISTURE;
     const moistureDeductionPercent = moistureDiff > 0 ? moistureDiff : 0;
 

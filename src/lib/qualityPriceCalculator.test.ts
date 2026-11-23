@@ -21,10 +21,16 @@ for (const coffeeType of ['arabica', 'robusta']) {
     assert.equal(result.rejectFinal, false);
   });
 }
-test('Arabica and Robusta deductions remain unchanged', () => {
+test('Arabica deductions stay unchanged while Robusta uses the 14% moisture target', () => {
   const inputs = { ...defaultCalculatorInputs, refPrice: '15000', moisture: '18', gp1: '14', gp2: '28', less12: '4', pods: '4', husks: '4', stones: '4' };
   assert.equal(calculateQualityPrice(inputs, 'arabica').finalPrice, 10570);
-  assert.equal(calculateQualityPrice(inputs, 'robusta').finalPrice, 12150);
+  assert.equal(calculateQualityPrice(inputs, 'robusta').finalPrice, 12000);
+});
+test('Robusta moisture at 14% has no deduction and 15% deducts 1% of reference price', () => {
+  const inputs = { ...defaultCalculatorInputs, refPrice: '10900', moisture: '14' };
+  assert.equal(calculateQualityPrice(inputs, 'robusta').finalPrice, 10900);
+  assert.equal(calculateQualityPrice({ ...inputs, moisture: '15' }, 'robusta').finalPrice, 10791);
+  assert.equal(calculateQualityPrice({ ...inputs, moisture: '13' }, 'robusta').finalPrice, 10900);
 });
 test('saved below12 and explicit stones are used rather than replaced by zeros', () => {
   const inputs = buildCalculatorInputs({ below12: 4.1, stones: 4.1, fm: 0 }, 'arabica', 15000);

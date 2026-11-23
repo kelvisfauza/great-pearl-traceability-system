@@ -2,7 +2,8 @@
 
 ## Robusta price deductions
 - [x] Checked quick and shared assessment calculators: G1/G2 affect outturn but not price; Less 12 deducts its full percentage; moisture deducts only above 15%. Screenshot's 10,900 reference and 4% deduction produce 10,464 correctly under the existing formula.
-- [ ] Update both calculators and regression tests after Fauza specifies G1/G2 deduction rates and moisture target; do not guess purchase-price rules or reprice saved assessments.
+- [x] Applied above-14% Robusta moisture deductions in both calculators; 19 tests passed and quick-calculator example shows 15% moisture deducting 1%, with final 10,355 UGX/kg for screenshot readings. Saved assessments unchanged; real signed-in assessment saving unavailable on external unmanaged Supabase.
+- [ ] Apply excess-only G1 above 3% and G2 above 8% after Fauza confirms the deduction rate; do not guess purchase-price rules.
 
 ## Missing meal-plan and Procurement documents
 - [x] MP-2026-000155 was issued/printed 12 November but has no submitted request or receipt; recent paid meal requests have saved receipts. Finance now shows issued-form and request status separately; Procurement lists issued forms and includes older non-paper meal requests with number search. No payments changed.
