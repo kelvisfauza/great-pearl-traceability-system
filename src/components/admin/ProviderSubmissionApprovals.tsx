@@ -1,3 +1,4 @@
+import { invokeFinanceFunction } from '@/lib/invokeFinanceFunction';
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -89,7 +90,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
     }
     setProcessing(selected.id);
     try {
-      const { data, error } = await supabase.functions.invoke('process-provider-submission', {
+      const { data, error } = await invokeFinanceFunction('process-provider-submission', {
         body: {
           submissionId: selected.id,
           action,

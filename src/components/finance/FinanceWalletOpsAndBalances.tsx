@@ -1,3 +1,4 @@
+import { invokeFinanceFunction } from '@/lib/invokeFinanceFunction';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,10 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
-    if (!quiet) supabase.functions.invoke('sync-yo-balance').catch(() => {});
+    if (!quiet) {
+      const sync = await invokeFinanceFunction('sync-yo-balance');
+      if (sync.error || sync.data?.ok === false) toast.error(sync.data?.error || 'Could not refresh Yo balance. Please try again.');
+    }
     const [{ data: o }, { data: l }, { data: iw }] = await Promise.all([
       (supabase as any).rpc('get_treasury_accounts_overview'),
       supabase.functions.invoke('admin-wallet-operation', { body: { action: 'finance_list' } }),

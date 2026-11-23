@@ -1,5 +1,10 @@
 # Roadmap
 
+## Finance authorization errors
+- [x] Authenticate both endpoints through verified claims and saved active-employee/Finance permissions; distinguish temporary permission-read failures from denial. Browser calls explicitly use the current session, refresh balances before reading, and show queue/history failures rather than false empty results. No payments or balances changed.
+- [x] Seven access tests and ten sign-in/loan regressions passed; both services deployed, anonymous/invalid calls still rejected and preview build clean.
+- [ ] Verify signed-in Finance balance refresh and provider lists — external Supabase supplies no automated staff session; real Finance browser check remained blank and authenticated success is unverified.
+
 ## Robusta price deductions
 - [x] Checked quick and shared assessment calculators: G1/G2 affect outturn but not price; Less 12 deducts its full percentage; moisture deducts only above 15%. Screenshot's 10,900 reference and 4% deduction produce 10,464 correctly under the existing formula.
 - [x] Applied above-14% Robusta moisture deductions in both calculators; 19 tests passed and quick-calculator example shows 15% moisture deducting 1%, with final 10,355 UGX/kg for screenshot readings. Saved assessments unchanged; real signed-in assessment saving unavailable on external unmanaged Supabase.

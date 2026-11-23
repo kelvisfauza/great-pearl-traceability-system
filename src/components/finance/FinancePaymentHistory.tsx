@@ -1,3 +1,4 @@
+import { invokeFinanceFunction } from '@/lib/invokeFinanceFunction';
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -38,10 +39,10 @@ const FinancePaymentHistory: React.FC = () => {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
 
-  const { data: submissions = [], isLoading } = useQuery({
+  const { data: submissions = [], isLoading, error: loadError, refetch } = useQuery({
     queryKey: ['finance-payment-history'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('process-provider-submission', {
+      const { data, error } = await invokeFinanceFunction('process-provider-submission', {
         body: { action: 'finance_history' },
       });
       if (error) throw error;
@@ -61,7 +62,12 @@ const FinancePaymentHistory: React.FC = () => {
         {submissions.length > 0 && <Badge variant="secondary">{submissions.length}</Badge>}
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {loadError ? (
+          <div className="space-y-2" role="alert">
+            <p className="text-sm text-destructive">Could not load payment history. Please try again.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+          </div>
+        ) : isLoading ? (
           <div className="flex items-center justify-center py-6 text-muted-foreground">
             <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading...
           </div>

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { requireFinanceCaller } from "../_shared/finance-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,9 +28,9 @@ function extractTag(xml: string, tag: string): string | null {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
-
   try {
+    const caller = await requireFinanceCaller(req, corsHeaders);
+    if (caller instanceof Response) return caller;
     const username = Deno.env.get("YO_API_USERNAME");
     const password = Deno.env.get("YO_API_PASSWORD");
     if (!username || !password) {

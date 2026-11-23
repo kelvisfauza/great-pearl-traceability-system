@@ -1,5 +1,5 @@
 import { receiptLink } from "../_shared/receipt-token.ts";
-import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { requireFinanceCaller } from "../_shared/finance-access.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
@@ -332,9 +332,9 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
-
   try {
+    const caller = await requireFinanceCaller(req, corsHeaders);
+    if (caller instanceof Response) return caller;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -350,10 +350,7 @@ serve(async (req) => {
       !!resendKey &&
       (req.headers.get("x-resend-key") || body.resendKey) === resendKey;
 
-    const authHeader = req.headers.get("Authorization") || "";
-    const jwt = authHeader.replace("Bearer ", "");
-    const { data: userData } = await supabase.auth.getUser(jwt);
-    const reviewer = userData?.user as any;
+    const reviewer = caller.user;
     if (!reviewer && !trustedResend) {
       return new Response(JSON.stringify({ ok: false, error: "Not authenticated" }), {
         status: 200,
@@ -447,12 +444,16 @@ serve(async (req) => {
     }
 
     // 📋 Finance: list submissions awaiting finance release
+    if (!reviewer) return new Response(JSON.stringify({ ok: false, error: "Please sign in again." }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
     if (action === "finance_list") {
-      const { data: rows } = await supabase
+      const { data: rows, error: listError } = await supabase
         .from("provider_submission_requests")
         .select("*")
         .eq("status", "awaiting_finance")
         .order("created_at", { ascending: false });
+      if (listError) throw new Error("Could not load provider payments. Please try again.");
       return new Response(JSON.stringify({ ok: true, submissions: rows || [] }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -462,11 +463,12 @@ serve(async (req) => {
     // 📜 Finance: recent history of all provider / meal-plan / per-diem
     // submissions (any status) so Finance can track outcomes after approval.
     if (action === "finance_history") {
-      const { data: rows } = await supabase
+      const { data: rows, error: historyError } = await supabase
         .from("provider_submission_requests")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(50);
+      if (historyError) throw new Error("Could not load payment history. Please try again.");
       return new Response(JSON.stringify({ ok: true, submissions: rows || [] }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

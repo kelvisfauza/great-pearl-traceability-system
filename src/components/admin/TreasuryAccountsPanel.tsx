@@ -1,3 +1,4 @@
+import { invokeFinanceFunction } from '@/lib/invokeFinanceFunction';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -132,7 +133,7 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
     };
     const fast = setInterval(tick, 1000);
     const yoSync = setInterval(() => {
-      if (!document.hidden) supabase.functions.invoke("sync-yo-balance").catch(() => {});
+      if (!document.hidden) invokeFinanceFunction("sync-yo-balance").catch(() => {});
     }, 60_000);
     return () => { cancelled = true; clearInterval(fast); clearInterval(yoSync); };
   }, []);
@@ -262,7 +263,7 @@ export default function TreasuryAccountsPanel({ view = "accounts" }: { view?: "a
         <div className="flex flex-wrap gap-3 justify-between items-center">
           <div className="text-sm text-muted-foreground">Yo last checked: {data.yo_synced_at ? new Date(data.yo_synced_at).toLocaleString("en-GB", { timeZone: "Africa/Kampala" }) : "Not checked"} · Account data read: {lastTick.toLocaleTimeString("en-GB", { timeZone: "Africa/Kampala" })}</div>
           <Button variant="outline" onClick={async () => {
-            const result = await supabase.functions.invoke("sync-yo-balance");
+            const result = await invokeFinanceFunction("sync-yo-balance");
             if (result.error || result.data?.ok === false) toast({ title: "Sync failed", description: result.error?.message || result.data?.error, variant: "destructive" });
             else { toast({ title: "Yo balance checked" }); await load(); }
           }}><RefreshCw className="mr-2 h-4 w-4" />Check Yo balance</Button>

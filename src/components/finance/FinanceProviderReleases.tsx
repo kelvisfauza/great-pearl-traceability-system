@@ -1,3 +1,4 @@
+import { invokeFinanceFunction } from '@/lib/invokeFinanceFunction';
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -22,10 +23,10 @@ const FinanceProviderReleases: React.FC = () => {
   const [receipt, setReceipt] = useState<any>(null);
   const [waiting, setWaiting] = useState<Record<string, number>>({});
 
-  const { data: submissions = [], isLoading } = useQuery({
+  const { data: submissions = [], isLoading, error: loadError, refetch } = useQuery({
     queryKey: ['finance-provider-releases'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('process-provider-submission', {
+      const { data, error } = await invokeFinanceFunction('process-provider-submission', {
         body: { action: 'finance_list' },
       });
       if (error) throw error;
@@ -40,7 +41,7 @@ const FinanceProviderReleases: React.FC = () => {
     setReleasing(s.id);
     try {
       const { data, error, timedOut } = await waitForFunds(
-        () => supabase.functions.invoke('process-provider-submission', {
+        () => invokeFinanceFunction('process-provider-submission', {
           body: { action: 'finance_release', submissionId: s.id, paymentMode: mode },
         }),
         (sec) => setWaiting((w) => ({ ...w, [s.id]: sec })),
@@ -86,7 +87,7 @@ const FinanceProviderReleases: React.FC = () => {
     if (!reason || !reason.trim()) return;
     setReleasing(s.id);
     try {
-      const { data, error } = await supabase.functions.invoke('process-provider-submission', {
+      const { data, error } = await invokeFinanceFunction('process-provider-submission', {
         body: { action: 'reject', submissionId: s.id, rejectionReason: reason.trim() },
       });
       if (error) throw error;
@@ -101,7 +102,7 @@ const FinanceProviderReleases: React.FC = () => {
   };
 
   // Keep the receipt prompt mounted even after the last item leaves the list.
-  if (!isLoading && submissions.length === 0) {
+  if (!isLoading && !loadError && submissions.length === 0) {
     return receipt ? <ReleaseReceiptDialog data={receipt} onClose={() => setReceipt(null)} /> : null;
   }
 
@@ -113,7 +114,12 @@ const FinanceProviderReleases: React.FC = () => {
         {submissions.length > 0 && <Badge variant="secondary">{submissions.length}</Badge>}
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {loadError ? (
+          <div className="space-y-2" role="alert">
+            <p className="text-sm text-destructive">Could not load provider payments. Please try again.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+          </div>
+        ) : isLoading ? (
           <div className="flex items-center justify-center py-6 text-muted-foreground">
             <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading...
           </div>
