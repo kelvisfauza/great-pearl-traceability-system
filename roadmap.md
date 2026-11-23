@@ -6,7 +6,8 @@
 - [ ] Verify real staff link → administrator review → refreshed queue — external unmanaged Supabase provides no browser session and the staff page did not render in the signed-out browser check.
 
 ## Treasury drift investigation
-- [ ] Reconcile UGX 328,876 only after confirming whether Benson's UGX 280,000 account debit represented a real payout and obtaining provider evidence for Timothy's marked-sent UGX 65,000 payout; balances unchanged.
+- [ ] Prevent silent GosentePay accounting failures with durable payout receipts and accounting-only recovery; make drift alerts current and distinguish investigation from funding.
+- [ ] Benson's UGX 280,000 was paid in cash (confirmed 23 November); preserve his wallet debit, trace the cash source and reconcile only supported entries. Obtain provider evidence for Timothy's marked-sent UGX 65,000 payout.
 
 ## Treasury list filters
 - [x] Put the Treasury movements and employee-account filters in a labelled panel and show the applied account, movement, reference, dates or search term as removable chips with Clear all; the chosen inputs stay highlighted and an empty list says it matched filters. Six filter-rule tests passed; preview build and typecheck clean.

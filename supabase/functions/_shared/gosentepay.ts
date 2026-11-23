@@ -1,4 +1,4 @@
-import { gosenteWithdrawFee } from "./gosentepay-fees.ts";
+import { recordedPayout } from "./payout-accounting.ts";
 // Shared GosentePay API client (v1 — https://api.gosentepay.com)
 // Handles Bearer token exchange + caching (24h), and exposes
 // deposit / withdraw / status helpers.
@@ -127,42 +127,30 @@ function sanitizeRef(ref: string): string {
 }
 
 export async function gosenteWithdraw(input: GosenteWithdrawInput) {
-  const res = await authedPost("/withdraw", {
+  const reference = sanitizeRef(input.ref);
+  return recordedPayout(reference, input.amount, () => authedPost("/withdraw", {
     secret_key: secretKey(),
     phone: normalizePhone(input.phone),
     amount: input.amount,
     email: input.email,
     reason: sanitizeReason(input.reason),
-    ref: sanitizeRef(input.ref),
-  });
-  if (isGosenteSuccess(res.status, res.body)) {
-    await recordPayoutOnBalance(input, sanitizeRef(input.ref));
-  }
-  return res;
+    ref: reference,
+  }), isGosenteSuccess, payoutAccountingRpc, message => console.error("[gosentepay]", message));
 }
 
-/** Reduce the tracked GosentePay balance by amount + service fee (idempotent per ref). */
-async function recordPayoutOnBalance(input: GosenteWithdrawInput, ref: string) {
-  try {
-    const url = Deno.env.get("SUPABASE_URL");
-    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!url || !key) return;
-    const amount = Number(input.amount) || 0;
-    const fee = gosenteWithdrawFee(amount);
-    await fetch(`${url}/rest/v1/rpc/gosentepay_balance_adjust`, {
-      method: "POST",
-      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        p_delta: -(amount + fee),
-        p_type: "payout_deduction",
-        p_reference: ref,
-        p_notes: `Payout UGX ${amount} to ${normalizePhone(input.phone)} + fee UGX ${fee}`,
-        p_by: "system",
-      }),
-    });
-  } catch (e) {
-    console.error("[gosentepay] balance record failed", e);
-  }
+export async function payoutAccountingRpc(name: string, args: Record<string, unknown>): Promise<unknown> {
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) throw new Error("Payout accounting is unavailable");
+  const response = await fetch(`${url}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+  if (!response.ok) throw new Error(`Payout accounting failed (${response.status})`);
+  const data = await response.json();
+  if (data && typeof data === "object" && data.ok === false) throw new Error("Payout accounting was refused");
+  return data;
 }
 
 /** Put a failed payout's amount + fee back on the tracked GosentePay balance (idempotent per ref; no-op if never deducted). */

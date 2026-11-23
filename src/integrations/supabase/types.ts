@@ -5841,6 +5841,39 @@ export type Database = {
         }
         Relationships: []
       }
+      gosentepay_payout_receipts: {
+        Row: {
+          accounted_at: string | null
+          accounting_error: string | null
+          amount: number
+          created_at: string
+          provider_fee: number
+          reference: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accounted_at?: string | null
+          accounting_error?: string | null
+          amount: number
+          created_at?: string
+          provider_fee: number
+          reference: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accounted_at?: string | null
+          accounting_error?: string | null
+          amount?: number
+          created_at?: string
+          provider_fee?: number
+          reference?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       grn_pay_codes: {
         Row: {
           batch_number: string
@@ -19492,6 +19525,10 @@ export type Database = {
       }
       loyalty_award_mode: { Args: never; Returns: string }
       loyalty_awards_suspended: { Args: never; Returns: boolean }
+      mark_gosentepay_payout_outcome: {
+        Args: { p_accepted: boolean; p_reference: string }
+        Returns: boolean
+      }
       mark_meal_forms_printed: {
         Args: { p_numbers: string[] }
         Returns: number
@@ -19535,6 +19572,10 @@ export type Database = {
           p_user_name?: string
         }
         Returns: string
+      }
+      prepare_gosentepay_payout: {
+        Args: { p_amount: number; p_reference: string }
+        Returns: boolean
       }
       process_daily_salary_credits: { Args: never; Returns: Json }
       process_monthly_payroll: { Args: { p_month?: string }; Returns: Json }
@@ -19618,6 +19659,7 @@ export type Database = {
         }
         Returns: string
       }
+      recover_gosentepay_payout_accounting: { Args: never; Returns: Json }
       red_flag_form_key: { Args: { value: string }; Returns: string }
       red_flag_missing_analysis: {
         Args: { has_file: boolean; has_sampling: boolean }
@@ -19752,6 +19794,10 @@ export type Database = {
         Returns: Json
       }
       settings_alert_auth: { Args: { p_token: string }; Returns: boolean }
+      settle_gosentepay_payout: {
+        Args: { p_reference: string }
+        Returns: boolean
+      }
       sg_is_automation: { Args: never; Returns: boolean }
       submit_legacy_store_clearance: {
         Args: { p: Json }
@@ -19989,6 +20035,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      treasury_reconciliation_snapshot: { Args: never; Returns: Json }
       treasury_resolve_account: {
         Args: {
           p_amount: number
