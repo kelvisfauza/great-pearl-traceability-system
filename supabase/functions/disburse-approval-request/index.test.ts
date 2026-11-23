@@ -14,8 +14,9 @@ async function release(options: { existing?: boolean; reserveOk?: boolean; delet
   let providerCalls = 0;
   let reversals = 0;
   const updates: any[] = [];
+  const ledgerInserts: any[] = [];
   const svc = {
-    rpc: async () => ({ data: 1700, error: null }),
+    rpc: async () => ({ data: 2200, error: null }),
     auth: { getUser: async () => ({ data: { user: { email: "finance@example.test" } } }) },
     functions: { invoke: async () => ({}) },
     from(table: string) {
@@ -41,7 +42,7 @@ async function release(options: { existing?: boolean; reserveOk?: boolean; delet
         select: () => query,
         eq: (key: string, value: string) => { filters[key] = value; return query; },
         or: () => query,
-        insert: () => { operation = "insert"; return query; },
+        insert: (value: any) => { operation = "insert"; if (table === "ledger_entries") ledgerInserts.push(value); return query; },
         delete: () => { operation = "delete"; return query; },
         update: (value: any) => { operation = "update"; updates.push(value); return query; },
         maybeSingle: async () => result(),
@@ -50,17 +51,17 @@ async function release(options: { existing?: boolean; reserveOk?: boolean; delet
       return query;
     },
   };
-  new Function("serve", "createClient", "Deno", "treasuryReserve", "treasuryRelease", "yoPayout", "yoNormalize", "gosenteWithdraw", "isGosenteSuccess", "gsNormalize", compiled)(
+  new Function("serve", "createClient", "Deno", "treasuryReserve", "treasuryRelease", "yoPayout", "yoNormalize", "gosenteWithdraw", "isGosenteSuccess", "gsNormalize", "requireInternalOrAdmin", compiled)(
     (fn: typeof handler) => { handler = fn; }, () => svc, { env: { get: () => "test" } },
     async () => ({ ok: options.reserveOk ?? false, error: "Operations account is empty" }),
     async () => { reversals++; }, async () => { providerCalls++; return { success: false, errorMessage: "Provider refused" }; },
-    (phone: string) => phone, async () => { providerCalls++; return {}; }, () => false, (phone: string) => phone,
+    (phone: string) => phone, async () => { providerCalls++; return {}; }, () => false, (phone: string) => phone, async () => null,
   );
   const response = await handler(new Request("http://localhost/payment", {
     method: "POST", headers: { Authorization: "Bearer test", "Content-Type": "application/json" },
     body: JSON.stringify({ request_id: "request-1", provider: options.cash ? "cash" : "yo", phone: "256700000000" }),
   }));
-  return { body: await response.json(), debit, inserted, providerCalls, reversals, updates };
+  return { body: await response.json(), debit, inserted, providerCalls, reversals, updates, ledgerInserts };
 }
 
 describe("Finance withdrawal failure restoration", () => {
@@ -89,8 +90,8 @@ describe("Finance withdrawal failure restoration", () => {
     const result = await release({ reserveOk: true, cash: true });
     assert.equal(result.debit, -72000);
     assert.equal(result.body.payout_status, "cash_disbursed");
-    assert.equal(result.body.service_fee, 1700);
-    assert.equal(result.body.total_deducted, 73700);
+    assert.equal(result.body.service_fee, 2200);
+    assert.equal(result.body.total_deducted, 74200);
     assert.equal(result.reversals, 0);
   });
   it("reports restoration failure instead of silently claiming wallet money was returned", async () => {
@@ -104,5 +105,11 @@ describe("Finance withdrawal failure restoration", () => {
     assert.equal(result.inserted, 0);
     assert.equal(result.providerCalls, 0);
     assert.match(result.body.error, /Wallet lookup failed/);
+  });
+  it("routes a cash payout to cash instead of the Yo float", async () => {
+    const result = await release({ cash: true });
+    assert.equal(result.ledgerInserts[0].metadata.type, "cash_payout");
+    assert.equal(result.ledgerInserts[0].metadata.provider, "cash");
+    assert.equal(result.providerCalls, 0);
   });
 });

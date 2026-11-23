@@ -6,8 +6,11 @@
 - [ ] Verify real staff link → administrator review → refreshed queue — external unmanaged Supabase provides no browser session and the staff page did not render in the signed-out browser check.
 
 ## Treasury drift investigation
-- [ ] Prevent silent GosentePay accounting failures with durable payout receipts and accounting-only recovery; make drift alerts current and distinguish investigation from funding.
-- [ ] Benson's UGX 280,000 was paid in cash (confirmed 23 November); preserve his wallet debit, trace the cash source and reconcile only supported entries. Obtain provider evidence for Timothy's marked-sent UGX 65,000 payout.
+- [x] Prepare durable GosentePay receipts before payment, recover accepted bookkeeping without resending, serialize duplicate deductions, and record provider fees atomically. Sixteen handler/accounting/fee tests and rollback-only live fee/idempotency/privacy checks passed; payment services deployed.
+- [x] Refresh drift from a single snapshot only after successful Yo sync, retain current figures in the existing alert and distinguish investigation from funding. Trusted monitor returned HTTP 200; recovered provider-confirmed missing UGX 35,000 and Timothy UGX 65,000 deductions plus fees, reducing drift from UGX 328,876 to UGX 228,876. Second live check recovered no payouts again and surfaced a temporary upstream connection timeout rather than inventing a new reconciliation figure.
+- [x] Benson's UGX 280,000 was paid from separate office cash (confirmed 23 November); audited cash classification only, preserving his wallet debit and Cash at Bank. Future Finance/admin cash payouts now select the cash bucket.
+- [ ] Reconcile the remaining UGX 228,876 against the current actual GosentePay balance and verified cash/bank records; awaiting provider balance screenshot. Tracked GosentePay is now -UGX 2,152 after recovery, not a live provider balance. No balancing adjustment or repayment sent.
+- [ ] Verify a new real payout and the signed-in Treasury screen — external unmanaged Supabase provides no automated staff session; real-money tests were not sent.
 
 ## Treasury list filters
 - [x] Put the Treasury movements and employee-account filters in a labelled panel and show the applied account, movement, reference, dates or search term as removable chips with Clear all; the chosen inputs stay highlighted and an empty list says it matched filters. Six filter-rule tests passed; preview build and typecheck clean.

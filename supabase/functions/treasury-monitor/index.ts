@@ -48,9 +48,14 @@ serve(async (req) => {
     }
 
     // Legacy Finance payouts need real provider confirmation, not a saved "sent" label.
+    const { data: baseline, error: baselineError } = await supabase.from("gosentepay_balance_log")
+      .select("created_at").in("change_type", ["manual_reconcile", "reconciliation"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (baselineError) throw baselineError;
+    // Never deduct old payouts already included in a later provider balance reset.
+    const legacySince = new Date(Math.max(Date.now() - 30 * 86400000, baseline ? Date.parse(baseline.created_at) : 0)).toISOString();
     const { data: legacy, error: legacyError } = await supabase.from("approval_requests")
       .select("id, amount, payout_ref").eq("payout_provider", "gosente").eq("payout_status", "sent")
-      .gte("payout_completed_at", new Date(Date.now() - 30 * 86400000).toISOString()).order("payout_completed_at").limit(100);
+      .gte("payout_completed_at", legacySince).order("payout_completed_at", { ascending: false }).limit(100);
     if (legacyError) throw legacyError;
     results.legacy_recovered = [];
     for (const payment of legacy || []) {

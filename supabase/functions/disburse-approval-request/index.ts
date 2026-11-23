@@ -140,7 +140,7 @@ serve(async (req) => {
           amount: -amount,
           reference: walletRef,
           source_category: "WITHDRAWAL",
-          metadata: { description: `Withdrawal released by Finance (${reqRow.details?.ref || requestId})`, approval_request_id: requestId, released_by: actorEmail },
+          metadata: { description: `Withdrawal released by Finance (${reqRow.details?.ref || requestId})`, approval_request_id: requestId, released_by: actorEmail, provider, ...(provider === "cash" ? { type: "cash_payout" } : {}) },
         });
         if (debitErr) {
           await svc.from("approval_requests").update({ payout_status: "failed", payout_error: `Wallet debit failed: ${debitErr.message}` }).eq("id", requestId);

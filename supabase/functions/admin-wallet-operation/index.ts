@@ -947,6 +947,7 @@ serve(async (req) => {
               admin_wallet_operation_id: op.id,
               destination_phone: op.destination_phone,
               provider: op.payout_provider,
+              ...(op.payout_provider === "cash" ? { type: "cash_payout" } : {}),
             },
           });
           if (Number(op.service_fee) > 0) {

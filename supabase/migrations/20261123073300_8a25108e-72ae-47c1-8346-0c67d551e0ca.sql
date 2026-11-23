@@ -1,0 +1,1 @@
+SELECT net.http_post(url:='https://pudfybkyfedeggmokhco.supabase.co/functions/v1/treasury-monitor',headers:=private_edge.header()||'{"Content-Type":"application/json"}'::jsonb,body:='{}'::jsonb,timeout_milliseconds:=120000);
