@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +28,7 @@ interface SystemLedgerEntry {
   reference: string;
   metadata: any;
   created_at: string;
+  source_category?: string;
   // joined
   employee_name?: string;
   employee_email?: string;
@@ -56,6 +57,7 @@ const SystemTransactions = () => {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [reverseModal, setReverseModal] = useState<SystemLedgerEntry | null>(null);
+  const [detailEntry, setDetailEntry] = useState<SystemLedgerEntry | null>(null);
   const [reverseReason, setReverseReason] = useState('');
   const [reversing, setReversing] = useState(false);
   const [reversalRequests, setReversalRequests] = useState<any[]>([]);
@@ -481,9 +483,10 @@ const SystemTransactions = () => {
                     return (
                       <div
                         key={entry.id}
-                        className={`flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors ${reversed ? 'opacity-60' : ''}`}
+                        className={`relative flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors ${reversed ? 'opacity-60' : ''}`}
                       >
-                        <div className={`p-1.5 rounded-full flex-shrink-0 mt-0.5 ${
+                        <Button variant="ghost" className="absolute inset-0 h-full w-full rounded-lg" onClick={() => setDetailEntry(entry)} aria-label={`View transaction details for ${emp?.name || 'Unknown User'}, ${entry.reference || getDisplayLabel(entry)}`} />
+                        <div className={`pointer-events-none relative p-1.5 rounded-full flex-shrink-0 mt-0.5 ${
                           meta?.type === 'wallet_transfer' ? (isCredit ? 'bg-blue-100' : 'bg-orange-100') :
                           meta?.type === 'transfer_reversal' ? 'bg-purple-100' :
                           isCredit ? 'bg-green-100' : 'bg-red-100'
@@ -499,7 +502,7 @@ const SystemTransactions = () => {
                           )}
                         </div>
 
-                        <div className="flex-1 min-w-0">
+                        <div className="pointer-events-none relative flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-sm">{emp?.name || 'Unknown User'}</span>
                             <span className="text-[10px] text-muted-foreground">{emp?.email || entry.user_id}</span>
@@ -539,7 +542,7 @@ const SystemTransactions = () => {
                           )}
                         </div>
 
-                        <div className="text-right flex-shrink-0">
+                        <div className="pointer-events-none relative text-right flex-shrink-0">
                           <div className={`text-sm font-semibold ${isCredit ? 'text-green-700' : 'text-red-700'}`}>
                             {isCredit ? '+' : ''}{entry.amount.toLocaleString()}
                           </div>
@@ -550,7 +553,7 @@ const SystemTransactions = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="flex-shrink-0 text-xs text-destructive hover:text-destructive"
+                            className="relative z-10 flex-shrink-0 text-xs text-destructive hover:text-destructive"
                             onClick={() => { setReverseModal(entry); setReverseReason(''); }}
                           >
                             <RotateCcw className="h-3.5 w-3.5 mr-1" />
@@ -686,6 +689,58 @@ const SystemTransactions = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!detailEntry} onOpenChange={open => !open && setDetailEntry(null)}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-xl max-h-[85dvh] overflow-y-auto rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Transaction details</DialogTitle>
+            <DialogDescription>{detailEntry ? getDisplayLabel(detailEntry) : ''}</DialogDescription>
+          </DialogHeader>
+          {detailEntry && (() => {
+            const employee = getEmployeeInfo(detailEntry.user_id);
+            const meta = getMeta(detailEntry);
+            const transfer = getTransferDetails(detailEntry);
+            const details = [
+              ['Account holder', employee?.name || 'Unknown User'],
+              ['Email', employee?.email],
+              ['Date and time', format(new Date(detailEntry.created_at), 'MMMM dd, yyyy · h:mm:ss a')],
+              ['Reference', detailEntry.reference],
+              ['Transaction type', getDisplayLabel(detailEntry)],
+              ['Source category', detailEntry.source_category?.replace(/_/g, ' ')],
+              ['Description', meta?.description],
+              ['Reason', meta?.reason],
+              ['Payment method', meta?.provider || meta?.payment_method || meta?.channel],
+              ['Destination account', meta?.destination_account],
+              ['Recipient phone', meta?.destination_phone || meta?.phone],
+              ['Recipient', meta?.to_name],
+              ['Recipient email', meta?.to_email],
+              ['Sender', meta?.from_name],
+              ['Sender email', meta?.from_email],
+              ['Transfer', transfer ? `${transfer.direction} ${transfer.name || transfer.email || 'Unknown'}` : null],
+              ['Initiated by', meta?.initiated_by || meta?.admin_email],
+              ['Approved by', meta?.approved_by],
+              ['Overdraft portion', meta?.overdraft_portion != null ? `UGX ${Number(meta.overdraft_portion).toLocaleString()}` : null],
+              ['Reversed', meta?.reversed === 'true' || meta?.reversed === true ? 'Yes' : null],
+              ['Reversal reason', meta?.reversal_reason],
+            ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+            return <>
+              <div className="border-b pb-4">
+                <p className="text-sm text-muted-foreground">{detailEntry.amount > 0 ? 'Wallet credit' : 'Wallet debit'}</p>
+                <p className={`text-2xl font-semibold break-words ${detailEntry.amount > 0 ? 'text-primary' : 'text-destructive'}`}>
+                  {detailEntry.amount > 0 ? '+' : '−'} UGX {Math.abs(detailEntry.amount).toLocaleString()}
+                </p>
+              </div>
+              <dl className="space-y-3 text-sm">
+                {details.map(([label, value]) => <div key={String(label)} className="grid grid-cols-1 sm:grid-cols-[9rem_minmax(0,1fr)] gap-1 sm:gap-3">
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd className="min-w-0 break-words whitespace-pre-wrap">{String(value)}</dd>
+                </div>)}
+              </dl>
+            </>;
+          })()}
+          <DialogFooter><Button variant="outline" onClick={() => setDetailEntry(null)}>Close</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Admin Reverse Transfer Modal */}
       <Dialog open={!!reverseModal} onOpenChange={open => !open && setReverseModal(null)}>
