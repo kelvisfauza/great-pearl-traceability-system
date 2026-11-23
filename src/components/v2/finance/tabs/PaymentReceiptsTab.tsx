@@ -183,8 +183,8 @@ const PaymentReceiptsTab = () => {
     try {
       const { data: auth } = await supabase.auth.getUser();
       const email = auth?.user?.email?.toLowerCase() || null;
-      if (batch.length === 1) printGrnPaymentReceipt(toReceipt(batch[0], email));
-      else printGrnPaymentReceipts(batch.map((p) => toReceipt(p, email)));
+      if (batch.length === 1) await printGrnPaymentReceipt(toReceipt(batch[0], email));
+      else await printGrnPaymentReceipts(batch.map((p) => toReceipt(p, email)));
       await recordPrints(batch);
       setSelected(new Set());
       toast.success(`${batch.length} receipt(s) sent to the printer`);

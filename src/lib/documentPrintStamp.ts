@@ -3,15 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateVerificationCode, getVerificationUrl } from '@/utils/verificationCode';
 import { issuePrintStamp, type PrintStamp } from './documentIssuance';
 import { toast } from 'sonner';
+import { departmentStampHtml } from '@/utils/departmentStamps';
+import { documentDepartmentStamp } from '@/lib/departmentStampRules';
 
 export const createDocumentPrintStamp = (title: string, format: string): Promise<PrintStamp> => issuePrintStamp(title, format, {
   identity: async () => {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user?.email) throw new Error('Please sign in before printing.');
     const { data: employee, error: employeeError } = await supabase.from('employees')
-      .select('name').ilike('email', user.email).maybeSingle();
+      .select('name, department').ilike('email', user.email).maybeSingle();
     if (employeeError || !employee?.name) throw new Error('Your employee name could not be loaded. Please try again.');
-    return { id: user.id, name: employee.name };
+    return { id: user.id, name: employee.name, department: employee.department || '' };
   },
   code: () => generateVerificationCode('document'),
   url: getVerificationUrl,
@@ -28,9 +30,9 @@ export const reportPrintError = (error: unknown) => toast.error('Unable to prepa
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char));
 
-export function stampHtmlDocument(html: string, stamp: PrintStamp): string {
+export function stampHtmlDocument(html: string, stamp: PrintStamp, departmentArtwork = ''): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  doc.querySelectorAll('[data-system-print-stamp], style[data-system-print-style]').forEach(el => el.remove());
+  doc.querySelectorAll('[data-system-print-stamp], [data-department-stamps], style[data-system-print-style]').forEach(el => el.remove());
   // Captured onload print scripts must not restart the intent dialog.
   doc.querySelectorAll('script').forEach(el => el.remove());
   const style = doc.createElement('style');
@@ -39,21 +41,33 @@ export function stampHtmlDocument(html: string, stamp: PrintStamp): string {
     [data-system-print-stamp]{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;border-top:1px solid #777!important;margin-top:16px!important;padding-top:8px!important;color:#111!important;background:#fff!important;font:10px Arial,sans-serif!important;break-inside:avoid!important;clear:both!important}
     [data-system-print-stamp] img{display:block!important;width:76px!important;height:76px!important;max-width:76px!important;max-height:76px!important;margin:0!important}
     [data-system-print-stamp] p{margin:3px 0!important;overflow-wrap:anywhere!important}
+    [data-department-stamps]{display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:14px!important;break-inside:avoid!important;clear:both!important;margin-top:10px!important}
+    [data-department-stamps] img{width:110px!important;height:78px!important;object-fit:contain!important;max-width:110px!important;margin:0!important}
     @media print{[data-system-print-stamp]{display:flex!important;visibility:visible!important}}
   `;
   doc.head.appendChild(style);
   const footer = doc.createElement('footer');
   footer.dataset.systemPrintStamp = stamp.code;
   footer.innerHTML = `<div><p><strong>Printed by: ${escapeHtml(stamp.printedBy)}</strong></p><p>${escapeHtml(new Date(stamp.printedAt).toLocaleString('en-GB', { timeZone: 'Africa/Kampala' }))} (Uganda)</p><p>Great Agro Coffee — a member of YEDA Coffee Company Limited</p><p>${escapeHtml(stamp.code)} · Scan to verify document issuance</p></div><img src="${stamp.qr}" alt="Document verification QR code" />`;
-  const copies = doc.querySelectorAll('.gac-grn-page, section.copy, .pq-doc');
+  const artwork = doc.createElement('div');
+  artwork.dataset.departmentStamps = 'true';
+  artwork.innerHTML = departmentArtwork;
+  const copies = doc.querySelectorAll('.gac-grn-page, section.copy, .pq-doc, section.receipt');
   if (copies.length) {
-    copies.forEach(copy => copy.appendChild(footer.cloneNode(true)));
+    copies.forEach(copy => { if (departmentArtwork) copy.appendChild(artwork.cloneNode(true)); copy.appendChild(footer.cloneNode(true)); });
   } else {
+    if (departmentArtwork) doc.body.appendChild(artwork);
     doc.body.appendChild(footer);
   }
   return '<!DOCTYPE html>' + doc.documentElement.outerHTML;
 }
 
 export async function prepareHtmlPrint(html: string, title: string): Promise<string> {
-  return stampHtmlDocument(html, await createDocumentPrintStamp(title, 'html'));
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const heading = Array.from(parsed.querySelectorAll('.title, .form-title, h2, caption')).map(node => node.textContent || '').join(' ').slice(0, 180);
+  const stamp = await createDocumentPrintStamp(`${title}${heading ? ' — ' + heading : ''}`, 'html');
+  const key = stamp.departmentStamp || documentDepartmentStamp(stamp.title);
+  const keys = key === 'business' ? ['business'] as const : [key, 'business'] as const;
+  const artwork = await Promise.all(keys.map(key => departmentStampHtml(key, stamp.printedAt)));
+  return stampHtmlDocument(html, stamp, artwork.join(''));
 }

@@ -1,5 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { createDocumentPrintStamp, reportPrintError } from '@/lib/documentPrintStamp';
+import { addDepartmentStampPdf } from '@/utils/departmentStamps';
+import { documentDepartmentStamp } from '@/lib/departmentStampRules';
 
 const pending = new WeakMap<jsPDF, Promise<void>>();
 
@@ -20,27 +22,34 @@ export function preparePdfPrint(doc: jsPDF, title = 'System document'): Promise<
     for (let page = 1; page <= count; page++) {
       doc.setPage(page);
       const w = doc.internal.pageSize.getWidth(), h = doc.internal.pageSize.getHeight();
-      const footer = Math.min(28 * 72 / 25.4 / unit, h * 0.22);
+      const footer = Math.min(56 * 72 / 25.4 / unit, h * 0.32);
       const fit = fitPdfPageForFooter(w * unit, h * unit, footer * unit);
       const commands = (doc.internal as any).pages[page] as string[];
       commands.unshift(`q ${fit.scale} 0 0 ${fit.scale} ${fit.translateX} ${fit.translateY} cm`);
       commands.push('Q');
       const pad = 8 * 72 / 25.4 / unit;
-      const size = footer * 0.78;
+      const verificationHeight = Math.min(28 * 72 / 25.4 / unit, footer * 0.55);
+      const size = verificationHeight * 0.78;
       const y = h - footer;
+      const key = stamp.departmentStamp || documentDepartmentStamp(title);
+      const stampWidth = 40 * 72 / 25.4 / unit;
+      const artworkHeight = footer - verificationHeight;
+      await addDepartmentStampPdf(doc, 'business', w - pad - stampWidth, y, stampWidth, artworkHeight, stamp.printedAt);
+      if (key !== 'business') await addDepartmentStampPdf(doc, key, w - pad - stampWidth * 2 - pad, y, stampWidth, artworkHeight, stamp.printedAt);
+      const verificationY = h - verificationHeight;
       doc.setDrawColor(100);
       doc.setLineWidth(0.3 / unit);
-      doc.line(pad, y + 2 / unit, w - pad, y + 2 / unit);
+      doc.line(pad, verificationY + 2 / unit, w - pad, verificationY + 2 / unit);
       doc.setTextColor(30);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       const lines = doc.splitTextToSize(`Printed by: ${stamp.printedBy}`, w - 3 * pad - size);
-      doc.text(lines, pad, y + 13 / unit);
+      doc.text(lines, pad, verificationY + 13 / unit);
       doc.setFontSize(6.5);
-      doc.text(`${new Date(stamp.printedAt).toLocaleString('en-GB', { timeZone: 'Africa/Kampala' })} (Uganda)`, pad, y + (13 + lines.length * 9) / unit);
+      doc.text(`${new Date(stamp.printedAt).toLocaleString('en-GB', { timeZone: 'Africa/Kampala' })} (Uganda)`, pad, verificationY + (13 + lines.length * 9) / unit);
       doc.text(stamp.code, pad, h - 12 / unit);
       doc.text(`Scan to verify issuance | Page ${page} of ${count}`, pad, h - 4 / unit);
-      doc.addImage(stamp.qr, 'PNG', w - pad - size, y + 4 / unit, size, size);
+      doc.addImage(stamp.qr, 'PNG', w - pad - size, verificationY + 4 / unit, size, size);
     }
     doc.setPage(current);
   })();

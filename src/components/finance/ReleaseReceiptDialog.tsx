@@ -19,7 +19,7 @@ export const ReleaseReceiptDialog: React.FC<{ data: ReleaseReceiptData | null; o
   const printNow = async () => {
     setBusy(true);
     try {
-      const doc = pdf();
+      const doc = await pdf();
       await preparePdfPrint(doc, title);
       const ok = await printPdfJob({ id: 'now', title, content: doc.output('datauristring') } as any, { alreadyStamped: true });
       if (ok) setDone(true);
@@ -30,7 +30,7 @@ export const ReleaseReceiptDialog: React.FC<{ data: ReleaseReceiptData | null; o
   const queue = async () => {
     setBusy(true);
     try {
-      const doc = pdf();
+      const doc = await pdf();
       // Stamped when printed from the queue, so the footer names the actual printer.
       const job = await addToPrintQueue({ title, docType: 'finance_receipt', pdfDataUrl: doc.output('datauristring') });
       if (job) { toast.success('Receipt added to print queue'); setDone(true); }
@@ -40,7 +40,7 @@ export const ReleaseReceiptDialog: React.FC<{ data: ReleaseReceiptData | null; o
   };
   const download = async () => {
     setBusy(true);
-    try { await pdf().save(`${data.reference}.pdf`); setDone(true); }
+    try { const doc = await pdf(); await doc.save(`${data.reference}.pdf`); setDone(true); }
     catch (error) { reportPrintError(error); }
     finally { setBusy(false); }
   };

@@ -1,6 +1,8 @@
 import { LOGO_URL } from '@/utils/companyBrand';
 import { getGrnScanQrUrl, getGrnScanUrl } from '@/utils/grnScanUrl';
 import { resolveSignatureBlock } from '@/utils/approverSignatures';
+import { departmentStampHtml } from '@/utils/departmentStamps';
+import { personalApprovalStamp } from '@/lib/departmentStampRules';
 
 export interface GrnReceiptData {
   grnNumber: string;
@@ -55,11 +57,13 @@ const RECEIPT_STYLES = `
     @page{size:A4;margin:0}
 `;
 
-function receiptSection(d: GrnReceiptData) {
+async function receiptSection(d: GrnReceiptData) {
   const lotValue = Number(d.lotValue ?? d.amount ?? 0);
   const previouslyPaid = Number(d.previouslyPaid ?? 0);
   const balance = Number(d.balance ?? Math.max(lotValue - previouslyPaid - Number(d.amount || 0), 0));
   const signer = resolveSignatureBlock(d.approvedByEmail, d.approvedBy || d.paidBy);
+  const key = personalApprovalStamp(d.approvedBy || d.paidBy);
+  const approvalStamp = key ? await departmentStampHtml(key) : '';
 
   return `<section class="receipt">
     <header>
@@ -106,6 +110,7 @@ function receiptSection(d: GrnReceiptData) {
       </div>
     </div>
 
+    ${approvalStamp ? `<div style="display:flex;justify-content:flex-end;margin-top:12px;break-inside:avoid">${approvalStamp}</div>` : ''}
     <footer>
       <img src="${getGrnScanQrUrl(d.grnNumber, 90)}" alt="GRN" style="width:90px;height:90px" />
       <div>
@@ -160,13 +165,13 @@ function printHtml(title: string, body: string) {
   doc.close();
 }
 
-export function printGrnPaymentReceipt(d: GrnReceiptData) {
-  printHtml(`Payment Receipt ${d.receiptNo}`, receiptSection(d));
+export async function printGrnPaymentReceipt(d: GrnReceiptData) {
+  printHtml(`Payment Receipt ${d.receiptNo}`, await receiptSection(d));
 }
 
 /** Print many payment receipts in one run — one receipt per page. */
-export function printGrnPaymentReceipts(list: GrnReceiptData[]) {
+export async function printGrnPaymentReceipts(list: GrnReceiptData[]) {
   if (!list.length) return;
   if (list.length === 1) return printGrnPaymentReceipt(list[0]);
-  printHtml(`Payment Receipts (${list.length})`, list.map(receiptSection).join(''));
+  printHtml(`Payment Receipts (${list.length})`, (await Promise.all(list.map(receiptSection))).join(''));
 }

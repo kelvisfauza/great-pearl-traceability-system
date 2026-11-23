@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
-import stampUrl from '@/assets/stamp-yeda.png';
+import { addDepartmentStampPdf } from '@/utils/departmentStamps';
+import { personalApprovalStamp } from '@/lib/departmentStampRules';
 import { getSignatory } from '@/utils/approverSignatures';
 import { COMPANY_TAGLINE } from '@/utils/companyBrand';
 import { preparePdfPrint } from '@/utils/pdfPrintStamp';
@@ -55,7 +56,7 @@ export async function buildMealReceiptPdf(data: MealReceipt) {
   text(`Amount: UGX ${Number(data.payment.amount).toLocaleString('en-UG')}   Charges: UGX ${Number(data.payment.withdraw_charge || 0).toLocaleString('en-UG')}`, 10);
   text(`TOTAL PAID: UGX ${Number(data.payment.total_amount).toLocaleString('en-UG')}`, 14, true);
   y += 8;
-  const stamp = await imageData(stampUrl);
+  const issuedAt = new Date().toISOString();
   for (const [index, stage] of [
     { label: 'ADMIN APPROVAL', name: data.request.admin_approved_by_name },
     { label: 'FINANCE PAYMENT', name: data.request.finance_released_by_name },
@@ -73,7 +74,8 @@ export async function buildMealReceiptPdf(data: MealReceipt) {
         const height = Math.min(18, 55 * props.height / props.width);
         doc.addImage(signature, 'PNG', x, y + 6, height * props.width / props.height, height);
       }
-      doc.addImage(stamp, 'PNG', x + 57, y + 6, 23, 23);
+      const key = index === 1 ? 'finance' : personalApprovalStamp(stage.name);
+      if (key) await addDepartmentStampPdf(doc, key, x + 52, y + 4, 30, 26, issuedAt);
     }
     doc.line(x, y + 32, x + 80, y + 32);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9);

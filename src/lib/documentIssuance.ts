@@ -1,3 +1,5 @@
+import { documentDepartmentStamp, type DepartmentStampKey } from './departmentStampRules';
+
 export interface PrintStamp {
   code: string;
   url: string;
@@ -5,13 +7,14 @@ export interface PrintStamp {
   printedBy: string;
   printedAt: string;
   title: string;
+  departmentStamp?: DepartmentStampKey;
 }
 
 export async function issuePrintStamp(
   title: string,
   format: string,
   services: {
-    identity: () => Promise<{ id: string; name: string }>;
+    identity: () => Promise<{ id: string; name: string; department?: string }>;
     code: () => string;
     url: (code: string) => string;
     qr: (url: string) => Promise<string>;
@@ -24,12 +27,14 @@ export async function issuePrintStamp(
   const url = services.url(code);
   const qr = await services.qr(url);
   const printedAt = new Date().toISOString();
+  const departmentStamp = documentDepartmentStamp(title, identity.department, identity.name);
   await services.register({
     code, type: 'document', subtype: 'system_print', status: 'verified',
     created_by: identity.id, issued_to_name: identity.name, issued_at: printedAt,
     reference_no: title.slice(0, 160),
     meta: { title: title.slice(0, 160), format, printed_by: identity.name, printed_at: printedAt,
+      department_stamp: departmentStamp, business_stamp: true, stamp_date: printedAt,
       verification_scope: 'Document issuance; not confirmation of payment, approval or handwritten changes.' },
   });
-  return { code, url, qr, printedBy: identity.name, printedAt, title };
+  return { code, url, qr, printedBy: identity.name, printedAt, title, departmentStamp };
 }

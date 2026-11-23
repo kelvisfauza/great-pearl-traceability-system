@@ -1,5 +1,11 @@
 # Roadmap
 
+## Department document stamps
+- [x] Prepare all six supplied stamps without their photographed dates; generate dates in Uganda time.
+- [x] Apply department/business stamps to shared HTML/PDF prints and queued PDF reprints, recorded Operations/Supervisor approvals and Finance receipts; preserve signatures, payment evidence and verification footers.
+- [x] Twenty-one date/department/receipt/issuance tests passed. Visually checked all six dated stamps, complete A4 meal receipt and A5 Finance receipt; removed photographed-date remnants and reserved stamp/QR space without clipping or overlap. Controlled sampling print preparation selects Quality even when its title is just an order number; no live payments or verification records written.
+- [ ] Verify real signed-in department printing and receipt issuance — external unmanaged Supabase supplies no automated staff session; controlled layout checks are not authenticated end-to-end verification.
+
 ## Procurement meal-payment receipts
 - [x] Add Print payment receipt to paid meal plans in Procurement review history; show the saved requisition number and separate recorded Admin/Finance signatures and stamps, using typed names when no exact signature is registered.
 - [x] Deploy read-only receipt lookup restricted to active Procurement reviewers, Finance and administrators; require the exact successful/cash payment linked to the paid request. Five receipt tests and eight meal/issuance regressions passed; actual PDF builder visually checked with no clipping or overlap. Print preparation adds the current employee and verification QR; no funds, approvals or saved payments changed.
