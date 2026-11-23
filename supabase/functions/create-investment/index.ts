@@ -92,9 +92,9 @@ Deno.serve(async (req) => {
           templateData: {
             employeeName: employeeName || email,
             amount: amt,
-            interestRate: 25,
+            interestRate: 20,
             maturityMonths: 3,
-            expectedReturn: amt * 1.25,
+            expectedReturn: amt * 1.2,
             startDate,
             maturityDate,
             investmentRef: investRef,

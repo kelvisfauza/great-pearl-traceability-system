@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
           reference: payoutRef,
           source_category: "SYSTEM_AWARD",
           metadata: {
-            description: `Investment matured - principal UGX ${principal.toLocaleString()} + interest UGX ${Math.round(interest).toLocaleString()} @ 25% - ${payoutRef}`,
+            description: `Investment matured - principal UGX ${principal.toLocaleString()} + interest UGX ${Math.round(interest).toLocaleString()} @ ${Number(inv.interest_rate)}% - ${payoutRef}`,
             type: "investment_maturity_payout",
             investment_id: inv.id,
             principal,
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
               principal,
               interest: Math.round(interest),
               payout: Math.round(payout),
-              interestRate: 25,
+              interestRate: Number(inv.interest_rate),
               maturityDate: inv.maturity_date,
               investmentRef: payoutRef,
             },

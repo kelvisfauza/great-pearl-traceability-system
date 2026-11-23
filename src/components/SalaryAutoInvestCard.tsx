@@ -112,7 +112,7 @@ export const SalaryAutoInvestCard = () => {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          Automatically invest a portion of your salary each month after it's credited. Earns 25% every 3 months, compounding if left!
+          Automatically invest a portion of your salary each month after it's credited. Earns 20% every 3 months, compounding if left!
         </p>
 
         <div className="flex items-center justify-between">
@@ -175,7 +175,7 @@ export const SalaryAutoInvestCard = () => {
               After each salary credit, {config.invest_type === 'fixed'
                 ? `UGX ${config.fixed_amount.toLocaleString()}`
                 : `${config.percentage}% of your salary`
-              } will be automatically invested at 25% interest for 3 months (compounds if left).
+              } will be automatically invested at 20% interest for 3 months (compounds if left).
             </span>
           </div>
         )}

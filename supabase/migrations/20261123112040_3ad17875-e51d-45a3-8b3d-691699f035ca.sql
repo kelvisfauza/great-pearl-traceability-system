@@ -1,0 +1,1 @@
+ALTER TABLE public.investments ALTER COLUMN interest_rate SET DEFAULT 20;

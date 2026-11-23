@@ -55,7 +55,7 @@ export const useInvestments = () => {
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || 'Failed to create investment');
 
-      toast({ title: "Investment Created! 📈", description: `UGX ${amount.toLocaleString()} locked for 3 months at 25% interest. Money keeps growing if left!` });
+      toast({ title: "Investment Created! 📈", description: `UGX ${amount.toLocaleString()} locked for 3 months at 20% interest. Money keeps growing if left!` });
       fetchInvestments();
       return true;
     } catch (err: any) {

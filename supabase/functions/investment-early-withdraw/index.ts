@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
       0,
       Math.floor((Date.now() - new Date(inv.start_date).getTime()) / (24 * 60 * 60 * 1000))
     );
-    const reducedInterest = principal * 0.25 * (Math.min(daysElapsed, totalDays) / totalDays);
+    const reducedInterest = principal * (Number(inv.interest_rate ?? 20) / 100) * (Math.min(daysElapsed, totalDays) / totalDays);
     // Early exit penalty: 5% of the interest earned so far (principal stays intact; waived if term complete)
     const PENALTY_RATE = 0.05;
     const penalty = daysElapsed >= totalDays ? 0 : Math.round(reducedInterest * PENALTY_RATE);
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
         reference: refundRef,
         source_category: "SYSTEM_AWARD",
         metadata: {
-          description: `Early investment withdrawal (pro-rated 25% interest, 5% penalty deducted from interest) - ${refundRef}`,
+          description: `Early investment withdrawal (pro-rated interest, 5% penalty deducted from interest) - ${refundRef}`,
           type: "investment_early_withdrawal",
           investment_id: inv.id,
           principal,

@@ -134,9 +134,9 @@ Deno.serve(async (req) => {
             templateData: {
               employeeName: cfg.employee_name,
               amount: investAmount,
-              interestRate: 25,
+              interestRate: 20,
               maturityMonths: 3,
-              expectedReturn: investAmount * 1.25,
+              expectedReturn: investAmount * 1.2,
               startDate,
               maturityDate,
               investmentRef: investRef,

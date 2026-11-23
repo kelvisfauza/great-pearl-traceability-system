@@ -312,7 +312,7 @@ serve(async (req) => {
     const debtToSalaryRatio = salary > 0 ? totalDebtObligations / salary : 999;
 
     // ── BUSINESS LOAN ELIGIBILITY GATES ───────────────────────────────
-    // The 4% business product is reserved for proven borrowers so it does
+    // The 8% business product is reserved for proven borrowers so it does
     // not undercut the other loan products for everyone.
     let businessDenyReason: string | null = null;
     if (isBusinessLoan) {
@@ -617,7 +617,7 @@ ${guarantorAssessments.length
   ? guarantorAssessments.map((g: any) => `- ${g.name} (${g.email}): salary UGX ${g.salary}, wallet UGX ${g.wallet_balance}, already guaranteeing UGX ${g.active_guarantee_exposure}, own outstanding UGX ${g.own_outstanding}, own defaults ${g.own_defaults}, own overdue loans ${g.own_overdue}, guaranteed defaults ${g.guaranteed_defaults}, times debited as guarantor ${g.guarantor_recovery_hits} → assessed capacity UGX ${g.capacity}${g.notes?.length ? ` [${g.notes.join('; ')}]` : ''}`).join("\n")
   : "- none supplied"}
 - Combined guarantor capacity (UGX): ${guarantorCapacityTotal}
-${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 4%/month flat (total interest capped at 30%), up to 8 months, requires 2 guarantors whose wallets can be debited. It is a PRIVILEGED product, not a general cheap loan. Eligibility gates (already enforced — if a gate failed the limit is 0 and you MUST deny): at least 6 months tenure, at least 1 successfully completed loan, no defaults, debt-to-salary below 2×. The ceiling is the LOWER of combined guarantor capacity (UGX ${guarantorCapacityTotal}), 6× the borrower's salary, and UGX 15,000,000 → effective limit UGX ${maxLimit}. There is no courtesy floor — weak guarantors mean a small or zero limit. DO reduce the offer for salary size, short tenure, high debt-to-salary ratio, thin repayment history, or any sign the "business" is really consumption. Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
+${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 8%/month flat (total interest capped at 30%), up to 8 months, requires 2 guarantors whose wallets can be debited. It is a PRIVILEGED product, not a general cheap loan. Eligibility gates (already enforced — if a gate failed the limit is 0 and you MUST deny): at least 6 months tenure, at least 1 successfully completed loan, no defaults, debt-to-salary below 2×. The ceiling is the LOWER of combined guarantor capacity (UGX ${guarantorCapacityTotal}), 6× the borrower's salary, and UGX 15,000,000 → effective limit UGX ${maxLimit}. There is no courtesy floor — weak guarantors mean a small or zero limit. DO reduce the offer for salary size, short tenure, high debt-to-salary ratio, thin repayment history, or any sign the "business" is really consumption. Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
 
 RULES (be fair — approve when reasonable; only deny on clear red flags)
 - IMPORTANT: recommended_amount = the user's ENTITLEMENT/LIMIT, NOT the requested amount.
