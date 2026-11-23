@@ -1,5 +1,10 @@
 # Roadmap
 
+## Procurement meal-payment receipts
+- [x] Add Print payment receipt to paid meal plans in Procurement review history; show the saved requisition number and separate recorded Admin/Finance signatures and stamps, using typed names when no exact signature is registered.
+- [x] Deploy read-only receipt lookup restricted to active Procurement reviewers, Finance and administrators; require the exact successful/cash payment linked to the paid request. Five receipt tests and eight meal/issuance regressions passed; actual PDF builder visually checked with no clipping or overlap. Print preparation adds the current employee and verification QR; no funds, approvals or saved payments changed.
+- [ ] Verify signed-in history → registered QR → printing — external Supabase supplies no automated staff session; authenticated issuance and browser print dialog remain unverified.
+
 ## Finance authorization errors
 - [x] Authenticate both endpoints through verified claims and saved active-employee/Finance permissions; distinguish temporary permission-read failures from denial. Browser calls explicitly use the current session, refresh balances before reading, and show queue/history failures rather than false empty results. No payments or balances changed.
 - [x] Seven access tests and ten sign-in/loan regressions passed; both services deployed, anonymous/invalid calls still rejected and preview build clean.

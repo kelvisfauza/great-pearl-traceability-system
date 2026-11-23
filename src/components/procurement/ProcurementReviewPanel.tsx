@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, XCircle, RefreshCw, Pencil, ClipboardCheck, User, Calendar, History, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Pencil, ClipboardCheck, User, Calendar, History, Eye, Printer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { printMealPaymentReceipt } from '@/utils/mealPaymentReceipt';
 import QuotationReviewPanel from '@/components/quotations/QuotationReviewPanel';
 import ProviderReplyDialog from '@/components/procurement/ProviderReplyDialog';
 
@@ -68,6 +69,7 @@ interface HistoryRow extends ReviewRow {
   requested_by: string | null;
   amount: number | null;
   current_status: string;
+  request_type?: string;
   details: Record<string, string>;
 }
 
@@ -88,6 +90,7 @@ const ProcurementReviewPanel = () => {
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState<HistoryRow[]>([]);
   const [detailRow, setDetailRow] = useState<HistoryRow | null>(null);
+  const [printingReceipt, setPrintingReceipt] = useState<string | null>(null);
 
   const [dialog, setDialog] = useState<{
     open: boolean;
@@ -110,7 +113,7 @@ const ProcurementReviewPanel = () => {
           .limit(200),
         (supabase as any)
           .from('provider_submission_requests')
-          .select('id,request_type,provider_name,phone,amount,description,status,created_at,invoice_number,requested_payment_method')
+          .select('id,request_type,provider_name,phone,amount,description,status,created_at,invoice_number,paper_document_number,requested_payment_method')
           .eq('status', 'pending')
           .order('created_at', { ascending: false })
           .limit(200),
@@ -134,7 +137,7 @@ const ProcurementReviewPanel = () => {
         id: r.id,
         title: `${PROVIDER_LABEL[String(r.request_type)] || 'Provider Request'} — ${r.provider_name || 'Unnamed'}`,
         type: PROVIDER_LABEL[String(r.request_type)] || String(r.request_type || 'Provider Request'),
-        description: [r.invoice_number ? `Document: ${r.invoice_number}` : '', r.requested_payment_method ? `Payment: ${r.requested_payment_method === 'cash' ? 'Cash' : `Mobile money to ${r.phone}`}` : '', r.description || ''].filter(Boolean).join('\n') || null,
+        description: [(r.paper_document_number || r.invoice_number) ? `Document: ${r.paper_document_number || r.invoice_number}` : '', r.requested_payment_method ? `Payment: ${r.requested_payment_method === 'cash' ? 'Cash' : `Mobile money to ${r.phone}`}` : '', r.description || ''].filter(Boolean).join('\n') || null,
         amount: r.amount,
         requestedby: r.phone || null,
         requestedby_name: r.provider_name || null,
@@ -170,7 +173,7 @@ const ProcurementReviewPanel = () => {
       const approvalIds = histRows.filter((r) => r.source_table === 'approval_requests').map((r) => r.record_id);
       const providerIds = histRows.filter((r) => r.source_table === 'provider_submission_requests').map((r) => r.record_id);
 
-      const lookup: Record<string, { title: string; requested_by: string | null; amount: number | null; status: string; details: Record<string, string> }> = {};
+      const lookup: Record<string, { title: string; requested_by: string | null; amount: number | null; status: string; request_type?: string; details: Record<string, string> }> = {};
 
       // Turn a raw DB row into labelled, human-readable detail lines (skip internal/empty fields)
       const SKIP_FIELDS = new Set(['id', 'created_at', 'updated_at', 'reviewed_by', 'reviewed_at', 'recommended_admin_name', 'recommended_admin_email']);
@@ -204,10 +207,11 @@ const ProcurementReviewPanel = () => {
           .in('id', providerIds);
         ((data || []) as any[]).forEach((r) => {
           lookup[r.id] = {
-            title: `${PROVIDER_LABEL[String(r.request_type)] || 'Provider Request'} — ${r.provider_name || 'Unnamed'}`,
+            title: `${PROVIDER_LABEL[String(r.request_type)] || 'Provider Request'}${r.paper_document_number || r.invoice_number ? ` ${r.paper_document_number || r.invoice_number}` : ''} — ${r.provider_name || 'Unnamed'}`,
             requested_by: r.provider_name,
             amount: r.amount,
             status: r.status,
+            request_type: r.request_type,
             details: buildDetails(r),
           };
         });
@@ -219,6 +223,7 @@ const ProcurementReviewPanel = () => {
         requested_by: lookup[r.record_id]?.requested_by || null,
         amount: lookup[r.record_id]?.amount ?? r.edited_amount ?? r.original_amount,
         current_status: lookup[r.record_id]?.status || 'unknown',
+        request_type: lookup[r.record_id]?.request_type,
         details: lookup[r.record_id]?.details || {},
       })));
     } catch (err) {
@@ -480,10 +485,20 @@ const ProcurementReviewPanel = () => {
                         <p><strong>Amount corrected:</strong> {money(h.original_amount)} → {money(h.edited_amount)}</p>
                       )}
                     </div>
-                    <div>
+                    <div className="flex gap-2 flex-wrap">
                       <Button size="sm" variant="outline" onClick={() => setDetailRow(h)}>
                         <Eye className="h-4 w-4 mr-2" /> View full details
                       </Button>
+                      {h.source_table === 'provider_submission_requests' && h.request_type === 'meal_plan' && h.current_status === 'paid' && (
+                        <Button size="sm" variant="outline" disabled={printingReceipt !== null} onClick={async () => {
+                          setPrintingReceipt(h.record_id);
+                          try { await printMealPaymentReceipt(h.record_id); }
+                          catch (e) { toast({ title: 'Receipt not printed', description: e instanceof Error ? e.message : 'Try again.', variant: 'destructive' }); }
+                          finally { setPrintingReceipt(null); }
+                        }}>
+                          <Printer className="h-4 w-4 mr-2" /> {printingReceipt === h.record_id ? 'Preparing…' : 'Print payment receipt'}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
