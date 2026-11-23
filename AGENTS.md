@@ -76,3 +76,4 @@
 - Provider/bank charges leave treasury with the payout: GosentePay fees debit Operations via trigger (returned on bounce); bank charges post against Cash at Bank.
 - Coffee integrity flags join the existing scanner via a private view; admins fix them only through audited resolve_coffee_flag, which never deletes paid entries.
 - Internal edge functions use requireInternalOrAdmin; cron/triggers send private_edge.header(), so the public key cannot run them.
+- Lending (loans/overdrafts) is funded inside treasury_account_post from Invest & Earn then User Wallets, capped at 50% of those pools; business accounts cannot fund Loans & Overdrafts and repaid principal returns to Invest & Earn, so lending only uses staff money.
