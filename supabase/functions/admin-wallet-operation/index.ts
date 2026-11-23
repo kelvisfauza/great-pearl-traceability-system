@@ -807,7 +807,9 @@ serve(async (req) => {
           }
           await postLedger(supabase, {
             user_id: op.target_user_id, entry_type: "WITHDRAWAL", amount, reference: ref,
-            source_category: odPortion > 0 ? "OVERDRAFT_DRAW" : "ADMIN_ADJUSTMENT",
+            // An account-only debit returns funds to General, even when funded
+            // partly by overdraft. Only the withdraw branch pays outside.
+            source_category: "ADMIN_ADJUSTMENT",
             metadata: {
               description: `Admin debit: ${op.reason}`,
               admin_wallet_operation_id: op.id,

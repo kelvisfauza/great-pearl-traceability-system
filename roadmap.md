@@ -1,5 +1,10 @@
 # Roadmap
 
+## Internal administrator debits versus payouts
+- [x] Preserve ADMIN_ADJUSTMENT on account-only debits even when using overdraft, so funds return to General instead of leaving the system; phone withdrawals remain external payouts.
+- [x] Routing regressions passed in the correction migration and administrator operation deployed; preview build clean. Signed-in operation execution remains untested; no real payout sent.
+- [x] Audited Benson's UGX 280,000 internal debit returning to General, superseding the previous separate-office-cash classification. Live read confirms General credited exactly UGX 280,000, original wallet debit remains -UGX 280,000 and Timothy's provider deduction remains -UGX 67,200; bank/provider balances and fees untouched.
+
 ## Quality posting waiting status
 - [x] Distinguish confirmed delivery links from saved administrator review, keep review open after linking, and align waiting counts across Quality views without automatically approving old postings. Live reads found 11 reviewed, 377 pending (84 linked) and three pending scans sharing reviewed form numbers but different source files/deliveries; no decisions changed.
 - [x] Add saved-decision read-back checks; six review/report regressions pass and preview build is clean.
@@ -8,8 +13,8 @@
 ## Treasury drift investigation
 - [x] Prepare durable GosentePay receipts before payment, recover accepted bookkeeping without resending, serialize duplicate deductions, and record provider fees atomically. Sixteen handler/accounting/fee tests and rollback-only live fee/idempotency/privacy checks passed; payment services deployed.
 - [x] Refresh drift from a single snapshot only after successful Yo sync, retain current figures in the existing alert and distinguish investigation from funding. Trusted monitor returned HTTP 200; recovered provider-confirmed missing UGX 35,000 and Timothy UGX 65,000 deductions plus fees, reducing drift from UGX 328,876 to UGX 228,876. Second live check recovered no payouts again and surfaced a temporary upstream connection timeout rather than inventing a new reconciliation figure.
-- [x] Benson's UGX 280,000 was paid from separate office cash (confirmed 23 November); audited cash classification only, preserving his wallet debit and Cash at Bank. Future Finance/admin cash payouts now select the cash bucket.
-- [ ] Reconcile the remaining UGX 228,876 against the current actual GosentePay balance and verified cash/bank records; awaiting provider balance screenshot. Tracked GosentePay is now -UGX 2,152 after recovery, not a live provider balance. No balancing adjustment or repayment sent.
+- [x] Benson's earlier separate-office-cash confirmation was superseded by Fauza's explicit internal-debit confirmation: credited General UGX 280,000 without refunding his wallet or changing bank/provider money. Future real Finance/admin cash payouts still select the cash bucket.
+- [ ] Reconcile remaining differences using a fresh successful provider refresh after Benson's UGX 280,000 internal correction; the earlier UGX 228,876 figure is now historical. Awaiting actual GosentePay balance evidence; tracked -UGX 2,152 is not a live provider balance. No arbitrary balancing adjustment or repayment sent.
 - [ ] Verify a new real payout and the signed-in Treasury screen — external unmanaged Supabase provides no automated staff session; real-money tests were not sent.
 
 ## Treasury list filters
