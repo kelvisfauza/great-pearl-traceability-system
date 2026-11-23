@@ -1,0 +1,1 @@
+- Resolve receipt numbers against submitted requests and exact issued meal forms; keep issuance distinct from payment and never create a receipt or resend a payout merely because lookup found no PDF.

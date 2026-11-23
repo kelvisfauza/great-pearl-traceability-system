@@ -19523,6 +19523,14 @@ export type Database = {
         }
         Returns: string
       }
+      lookup_issued_meal_form: {
+        Args: { p_number: string }
+        Returns: {
+          created_at: string
+          document_number: string
+          printed_at: string
+        }[]
+      }
       loyalty_award_mode: { Args: never; Returns: string }
       loyalty_awards_suspended: { Args: never; Returns: boolean }
       mark_gosentepay_payout_outcome: {

@@ -19,6 +19,7 @@ export default function MealPlanRequests() {
   const [printing, setPrinting] = useState(false);
   const [issued, setIssued] = useState('');
   const [bulkCount, setBulkCount] = useState('10');
+  const [documentSearch, setDocumentSearch] = useState('');
   async function bulkTemplates() {
     const n = Math.floor(Number(bulkCount));
     if (!(n >= 1 && n <= 100)) { toast.error('Enter between 1 and 100 forms'); return; }
@@ -37,9 +38,19 @@ export default function MealPlanRequests() {
     finally { setPrinting(false); }
   }
   const qc = useQueryClient();
-  const { data: requests = [], error: loadError } = useQuery({ queryKey: ['paper-meal-requests'], queryFn: async () => {
-    const { data, error } = await (supabase as any).from('provider_submission_requests').select('id,invoice_number,provider_name,amount,status,requested_payment_method').eq('request_type','meal_plan').not('paper_document_number','is',null).order('created_at', { ascending: false }).limit(50);
+  const safeSearch = documentSearch.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  const { data: requests = [], error: loadError } = useQuery({ queryKey: ['paper-meal-requests', safeSearch], queryFn: async () => {
+    let query = (supabase as any).from('provider_submission_requests').select('id,invoice_number,paper_document_number,provider_name,amount,status,requested_payment_method').eq('request_type','meal_plan');
+    if (safeSearch) query = query.or(`invoice_number.ilike.%${safeSearch}%,paper_document_number.ilike.%${safeSearch}%`);
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
     if (error) throw error; return data || [];
+  }, refetchInterval: 15000 });
+  const { data: issuedForms = [], error: formsError } = useQuery({ queryKey: ['issued-meal-forms', safeSearch], queryFn: async () => {
+    let query = supabase.from('meal_plan_forms').select('document_number,created_at,printed_at');
+    if (safeSearch) query = query.ilike('document_number', `%${safeSearch}%`);
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
+    if (error) throw error;
+    return data || [];
   }, refetchInterval: 15000 });
   const update = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
   async function template() {
@@ -85,6 +96,16 @@ export default function MealPlanRequests() {
       <div><Label htmlFor="meal-details">Meal period / items and purpose on document</Label><Textarea id="meal-details" required maxLength={1000} rows={4} value={form.description} onChange={e => update('description',e.target.value)} /></div>
       <Button disabled={busy || printing} type="submit">{busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}Submit Request</Button>
     </form>
+    <div className="border-t pt-4 space-y-3">
+      <Label htmlFor="meal-document-search">Find meal documents</Label>
+      <Input id="meal-document-search" value={documentSearch} onChange={e => setDocumentSearch(e.target.value)} placeholder="MP-2026-000155 or MEAL-20261112" />
+      <h3 className="font-medium">Issued meal-plan forms</h3>
+      {formsError ? <p role="alert" className="text-destructive">Unable to load issued forms.</p> : <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Document</TableHead><TableHead>Issued</TableHead><TableHead>Printed</TableHead><TableHead></TableHead></TableRow></TableHeader><TableBody>
+        {issuedForms.map(f => <TableRow key={f.document_number}><TableCell>{f.document_number}</TableCell><TableCell>{new Date(f.created_at).toLocaleDateString('en-UG')}</TableCell><TableCell>{f.printed_at ? new Date(f.printed_at).toLocaleDateString('en-UG') : 'Not recorded'}</TableCell><TableCell><Button variant="outline" disabled={printing} onClick={() => update('documentNumber', f.document_number)}>Use number</Button></TableCell></TableRow>)}
+        {!issuedForms.length && <TableRow><TableCell colSpan={4}>No issued forms match.</TableCell></TableRow>}
+      </TableBody></Table></div>}
+      <p className="text-xs text-muted-foreground">{safeSearch ? 'Up to 50 matching records' : 'Latest 50 issued forms and meal requests'}</p>
+    </div>
     <div className="border-t pt-4 space-y-3"><h3 className="font-medium">Paper meal-plan requests</h3>{loadError && <p className="text-destructive">Unable to load meal-plan requests.</p>}<div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Document</TableHead><TableHead>Recipient</TableHead><TableHead>Amount (UGX)</TableHead><TableHead>Payment</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{requests.map((r: any) => <TableRow key={r.id}><TableCell>{r.invoice_number}</TableCell><TableCell>{r.provider_name}</TableCell><TableCell>{Number(r.amount).toLocaleString()}</TableCell><TableCell>{r.requested_payment_method === 'cash' ? 'Cash' : 'Mobile money'}</TableCell><TableCell>{r.status.replaceAll('_',' ')}</TableCell></TableRow>)}{!requests.length && <TableRow><TableCell colSpan={5} className="text-muted-foreground">No paper meal-plan requests.</TableCell></TableRow>}</TableBody></Table></div></div>
   </section>;
 }

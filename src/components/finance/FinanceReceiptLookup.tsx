@@ -15,18 +15,26 @@ export default function FinanceReceiptLookup() {
   const [printing, setPrinting] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
+  const [issuedForm, setIssuedForm] = useState<{ document_number: string; created_at: string; printed_at: string | null } | null>(null);
+  const [requestsFound, setRequestsFound] = useState<any[]>([]);
 
   const search = async (event: React.FormEvent) => {
     event.preventDefault();
     const reference = number.trim().toUpperCase();
     if (!reference) return;
-    setLoading(true); setError(''); setReceipts([]); setSearched(false);
+    setLoading(true); setError(''); setReceipts([]); setIssuedForm(null); setRequestsFound([]); setSearched(false);
     try {
       // Exact matching reaches old receipts without a recent-history row limit.
       const { data: requests, error: requestError } = await supabase
-        .from('provider_submission_requests').select('id')
+        .from('provider_submission_requests').select('id,invoice_number,paper_document_number,provider_name,amount,status,payout_status')
         .or(`paper_document_number.eq.${reference.replace(/[^A-Z0-9-]/g, '')},invoice_number.eq.${reference.replace(/[^A-Z0-9-]/g, '')}`);
       if (requestError) throw requestError;
+      setRequestsFound(requests || []);
+      if (/^MP-\d{4}-\d+$/.test(reference)) {
+        const { data: form, error: formError } = await supabase.rpc('lookup_issued_meal_form', { p_number: reference }).maybeSingle();
+        if (formError) throw formError;
+        setIssuedForm(form);
+      }
       const safeReference = reference.replace(/[^A-Z0-9-]/g, '');
       const conditions = [`reference.eq.${safeReference}`, `metadata->>invoice_number.eq.${safeReference}`];
       if (requests?.length) conditions.push(`source_id.in.(${requests.map(r => r.id).join(',')})`);
@@ -79,7 +87,16 @@ export default function FinanceReceiptLookup() {
       <Button type="submit" disabled={loading || !number.trim()}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />} Find receipt</Button>
     </form>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    {searched && !receipts.length && <p className="text-sm text-muted-foreground">No saved payment receipt matches this number.</p>}
+    {searched && issuedForm && <div className="border rounded-lg p-3 space-y-1">
+      <p className="font-semibold">Meal-plan form {issuedForm.document_number}</p>
+      <p className="text-sm text-muted-foreground">Issued {new Date(issuedForm.created_at).toLocaleDateString('en-UG')} · {issuedForm.printed_at ? 'Printed' : 'Printing not recorded'}</p>
+      {!requestsFound.length && <p className="text-sm">This form has not been submitted in Procurement. There is no saved meal request or payment receipt for it.</p>}
+    </div>}
+    {searched && requestsFound.map(request => <div key={request.id} className="border rounded-lg p-3 space-y-1">
+      <p className="font-semibold">{request.paper_document_number || request.invoice_number} · {request.provider_name} · UGX {Number(request.amount).toLocaleString()}</p>
+      <p className="text-sm text-muted-foreground">Request: {request.status.replaceAll('_', ' ')}{request.payout_status ? ` · Payment: ${request.payout_status.replaceAll('_', ' ')}` : ''}</p>
+    </div>)}
+    {searched && !receipts.length && !(issuedForm && !requestsFound.length) && <p className="text-sm text-muted-foreground">{requestsFound.length ? 'The request was found, but no saved payment receipt is available. Check its payment status; do not pay again just to create a receipt.' : 'No issued meal form, submitted request or saved payment receipt matches this number.'}</p>}
     {receipts.map(receipt => <div key={receipt.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border rounded-lg p-3">
       <div className="min-w-0 space-y-1">
         <p className="font-semibold break-words">{receipt.recipient_name} · UGX {Number(receipt.total ?? receipt.amount).toLocaleString()}</p>

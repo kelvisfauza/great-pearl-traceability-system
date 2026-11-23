@@ -1,5 +1,10 @@
 # Roadmap
 
+## Missing meal-plan and Procurement documents
+- [x] MP-2026-000155 was issued/printed 12 November but has no submitted request or receipt; recent paid meal requests have saved receipts. Finance now shows issued-form and request status separately; Procurement lists issued forms and includes older non-paper meal requests with number search. No payments changed.
+- [x] Five meal-rule tests and six live access checks passed; phone-sized actual-component examples show unsubmitted form and paid receipt correctly, preview build clean. New lookup warning resolved with private implementation/public invoker; 504 pre-existing linter findings untouched.
+- [ ] Verify signed-in Finance/Procurement lookup with real saved records — external unmanaged Supabase provides no staff session; real route rendered blank, controlled component checks are not authenticated end-to-end verification.
+
 ## Finance receipt lookup
 - [x] Add exact receipt/paper-number lookup in Finance History using saved issued PDFs, including provider request links; reprints use the shared printing-user and verification QR footer and reserve the print window on tap.
 - [x] Phone-sized sample-data check passed for paper-number search, displaying the saved amount, verified-PDF viewer opening and clearing results on no match; preview build clean. Live reads found no MP-2026-000140 provider request or generated receipt, so that specific receipt cannot be printed from saved records.
