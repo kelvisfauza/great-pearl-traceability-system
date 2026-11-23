@@ -111,6 +111,33 @@ Deno.serve(async (req) => {
       if (ledgerErr) throw ledgerErr;
     }
 
+    // Record the 5% early-exit penalty as company income: an internal move from
+    // Invest & Earn into Profits (no real money enters or leaves, so totals stay balanced).
+    if (penalty > 0) {
+      const penRef = `${refundRef}-PENALTY`;
+      const { data: posted } = await admin
+        .from("treasury_account_entries")
+        .select("id")
+        .eq("reference", penRef)
+        .limit(1);
+      if (!posted?.length) {
+        const desc = `Early investment exit penalty (5% of earned interest) - ${inv.user_email ?? ""}`;
+        const meta = { type: "investment_early_exit_penalty", investment_id: inv.id, principal, reduced_interest: reducedInterest };
+        const { error: e1 } = await admin.rpc("treasury_account_post", {
+          p_account: "invest_earn", p_direction: "debit", p_amount: penalty, p_counter: "profits",
+          p_reference: penRef, p_email: inv.user_email ?? null, p_description: desc, p_metadata: meta,
+        });
+        if (e1) console.error("penalty debit failed:", e1);
+        else {
+          const { error: e2 } = await admin.rpc("treasury_account_post", {
+            p_account: "profits", p_direction: "credit", p_amount: penalty, p_counter: "invest_earn",
+            p_reference: penRef, p_email: inv.user_email ?? null, p_description: desc, p_metadata: meta,
+          });
+          if (e2) console.error("penalty credit failed:", e2);
+        }
+      }
+    }
+
     const { error: updErr } = await admin
       .from("investments")
       .update({
