@@ -34,6 +34,7 @@ const FinanceReports = lazy(() => import('@/components/finance/FinanceReports').
 const SupplierAdvanceModal = lazy(() => import('@/components/finance/SupplierAdvanceModal'));
 const SupplierLedgers = lazy(() => import('@/components/finance/SupplierLedgers'));
 const InstantWithdrawalHistory = lazy(() => import('@/components/finance/InstantWithdrawalHistory'));
+const FinanceReceiptLookup = lazy(() => import('@/components/finance/FinanceReceiptLookup'));
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center py-12">
@@ -126,6 +127,7 @@ const Finance = () => {
       case 'history':
         return (
           <div className="space-y-4">
+            {!scanOnly && <FinanceReceiptLookup />}
             <div className="flex gap-2 overflow-x-auto pb-1">
               {historyViews.map(v => (
                 <Button

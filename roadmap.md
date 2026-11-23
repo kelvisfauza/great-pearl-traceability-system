@@ -1,5 +1,10 @@
 # Roadmap
 
+## Finance receipt lookup
+- [x] Add exact receipt/paper-number lookup in Finance History using saved issued PDFs, including provider request links; reprints use the shared printing-user and verification QR footer and reserve the print window on tap.
+- [x] Phone-sized sample-data check passed for paper-number search, displaying the saved amount, verified-PDF viewer opening and clearing results on no match; preview build clean. Live reads found no MP-2026-000140 provider request or generated receipt, so that specific receipt cannot be printed from saved records.
+- [ ] Verify signed-in Finance lookup and QR issuance with a real saved receipt — external unmanaged Supabase supplies no automated staff session.
+
 ## Internal administrator debits versus payouts
 - [x] Preserve ADMIN_ADJUSTMENT on account-only debits even when using overdraft, so funds return to General instead of leaving the system; phone withdrawals remain external payouts.
 - [x] Routing regressions passed in the correction migration and administrator operation deployed; preview build clean. Signed-in operation execution remains untested; no real payout sent.
