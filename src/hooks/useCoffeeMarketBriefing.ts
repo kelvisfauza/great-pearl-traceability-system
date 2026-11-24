@@ -55,6 +55,12 @@ export const useCoffeeMarketBriefing = (snapshot: CoffeeMarketSnapshot) => {
       });
 
       if (error) {
+        const status = (error as { context?: { status?: number } }).context?.status;
+        if (status === 401 || status === 403) {
+          // Accounts without staff access keep the standard briefing instead of erroring.
+          setState((current) => ({ briefing: current.briefing ?? fallbackBriefing, loading: false, error: null }));
+          return;
+        }
         throw error;
       }
 
