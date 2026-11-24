@@ -18526,6 +18526,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      accept_loan_counter_offer: { Args: { p_loan_id: string }; Returns: Json }
       acquire_quality_outlook_lease: {
         Args: { p_token: string }
         Returns: Json
@@ -18810,6 +18811,7 @@ export type Database = {
         }[]
       }
       current_user_email: { Args: never; Returns: string }
+      decline_loan_counter_offer: { Args: { p_loan_id: string }; Returns: Json }
       decline_my_admin_withdrawal: { Args: { _id: string }; Returns: Json }
       decline_pending_supplier: {
         Args: { p_real_supplier_id: string; p_request_id: string }
@@ -19842,6 +19844,15 @@ export type Database = {
         Returns: boolean
       }
       sg_is_automation: { Args: never; Returns: boolean }
+      sign_loan_revision: {
+        Args: {
+          p_accepted_at: string
+          p_loan_id: string
+          p_signature: string
+          p_terms_version: string
+        }
+        Returns: Json
+      }
       submit_legacy_store_clearance: {
         Args: { p: Json }
         Returns: {

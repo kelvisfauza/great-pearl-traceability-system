@@ -1899,15 +1899,7 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
           installment = totalWeeks > 0 ? Math.ceil(total / totalWeeks) : 0;
         }
 
-        const { error } = await supabase.from('loans').update({
-          loan_amount: newAmount,
-          original_loan_amount: loan.original_loan_amount || loan.loan_amount,
-          total_repayable: total,
-          remaining_balance: total,
-          monthly_installment: freq === 'weekly' ? null : installment,
-          weekly_installment: freq === 'weekly' ? installment : null,
-          status: 'pending_admin',
-        } as any).eq('id', loanId);
+        const { error } = await (supabase as any).rpc('accept_loan_counter_offer', { p_loan_id: loanId });
         if (error) throw error;
 
         // Notify admin via SMS
@@ -1933,10 +1925,7 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
 
         toast({ title: "Counter Offer Accepted", description: `Loan updated to UGX ${newAmount.toLocaleString()} and sent for admin approval` });
       } else {
-        const { error } = await supabase.from('loans').update({
-          status: 'rejected',
-          admin_rejection_reason: 'Borrower declined counter offer',
-        }).eq('id', loanId);
+        const { error } = await (supabase as any).rpc('decline_loan_counter_offer', { p_loan_id: loanId });
         if (error) throw error;
 
         toast({ title: "Counter Offer Declined", description: "The loan application has been closed" });
@@ -2006,24 +1995,9 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
       const total = Number(loan.revision_total_repayable || 0);
       const installment = Number(loan.revision_installment || 0);
 
-      const { error } = await supabase.from('loans').update({
-        loan_amount: Number(loan.revision_amount || loan.loan_amount),
-        original_loan_amount: loan.original_loan_amount || loan.loan_amount,
-        duration_months: Number(loan.revision_duration_months || loan.duration_months),
-        repayment_frequency: freq,
-        total_weeks: freq === 'weekly' ? getLoanSchedule(Number(loan.revision_duration_months || loan.duration_months)).totalWeeks : loan.total_weeks,
-        total_repayable: total,
-        remaining_balance: total,
-        monthly_installment: freq === 'weekly' ? null : installment,
-        weekly_installment: freq === 'weekly' ? installment : null,
-        status: 'pending_admin',
-        revision_signed_at: meta.acceptedAt,
-        revision_signature: meta.signature,
-        revision_terms_version: meta.version,
-        terms_version: meta.version,
-        terms_signature: meta.signature,
-        terms_accepted_at: meta.acceptedAt,
-      } as any).eq('id', loan.id);
+      const { error } = await (supabase as any).rpc('sign_loan_revision', {
+        p_loan_id: loan.id, p_signature: meta.signature, p_terms_version: meta.version, p_accepted_at: meta.acceptedAt,
+      });
       if (error) throw error;
 
       const { data: admins } = await supabase
