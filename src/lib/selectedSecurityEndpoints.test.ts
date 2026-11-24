@@ -39,7 +39,13 @@ for (const name of endpoints) {
     });
     if (!handler) throw new Error('Handler was not registered');
     const result = await handler(new Request('https://example.test', { method: 'POST', body: '{}' }));
-    assert.equal(result.status, 401);
+    if (name === 'coffee-market-briefing') {
+      // Display screens get a quiet refusal: still no briefing and no side effects.
+      assert.equal(result.status, 200);
+      assert.deepEqual(await result.json(), { ok: false, error: 'Unauthorized', denied: true });
+    } else {
+      assert.equal(result.status, 401);
+    }
     assert.equal(sideEffects, 0);
     const preflight = await handler(new Request('https://example.test', { method: 'OPTIONS' }));
     assert.equal(preflight.status, 200);

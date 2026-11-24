@@ -64,6 +64,12 @@ export const useCoffeeMarketBriefing = (snapshot: CoffeeMarketSnapshot) => {
         throw error;
       }
 
+      if (!data || (data as { ok?: boolean }).ok === false) {
+        // Not allowed or unavailable: keep the standard briefing without raising an error.
+        setState((current) => ({ briefing: current.briefing ?? fallbackBriefing, loading: false, error: null }));
+        return;
+      }
+
       setState({
         briefing: data as CoffeeMarketBriefing,
         loading: false,

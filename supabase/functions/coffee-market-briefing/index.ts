@@ -139,7 +139,14 @@ Deno.serve(async (req) => {
   }
 
   const caller = await requireStaff(req, corsHeaders);
-  if (caller instanceof Response) return caller;
+  if (caller instanceof Response) {
+    // Access stays denied, but report it as a business result so display screens fall back quietly.
+    const denied = await caller.json().catch(() => ({ error: "Forbidden" }));
+    return new Response(JSON.stringify({ ok: false, error: denied?.error ?? "Forbidden", denied: true }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
