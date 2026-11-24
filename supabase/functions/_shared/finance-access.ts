@@ -1,9 +1,14 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-export function financeAccessAllowed(employee: { status?: string; disabled?: boolean; permissions?: string[] } | null, roles: string[]): boolean {
+const STAFF_ROLES = ["Super Admin", "Administrator", "Manager", "HR", "Finance", "Finance Manager"];
+
+export function financeAccessAllowed(employee: { status?: string; disabled?: boolean; permissions?: string[]; role?: string | null; department?: string | null } | null, roles: string[]): boolean {
   if (!employee || employee.disabled === true || employee.status?.toLowerCase() !== "active") return false;
+  // Match the app's own access (employees.role / HR department), as the previous is_admin_hr_or_finance check did.
+  if (employee.role && STAFF_ROLES.includes(employee.role)) return true;
+  if (employee.department?.toLowerCase() === "hr" || employee.department?.toLowerCase() === "human resources") return true;
   return roles.some(role => ["Administrator", "Super Admin", "admin", "finance_manager", "Finance", "Finance Manager"].includes(role)) ||
-    (employee.permissions || []).some(permission => ["Finance", "Finance Management", "Finance Approval", "Finance:approve", "Finance:process"].includes(permission));
+    (employee.permissions || []).some(permission => ["Administration", "Finance", "Finance Management", "Finance Approval", "Finance:approve", "Finance:process"].includes(permission));
 }
 
 /** Finance endpoints authenticate once; unavailable identity/permission reads never masquerade as denied access. */
@@ -35,7 +40,7 @@ export async function requireFinanceCaller(req: Request, corsHeaders: Record<str
   }
   const user = { id: String(auth.claims.sub), email: String(auth.claims.email).toLowerCase() };
   const [{ data: employee, error: employeeError }, { data: roles, error: roleError }] = await Promise.all([
-    db.from("employees").select("status, disabled, permissions").ilike("email", user.email).maybeSingle(),
+    db.from("employees").select("status, disabled, permissions, role, department").ilike("email", user.email).maybeSingle(),
     db.from("user_roles").select("role").eq("user_id", user.id),
   ]);
   if (employeeError || roleError) return reply(503, "Finance permissions could not be checked. Please try again.");

@@ -52,3 +52,10 @@ Deno.test("anonymous requests are rejected before data access", async () => {
     assertEquals(result instanceof Response ? result.status : null, 401);
   }
 });
+Deno.test("employee role Administrator/Manager/Finance is allowed without user_roles", async () => {
+  const { financeAccessAllowed } = await import("../_shared/finance-access.ts");
+  for (const role of ["Administrator", "Manager", "Finance"]) {
+    if (!financeAccessAllowed({ status: "active", role, permissions: [] }, [])) throw new Error(role);
+  }
+  if (financeAccessAllowed({ status: "active", role: "User", permissions: [] }, [])) throw new Error("User allowed");
+});
