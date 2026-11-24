@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { Script } from 'node:vm';
 import ts from 'typescript';
 
-function maintenance(options: { readError?: unknown; writeError?: unknown; smsSuccess?: boolean; scheduledActive?: boolean; statusError?: unknown } = {}) {
+function maintenance(options: { switchError?: unknown; smsSuccess?: boolean; scheduledActive?: boolean; statusError?: unknown } = {}) {
   const source = readFileSync('src/hooks/useMaintenanceMode.ts', 'utf8');
   const parsed = ts.createSourceFile('maintenance.ts', source, ts.ScriptTarget.Latest, true);
   let stripped = source;
@@ -12,20 +12,29 @@ function maintenance(options: { readError?: unknown; writeError?: unknown; smsSu
     if (ts.isImportDeclaration(node)) stripped = stripped.slice(0, node.getStart(parsed)) + stripped.slice(node.end);
   }
   const code = ts.transpileModule(stripped, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  const writes: Record<string, unknown>[] = [];
+  const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
   let messages = 0;
   const exports: Record<string, any> = {};
   const client = {
-    rpc: (name: string) => name === 'verify_and_deactivate_maintenance' ? Promise.resolve({ data: true }) : ({ maybeSingle: async () => ({ data: { is_active: false, scheduled_active: options.scheduledActive ?? false }, error: options.statusError }) }),
+    rpc: (name: string, args: Record<string, unknown>) => {
+      if (name === 'set_maintenance_mode') {
+        rpcCalls.push({ name, args });
+        return Promise.resolve({ data: { ok: true, id: 'saved-maintenance', is_active: args.p_activate }, error: options.switchError ?? null });
+      }
+      if (name === 'mark_maintenance_recovery_sms') {
+        rpcCalls.push({ name, args });
+        return Promise.resolve({ data: { ok: true }, error: null });
+      }
+      if (name === 'verify_and_deactivate_maintenance') return Promise.resolve({ data: true });
+      return { maybeSingle: async () => ({ data: { is_active: false, scheduled_active: options.scheduledActive ?? false }, error: options.statusError }) };
+    },
     functions: { invoke: async () => { messages++; return { data: { success: options.smsSuccess ?? true } }; } },
     from: (table: string) => {
       const chain: any = {
         select: () => chain, eq: () => chain, order: () => chain, limit: () => chain,
         maybeSingle: async () => table === 'employees'
           ? { data: { phone: '0700000000' } }
-          : { data: { id: 'saved-maintenance' }, error: options.readError },
-        single: async () => ({ data: { id: 'saved-maintenance' }, error: options.writeError }),
-        update: (values: Record<string, unknown>) => { writes.push(values); return chain; },
+          : { data: null, error: null },
       };
       return chain;
     },
@@ -34,50 +43,47 @@ function maintenance(options: { readError?: unknown; writeError?: unknown; smsSu
     useState: (initial: unknown) => [initial, () => {}], useCallback: (fn: unknown) => fn,
     useEffect: () => {}, console: { error: () => {} },
   });
-  return { hook: exports.useMaintenanceMode(), writes, messages: () => messages };
+  return { hook: exports.useMaintenanceMode(), rpcCalls, messages: () => messages };
 }
 
-test('activation saves active state with a 10-digit code and 4-digit PIN', async () => {
-  const { hook, writes, messages } = maintenance();
+test('activation switches maintenance on with a 10-digit code and 4-digit PIN', async () => {
+  const { hook, rpcCalls, messages } = maintenance();
   const result = await hook.toggleMaintenance(true, 'Planned work', 'Authorized administrator', null);
-  assert.equal(writes[0].is_active, true);
-  assert.equal(writes[0].reason, 'Planned work');
+  const switchCall = rpcCalls.find((c) => c.name === 'set_maintenance_mode');
+  assert.equal(switchCall?.args.p_activate, true);
+  assert.equal(switchCall?.args.p_reason, 'Planned work');
+  assert.match(switchCall?.args.p_recovery_key as string, /^\d{10}$/);
+  assert.match(switchCall?.args.p_recovery_pin as string, /^\d{4}$/);
   assert.match(result.code, /^\d{10}$/);
   assert.match(result.pin, /^\d{4}$/);
   assert.equal(result.smsSent, true);
   assert.equal(messages(), 1);
-  assert.equal(writes[1].recovery_sms_sent, true);
+  const markCall = rpcCalls.find((c) => c.name === 'mark_maintenance_recovery_sms');
+  assert.equal(markCall?.args.p_id, 'saved-maintenance');
+  assert.equal(markCall?.args.p_phone, '0700000000');
 });
 
-test('failed reads do not write a maintenance state or send codes', async () => {
-  const failure = new Error('Read refused');
-  const { hook, writes, messages } = maintenance({ readError: failure });
-  await assert.rejects(hook.toggleMaintenance(true), (error) => error === failure);
-  assert.equal(writes.length, 0);
-  assert.equal(messages(), 0);
-});
-
-test('failed activation saves do not send recovery codes', async () => {
+test('failed switches do not send recovery codes', async () => {
   const failure = new Error('Save refused');
-  const { hook, messages } = maintenance({ writeError: failure });
+  const { hook, messages } = maintenance({ switchError: failure });
   await assert.rejects(hook.toggleMaintenance(true), (error) => error === failure);
   assert.equal(messages(), 0);
 });
 
 test('unconfirmed SMS does not mark recovery codes as sent', async () => {
-  const { hook, writes } = maintenance({ smsSuccess: false });
+  const { hook, rpcCalls } = maintenance({ smsSuccess: false });
   const result = await hook.toggleMaintenance(true);
   assert.equal(result.smsSent, false);
-  assert.equal(writes.length, 1);
-  assert.equal(writes[0].recovery_sms_sent, false);
+  assert.equal(rpcCalls.some((c) => c.name === 'mark_maintenance_recovery_sms'), false);
 });
 
 test('manual deactivation clears credentials without sending another SMS', async () => {
-  const { hook, writes, messages } = maintenance();
+  const { hook, rpcCalls, messages } = maintenance();
   await hook.toggleMaintenance(false);
-  assert.equal(writes[0].is_active, false);
-  assert.equal(writes[0].recovery_key, null);
-  assert.equal(writes[0].recovery_pin, null);
+  const switchCall = rpcCalls.find((c) => c.name === 'set_maintenance_mode');
+  assert.equal(switchCall?.args.p_activate, false);
+  assert.equal(switchCall?.args.p_recovery_key, null);
+  assert.equal(switchCall?.args.p_recovery_pin, null);
   assert.equal(messages(), 0);
 });
 

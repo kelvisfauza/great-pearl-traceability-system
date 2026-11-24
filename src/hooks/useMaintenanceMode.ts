@@ -72,36 +72,19 @@ export const useMaintenanceMode = () => {
   };
 
   const toggleMaintenance = useCallback(async (activate: boolean, reason?: string, activatedBy?: string, expectedBackOnline?: string | null) => {
-    const { data: record, error: readError } = await supabase
-      .from('system_maintenance')
-      .select('id')
-      .order('is_active', { ascending: false })
-      .order('updated_at', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (readError) throw readError;
-    if (!record) throw new Error('No maintenance record found');
-
     const recoveryCode = activate ? generateCode() : null;
     const recoveryPin = activate ? generatePin() : null;
 
-    const { data, error } = await supabase
-      .from('system_maintenance')
-      .update({
-        is_active: activate,
-        reason: activate ? (reason || 'System maintenance in progress') : null,
-        activated_by: activate ? (activatedBy || 'Admin') : null,
-        activated_at: activate ? new Date().toISOString() : null,
-        recovery_key: recoveryCode,
-        recovery_pin: recoveryPin,
-        recovery_sms_sent: false,
-        expected_back_online: activate ? (expectedBackOnline || null) : null,
-      } as any)
-      .eq('id', (record as any).id)
-      .select('id')
-      .single();
+    // Go through the guarded server-side switch so any active admin can toggle,
+    // even if their account is missing an entry in the user_roles list.
+    const { data, error } = await supabase.rpc('set_maintenance_mode' as any, {
+      p_activate: activate,
+      p_reason: activate ? (reason || 'System maintenance in progress') : null,
+      p_activated_by: activate ? (activatedBy || 'Admin') : null,
+      p_expected_back_online: activate ? (expectedBackOnline || null) : null,
+      p_recovery_key: recoveryCode,
+      p_recovery_pin: recoveryPin,
+    });
 
     if (error) {
       console.error('Error toggling maintenance:', error);
@@ -133,11 +116,11 @@ export const useMaintenanceMode = () => {
           }
           smsSent = true;
 
-          // Mark SMS as sent
-          await supabase
-            .from('system_maintenance')
-            .update({ recovery_sms_sent: true, recovery_phone: fauza.phone } as any)
-            .eq('id', (record as any).id);
+          // Mark SMS as sent through the guarded server-side function
+          await supabase.rpc('mark_maintenance_recovery_sms' as any, {
+            p_id: (data as any)?.id,
+            p_phone: fauza.phone,
+          });
         }
       } catch (smsErr) {
         console.error('Failed to send recovery SMS:', smsErr);
