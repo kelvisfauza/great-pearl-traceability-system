@@ -25,12 +25,18 @@ const json = (body: unknown) =>
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  // Credential enrollment and lookup belong only to the signed-in owner.
+  const caller = await requireStaff(req, corsHeaders);
+  if (caller instanceof Response) return caller;
+  if (caller.internal) return json({ ok: false, error: 'Sign in with your own account.' });
+
   try {
     const { action, email, credential_id, context } = await req.json().catch(() => ({} as any));
     const normalizedEmail =
       typeof email === 'string' && email.includes('@') ? email.toLowerCase().trim() : null;
 
     if (!normalizedEmail) return json({ ok: false, error: 'Missing approver email.' });
+    if (normalizedEmail !== caller.email) return json({ ok: false, error: 'Use your signed-in account.' });
 
     const admin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',

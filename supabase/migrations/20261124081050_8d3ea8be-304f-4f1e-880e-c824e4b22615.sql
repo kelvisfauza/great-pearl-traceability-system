@@ -1,0 +1,10 @@
+ALTER POLICY "Authenticated users can create field assessments" ON public.field_assessments TO authenticated WITH CHECK (public.is_active_staff() AND submitted_by=auth.uid());
+ALTER POLICY "Authenticated users can create assessment prices" ON public.field_assessment_prices TO authenticated WITH CHECK (public.is_active_staff() AND EXISTS(SELECT 1 FROM public.field_assessments a WHERE a.id=field_assessment_prices.assessment_id AND a.submitted_by=auth.uid()));
+ALTER POLICY "Authenticated users can create assessment traders" ON public.field_assessment_traders TO authenticated WITH CHECK (public.is_active_staff() AND EXISTS(SELECT 1 FROM public.field_assessments a WHERE a.id=field_assessment_traders.assessment_id AND a.submitted_by=auth.uid()));
+ALTER POLICY "Authenticated users can create assessment suppliers" ON public.field_assessment_suppliers TO authenticated WITH CHECK (public.is_active_staff() AND EXISTS(SELECT 1 FROM public.field_assessments a WHERE a.id=field_assessment_suppliers.assessment_id AND a.submitted_by=auth.uid()));
+ALTER POLICY "Authenticated users can insert field_attendance_logs" ON public.field_attendance_logs TO authenticated WITH CHECK (public.is_active_staff() AND lower(field_agent)=lower(auth.jwt()->>'email'));
+ALTER POLICY "Authenticated users can insert daily_reports" ON public.daily_reports TO authenticated WITH CHECK (public.is_active_staff() AND lower(submitted_by)=lower(auth.jwt()->>'email'));
+DROP POLICY "System can insert appeals" ON public.absence_appeals;
+CREATE POLICY "System creates deduction appeals" ON public.absence_appeals FOR INSERT TO service_role WITH CHECK(true);
+DROP POLICY "Authenticated users can insert warehouses" ON public.warehouses;
+DROP POLICY "Anyone can insert performance_data" ON public.performance_data;

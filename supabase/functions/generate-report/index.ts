@@ -1,4 +1,5 @@
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { requireStaff } from "../_shared/internal-auth.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5';
 
 const corsHeaders = {
@@ -21,13 +22,32 @@ Deno.serve(async (req) => {
   }
   const __denied = await requireInternalOrAdmin(req, corsHeaders);
   if (__denied) return __denied;
+  const caller = await requireStaff(req, corsHeaders);
+  if (caller instanceof Response) return caller;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // User-triggered reports retain the caller's table access rules.
+    // Only trusted scheduled/server callers may use elevated reads.
+    const supabase = caller.internal
+      ? createClient(supabaseUrl, supabaseKey)
+      : createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
+          global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+          auth: { persistSession: false },
+        });
 
-    const { template_id, template_name, category, data_sources, format }: ReportRequest = await req.json();
+    const { template_id, format }: ReportRequest = await req.json();
+    const { data: template, error: templateError } = await supabase
+      .from('report_templates').select('name, category, data_sources').eq('id', template_id).maybeSingle();
+    if (templateError || !template || !Array.isArray(template.data_sources)) {
+      return new Response(JSON.stringify({ ok: false, success: false, error: 'Report template is unavailable.' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const template_name = template.name;
+    const category = template.category;
+    const data_sources = template.data_sources.filter((source: unknown): source is string => typeof source === 'string' && /^[a-z][a-z0-9_]*$/.test(source));
 
     console.log(`📊 Generating ${format} report: ${template_name} (${category})`);
     console.log(`📋 Data sources:`, data_sources);

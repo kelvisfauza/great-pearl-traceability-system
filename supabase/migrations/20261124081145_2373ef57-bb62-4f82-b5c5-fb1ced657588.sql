@@ -1,0 +1,4 @@
+ALTER POLICY "Authenticated users can insert defect_library" ON public.defect_library TO authenticated WITH CHECK(public.is_active_staff() AND lower(added_by)=lower(auth.jwt()->>'email'));
+ALTER POLICY "Authenticated users can insert quality_recommendations" ON public.quality_recommendations TO authenticated WITH CHECK(public.is_active_staff() AND lower(submitted_by)=lower(auth.jwt()->>'email') AND lower(status)='pending' AND reviewed_by IS NULL AND reviewed_at IS NULL);
+ALTER POLICY "Authenticated users can insert quality_reevaluations" ON public.quality_reevaluations TO authenticated WITH CHECK(public.is_active_staff() AND lower(evaluated_by)=lower(auth.jwt()->>'email'));
+ALTER POLICY "Authenticated users can insert quality_daily_checklists" ON public.quality_daily_checklists TO authenticated WITH CHECK(public.is_active_staff() AND lower(employee_email)=lower(auth.jwt()->>'email'));
