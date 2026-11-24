@@ -3,6 +3,7 @@ import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { Script } from 'node:vm';
 import ts from 'typescript';
+import { operationsReportRecipients } from '../../supabase/functions/_shared/operations-report-recipients';
 
 function handler(name: string, context: Record<string, unknown>) {
   let source = readFileSync(`supabase/functions/${name}/index.ts`, 'utf8');
@@ -18,7 +19,7 @@ function handler(name: string, context: Record<string, unknown>) {
     exports: {}, Request, Response, URL, console: { log() {}, error() {}, warn() {} },
     Deno: { env: { get: (key: string) => key === 'SUPABASE_SERVICE_ROLE_KEY' ? 'service-key' : 'public-key' }, serve: (fn: typeof serve) => { serve = fn; } },
     serve: (fn: typeof serve) => { serve = fn; },
-    autoTableMod: {}, ...context,
+    autoTableMod: {}, operationsReportRecipients, ...context,
   });
   if (!serve) throw new Error('Missing handler');
   return (body: unknown, token = '') => serve(new Request('https://example.test', {
@@ -177,3 +178,24 @@ for (const authenticated of [false, true]) {
     assert.equal(effects, 0);
   });
 }
+
+test('scheduled reports exclude disabled administrators while preserving enabled recipients', () => {
+  const recipients = operationsReportRecipients([
+    { name: 'Allowed Admin', email: 'allowed@example.test', phone: '0700000000', role: 'Administrator', status: 'Active', disabled: false },
+    { name: 'Disabled Admin', email: 'disabled@example.test', role: 'Administrator', status: 'Active', disabled: true },
+    { email: 'staff@example.test', role: 'Staff', status: 'Active', disabled: false },
+  ]);
+  assert.deepEqual(recipients, [{ name: 'Allowed Admin', email: 'allowed@example.test', phone: '0700000000' }]);
+});
+
+test('test reports use the exact saved administrator address and cannot select disabled recipients', () => {
+  const employees = [
+    { name: 'Saved Admin', email: 'Saved.Admin@example.test', phone: '0700000000', role: 'Administrator', status: 'Active', disabled: false },
+    { email: 'disabled@example.test', role: 'Administrator', status: 'Active', disabled: true },
+  ];
+  assert.deepEqual(operationsReportRecipients(employees, ' saved.admin@example.test '), [
+    { name: 'Saved Admin', email: 'Saved.Admin@example.test', phone: null },
+  ]);
+  assert.deepEqual(operationsReportRecipients(employees, 'disabled@example.test'), []);
+  assert.deepEqual(operationsReportRecipients(employees, 'external@example.test'), []);
+});

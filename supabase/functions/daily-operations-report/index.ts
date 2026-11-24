@@ -7,6 +7,7 @@ import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { jsPDF } from 'npm:jspdf@2.5.2'
 import autoTableMod from 'npm:jspdf-autotable@3.8.4'
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { operationsReportRecipients } from '../_shared/operations-report-recipients.ts';
 
 const autoTable: any = (autoTableMod as any).default ?? autoTableMod
 
@@ -54,14 +55,17 @@ Deno.serve(async (req) => {
     const date: string = body.date || kampalaToday()
     const testEmail: string | null = body.testEmail || null
     const skipSms: boolean = body.skipSms === true || !!testEmail
+    let testRecipients: ReturnType<typeof operationsReportRecipients> = [];
 
     // Test delivery must remain within the same saved administrator audience.
     if (testEmail) {
       if (typeof testEmail !== 'string') return json({ ok: false, error: 'Select a report recipient' });
       const { data: recipient, error } = await supabase.from('employees')
-        .select('id').ilike('email', testEmail.trim().replace(/[\\%_]/g, '\\$&'))
+        .select('name,email,phone,status,role,disabled').ilike('email', testEmail.trim().replace(/[\\%_]/g, '\\$&'))
         .eq('status', 'Active').eq('role', 'Administrator').eq('disabled', false).maybeSingle();
       if (error || !recipient) return json({ ok: false, error: 'Select an active report administrator' });
+      testRecipients = operationsReportRecipients([recipient], testEmail);
+      if (testRecipients.length !== 1) return json({ ok: false, error: 'Select an active report administrator' });
     }
 
     const from = `${date}T00:00:00${TZ_OFFSET}`
@@ -102,7 +106,7 @@ Deno.serve(async (req) => {
         .select('user_id, activity_type')
         .gte('created_at', fromIso).lte('created_at', toIso),
       supabase.from('employees')
-        .select('id, name, email, phone, role, auth_user_id')
+        .select('id, name, email, phone, role, auth_user_id, status, disabled')
         .eq('status', 'Active').eq('role', 'Administrator'),
       supabase.from('ledger_entries')
         .select('entry_type, source_category, amount')
@@ -349,8 +353,8 @@ Deposits: ${money(wallet.deposits)} | Bonuses: ${money(wallet.bonuses)} | Loyalt
 Download the PDF: ${downloadUrl}`
 
     const recipients = testEmail
-      ? [{ name: 'Administrator', email: testEmail, phone: null as string | null }]
-      : ADMINS.map((a: any) => ({ name: a.name, email: a.email, phone: a.phone }))
+      ? testRecipients
+      : operationsReportRecipients(ADMINS)
 
     const emailResults: any[] = []
     for (const r of recipients) {
