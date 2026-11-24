@@ -1,38 +1,14 @@
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
-// One-off: send today's Great Agro Coffee prices to supplier Muhiwa.
+// Retired one-off sender: never parse destinations/content or invoke a provider.
+// Normal price broadcasts remain in the existing saved-price workflow.
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-
-  let body: Record<string, unknown> = {}
-
-  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
-  try { body = await req.json() } catch { /* no body */ }
-
-  const phone = typeof body.phone === 'string' ? body.phone : '0781309165'
-  const name = typeof body.name === 'string' ? body.name : 'Muhiwa'
-  const message = typeof body.message === 'string'
-    ? body.message
-    : `Great Agro Coffee Prices 04/09/2026\nArabica: UGX 14,600/kg (80%)\nRobusta: UGX 11,300/kg (80%)\nSorted: UGX 15,800/kg\nDeliver your coffee now!`
-
-  const res = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceKey}` },
-    body: JSON.stringify({
-      phone,
-      userName: name,
-      message,
-      messageType: 'price_update',
-      triggeredBy: 'admin-manual',
-    }),
-  })
-  const text = await res.text()
-
-  return new Response(JSON.stringify({ ok: res.ok, status: res.status, response: text.slice(0, 1000) }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  })
-})
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  return new Response(JSON.stringify({
+    ok: false,
+    error: 'This one-off price sender is retired. Use the normal supplier price broadcast workflow.',
+  }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+});
