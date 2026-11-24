@@ -42,6 +42,12 @@ export const useCoffeeMarketBriefing = (snapshot: CoffeeMarketSnapshot) => {
 
   const refresh = useCallback(async () => {
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        // Signed-out TV screens keep the standard briefing; the AI briefing is staff-only.
+        setState((current) => ({ briefing: current.briefing ?? fallbackBriefing, loading: false, error: null }));
+        return;
+      }
       setState((current) => ({ ...current, loading: true, error: null }));
 
       const { data, error } = await supabase.functions.invoke("coffee-market-briefing", {
