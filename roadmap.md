@@ -1,5 +1,9 @@
 # Roadmap
 
+## Maintenance activation — 24 November 08:47 UTC
+- [x] Read activation, public status, guard, recovery, schedule controls and live maintenance triggers. Reproduced missing unqualified crypt/gen_salt lookup; repaired both activation hashing and recovery verification using the installed extensions schema without changing permissions or settings.
+- [x] Five focused activation tests passed, plus rollback-only real protected-administrator activation/hash/wrong-code/valid-recovery checks. Desktop and mobile browser checks with simulated manual/scheduled status verified maintenance blocking, recovery access and restored online state; build clean. Current live maintenance row remains inactive and unchanged. SMS acceptance is now checked before reporting delivery; no real SMS sent. Full signed-in browser activation and inbox/phone delivery remain unverified on the external unmanaged backend.
+
 ## Selected security batch — 24 November 08:26 UTC
 - [x] Reviewed the 65 selected findings; fixed 16 selected database creation/read rules, both direct activity-award findings and false Procurement-return notices. Only those 19 were marked fixed.
 - [x] Passed 56 focused tests plus rollback-only database checks for unauthorized access, real authors, existing protected administrator labels and zero browser-issued rewards. Deployed the notice service and verified live invalid-session rejection after pinning compatible SDK dependencies. No real messages, payments, settings or settled records changed.

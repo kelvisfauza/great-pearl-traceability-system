@@ -40,16 +40,20 @@ const MaintenanceToggle = () => {
     setToggling(true);
     try {
       const expectedISO = expectedBack ? new Date(expectedBack).toISOString() : null;
-      await toggleMaintenance(true, maintenanceReason, employee?.name || 'Admin', expectedISO);
+      const result = await toggleMaintenance(true, maintenanceReason, employee?.name || 'Admin', expectedISO);
       setShowConfirm(false);
       setMaintenanceReason('');
       setExpectedBack('');
       toast({
         title: 'Maintenance Mode Activated',
-        description: 'All users have been logged out. Recovery code and PIN have been sent via SMS to the authorized administrator.',
+        description: result.smsSent
+          ? 'Maintenance is active. The recovery SMS was accepted for sending to the authorized administrator.'
+          : 'Maintenance is active, but the recovery SMS was not confirmed.',
+        variant: result.smsSent ? 'default' : 'destructive',
       });
-    } catch {
-      toast({ title: 'Error', description: 'Failed to activate maintenance mode', variant: 'destructive' });
+    } catch (error) {
+      const message = (error as { message?: string })?.message;
+      toast({ title: 'Activation failed', description: message || 'Maintenance could not be saved. Please try again.', variant: 'destructive' });
     } finally {
       setToggling(false);
     }
@@ -63,8 +67,9 @@ const MaintenanceToggle = () => {
         title: 'System Restored',
         description: 'Maintenance mode has been deactivated. All users can now access the system.',
       });
-    } catch {
-      toast({ title: 'Error', description: 'Failed to deactivate maintenance mode', variant: 'destructive' });
+    } catch (error) {
+      const message = (error as { message?: string })?.message;
+      toast({ title: 'Restore failed', description: message || 'Maintenance could not be deactivated. Please try again.', variant: 'destructive' });
     } finally {
       setToggling(false);
     }

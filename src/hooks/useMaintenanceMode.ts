@@ -72,17 +72,7 @@ export const useMaintenanceMode = () => {
   };
 
   const toggleMaintenance = useCallback(async (activate: boolean, reason?: string, activatedBy?: string, expectedBackOnline?: string | null) => {
-    const { data: activeRecord } = await supabase
-      .from('system_maintenance')
-      .select('id')
-      .eq('is_active', true)
-      .order('is_active', { ascending: false })
-      .order('updated_at', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const { data: latestRecord } = await supabase
+    const { data: record, error: readError } = await supabase
       .from('system_maintenance')
       .select('id')
       .order('is_active', { ascending: false })
@@ -91,8 +81,7 @@ export const useMaintenanceMode = () => {
       .limit(1)
       .maybeSingle();
 
-    const record = activeRecord ?? latestRecord;
-
+    if (readError) throw readError;
     if (!record) throw new Error('No maintenance record found');
 
     const recoveryCode = activate ? generateCode() : null;
@@ -119,7 +108,8 @@ export const useMaintenanceMode = () => {
       throw error;
     }
 
-    // Send SMS with recovery codes to Fauza2 when activating
+    let smsSent = false;
+    // Confirm provider acceptance before recording a recovery SMS as sent.
     if (activate && recoveryCode && recoveryPin) {
       try {
         const { data: fauza } = await supabase
@@ -131,12 +121,17 @@ export const useMaintenanceMode = () => {
         if (fauza?.phone) {
           const smsMessage = `MAINTENANCE MODE ACTIVATED. Recovery Code: ${recoveryCode}. PIN: ${recoveryPin}. Use these at the recovery page to restore the system.`;
 
-          await supabase.functions.invoke('send-sms', {
+          const { data: smsResult, error: smsError } = await supabase.functions.invoke('send-sms', {
             body: {
               phone: fauza.phone,
               message: smsMessage,
             },
           });
+
+          if (smsError || smsResult?.success !== true) {
+            throw new Error('Recovery SMS was not confirmed.');
+          }
+          smsSent = true;
 
           // Mark SMS as sent
           await supabase
@@ -151,7 +146,7 @@ export const useMaintenanceMode = () => {
     }
 
     await fetchStatus();
-    return { code: recoveryCode, pin: recoveryPin };
+    return { code: recoveryCode, pin: recoveryPin, smsSent };
   }, [fetchStatus]);
 
   const deactivateWithKey = useCallback(async (code: string, pin: string) => {
