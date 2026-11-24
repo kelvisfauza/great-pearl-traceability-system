@@ -1,5 +1,10 @@
 # Roadmap
 
+## Selected security batch — 24 November 08:26 UTC
+- [x] Reviewed the 65 selected findings; fixed 16 selected database creation/read rules, both direct activity-award findings and false Procurement-return notices. Only those 19 were marked fixed.
+- [x] Passed 56 focused tests plus rollback-only database checks for unauthorized access, real authors, existing protected administrator labels and zero browser-issued rewards. Deployed the notice service and verified live invalid-session rejection after pinning compatible SDK dependencies. No real messages, payments, settings or settled records changed.
+- [ ] Remaining 46 selected findings await workflow/access decisions: saved recipients versus manual messages, guarded private/public links and fingerprint proof, payout destinations, attendance/meeting/budget authority, loan-data consent and file overwrite permissions. Preserve existing workflows meanwhile; real signed-in staff success checks remain unverified. Company-name wording also awaits the user's answer; neither prices nor company wording changed.
+
 ## Related-flow security review — 24 November
 - [x] Re-read 30 literal-table consumers plus approval, fingerprint, alternate report/Firestore, pricing and AI/broadcast paths; read live ownership policies, relevant database routines and existing scheduler metadata. Delivered a detailed code-read/status inventory; did not claim complete signed-in or scheduler verification.
 - [x] Closed an additional gap inside the selected fingerprint-details finding: check employee availability before credential access across all four actions. Forty-five focused tests passed; deployed service and live invalid-session denial verified. Settled records, unselected settings/permissions and the 65 open selected findings unchanged.

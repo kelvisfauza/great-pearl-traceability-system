@@ -1,6 +1,9 @@
 import { requireStaff } from "../_shared/internal-auth.ts";
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
-import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
+import { createClient } from 'npm:@supabase/supabase-js@2.108.2'
+import { corsHeaders } from 'npm:@supabase/supabase-js@2.108.2/cors'
+import { z } from 'npm:zod@3'
+import { reviewNoticeAllowed, reviewNoticeAlreadySent } from './noticeRules.ts'
 
 const SITE_NAME = 'Great Agro Coffee'
 const SENDER_DOMAIN = 'notify.greatpearlcoffeesystem.site'
@@ -10,10 +13,11 @@ const LOGO_URL = 'https://great-pearl-traceability-system.lovable.app/lovable-up
 const REVIEW_URL = 'https://greatpearlcoffeesystem.site/procurement-review'
 const APPROVALS_URL = 'https://greatpearlcoffeesystem.site/approvals'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const NoticeBody = z.object({
+  mode: z.enum(['scan', 'returned', 'reviewed']).default('scan'),
+  source_table: z.enum(['approval_requests', 'provider_submission_requests']).default('approval_requests'),
+  record_id: z.string().trim().max(200).optional(),
+})
 
 const PENDING_STATUSES = [
   'Pending',
@@ -75,8 +79,8 @@ const rowsTable = (rows: Array<Record<string, unknown>>) => `
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
-  const __denied = await requireStaff(req, corsHeaders);
-  if (__denied instanceof Response) return __denied;
+  const caller = await requireStaff(req, corsHeaders);
+  if (caller instanceof Response) return caller;
 
   const json = (body: unknown) =>
     new Response(JSON.stringify(body), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -99,8 +103,26 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const payload = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
-    const mode = String(payload.mode || 'scan')
+    let input: unknown = {}
+    try { input = req.method === 'POST' ? await req.json() : {} } catch {
+      return new Response(JSON.stringify({ ok: false, error: 'Invalid request body.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const parsed = NoticeBody.safeParse(input)
+    if (!parsed.success) return new Response(JSON.stringify({ ok: false, error: 'Invalid notice request.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    const payload = parsed.data
+    const mode = payload.mode
+    let callerName: string | null = null
+    if (!caller.internal && mode !== 'scan') {
+      const { data: employee, error } = await supabase.from('employees').select('name,disabled,status,permissions').ilike('email', caller.email || '').maybeSingle()
+      if (error || !employee || employee.disabled === true || ['inactive','terminated','disabled','suspended'].includes(String(employee.status ?? 'active').toLowerCase())) return json({ ok: false, error: 'Account unavailable.' })
+      callerName = employee.name
+      if (mode === 'returned') {
+        const { data: roles, error: roleError } = await supabase.from('user_roles').select('role').eq('user_id', caller.userId)
+        const permitted = !roleError && ((roles || []).some((r: { role: string }) => ['admin','administrator','super_admin'].includes(r.role.toLowerCase().replace(/ /g, '_'))) ||
+          (Array.isArray(employee.permissions) && employee.permissions.some((p: string) => p === '*' || p === 'Administration')))
+        if (!permitted) return json({ ok: false, error: 'Administrator permission required.' })
+      }
+    }
 
     // ---------------------------------------------------------------
     // MODE: returned — an admin sent the request back to procurement
@@ -117,6 +139,9 @@ Deno.serve(async (req) => {
         .eq('record_id', recordId)
         .maybeSingle()
       if (!review) return json({ ok: false, error: 'Review not found' })
+
+      if (!reviewNoticeAllowed('returned', review, { ...caller, name: callerName })) return json({ ok: false, error: 'A saved return by the signed-in administrator is required.' })
+      if (reviewNoticeAlreadySent('returned', review)) return json({ ok: true, already_notified: true })
 
       const { data: staff } = await supabase
         .from('employees')
@@ -206,6 +231,9 @@ Deno.serve(async (req) => {
         .maybeSingle()
 
       if (!review) return json({ ok: false, error: 'Review not found' })
+
+      if (!reviewNoticeAllowed('reviewed', review, { ...caller, name: callerName })) return json({ ok: false, error: 'A saved decision by the signed-in reviewer is required.' })
+      if (reviewNoticeAlreadySent('reviewed', review)) return json({ ok: true, already_notified: true })
 
       let recipients: Array<{ name: string; email: string; phone: string }> = []
       if (review.recommended_admin_email) {

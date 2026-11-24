@@ -1,0 +1,1 @@
+ALTER FUNCTION public.selected_staff_module_access(text[]) SECURITY INVOKER;

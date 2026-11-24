@@ -19805,6 +19805,10 @@ export type Database = {
         Returns: number
       }
       scan_system_red_flags: { Args: never; Returns: Json }
+      selected_staff_module_access: {
+        Args: { p_modules: string[] }
+        Returns: boolean
+      }
       send_birthday_wish: {
         Args: { p_recipient_employee_id: string }
         Returns: Json
