@@ -15,7 +15,7 @@ import { Printer, Search, FileText, ArrowDownCircle, ArrowUpCircle, Wallet, Arro
 import { AlertTriangle, Info } from "lucide-react";
 import { Mail } from "lucide-react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { LOGO_URL, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONE, COMPANY_EMAIL, COMPANY_SUPPORT_EMAIL, COMPANY_WEBSITE, COMPANY_REG } from "@/utils/companyBrand";
 
@@ -30,6 +30,31 @@ type Entry = {
 };
 
 const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
+
+const savedMetadata = (value: unknown): Record<string, unknown> => {
+  if (typeof value === "string") {
+    try { return savedMetadata(JSON.parse(value)); } catch { return {}; }
+  }
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown> : {};
+};
+
+const detailLabel = (key: string) => key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const MetadataDetails = ({ value }: { value: Record<string, unknown> }) => (
+  <dl className="space-y-3">
+    {Object.entries(value).filter(([key, item]) => item != null && item !== "" && !/(password|passcode|secret|token|authorization|credential|api_key)/i.test(key)).map(([key, item]) => (
+      <div key={key} className="grid grid-cols-1 gap-1 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-4">
+        <dt className="text-sm text-muted-foreground">{detailLabel(key)}</dt>
+        <dd className="min-w-0 whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">
+          {typeof item === "object"
+            ? <MetadataDetails value={item as Record<string, unknown>} />
+            : typeof item === "boolean" ? (item ? "Yes" : "No") : String(item)}
+        </dd>
+      </div>
+    ))}
+  </dl>
+);
 
 // Must match TransactionStatement.tsx (employee view) so admin numbers
 // reconcile exactly with what the employee sees.
@@ -68,6 +93,7 @@ const UserStatement = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [detailEntry, setDetailEntry] = useState<(Entry & { running: number }) | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
@@ -175,7 +201,7 @@ const UserStatement = () => {
 
         const { data, error } = await q;
         if (error) throw error;
-        const batch = (data || []) as Entry[];
+        const batch = ((data || []) as Entry[]).map((entry) => ({ ...entry, metadata: savedMetadata(entry.metadata) }));
         all.push(...batch);
         if (batch.length < PAGE) break;
         if (offset > 50000) break; // safety
@@ -764,7 +790,15 @@ const UserStatement = () => {
                               <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Loading…</TableCell></TableRow>
                             )}
                             {!isLoading && totals.enriched.slice().reverse().map((e) => (
-                              <TableRow key={e.id}>
+                              <TableRow key={e.id} className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" tabIndex={0}
+                                aria-label={`View transaction ${e.reference || e.entry_type}`}
+                                onClick={() => setDetailEntry(e)}
+                                onKeyDown={(event) => {
+                                  if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+                                    event.preventDefault();
+                                    setDetailEntry(e);
+                                  }
+                                }}>
                                 <TableCell className="text-xs whitespace-nowrap">{new Date(e.created_at).toLocaleString()}</TableCell>
                                 <TableCell>
                                   <Badge className={TYPE_COLORS[e.entry_type] || "bg-muted text-foreground"} variant="secondary">
@@ -772,9 +806,11 @@ const UserStatement = () => {
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-xs max-w-[320px] min-w-[180px]">
-                                  <div className="truncate" title={e.metadata?.description || e.reference}>
+                                  <Button variant="link" className="h-auto max-w-full justify-start p-0 text-xs text-foreground" onClick={(event) => { event.stopPropagation(); setDetailEntry(e); }} aria-label={`View details for ${e.reference || e.entry_type}`}>
+                                    <span className="truncate" title={e.metadata?.description || e.reference}>
                                     {e.metadata?.description || "—"}
-                                  </div>
+                                    </span>
+                                  </Button>
                                   <div className="text-[10px] text-muted-foreground truncate" title={e.reference}>{e.reference}</div>
                                 </TableCell>
                                 <TableCell className={`text-right font-mono text-xs whitespace-nowrap tabular-nums ${Number(e.amount) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
@@ -827,6 +863,38 @@ const UserStatement = () => {
                 </Card>
               </>
             )}
+
+            <Dialog open={detailEntry !== null} onOpenChange={(open) => { if (!open) setDetailEntry(null); }}>
+              <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Transaction Details</DialogTitle>
+                  <DialogDescription className="break-words">{selectedEmployee?.name} {selectedEmployee?.wallet_account_number ? `· ${selectedEmployee.wallet_account_number}` : ""}</DialogDescription>
+                </DialogHeader>
+                {detailEntry && (
+                  <div className="space-y-5">
+                    <div className="border-b pb-4">
+                      <p className="text-xs text-muted-foreground">{Number(detailEntry.amount) < 0 ? "Debit" : "Credit"}</p>
+                      <p className="text-2xl font-semibold tabular-nums">{Number(detailEntry.amount) >= 0 ? "+" : "−"}{fmt(Math.abs(Number(detailEntry.amount)))}</p>
+                    </div>
+                    <MetadataDetails value={{
+                      date: new Date(detailEntry.created_at).toLocaleString(),
+                      type: getSpecificWithdrawalLabel(detailEntry as any) || detailLabel(detailEntry.entry_type),
+                      source: detailEntry.source_category ? detailLabel(detailEntry.source_category) : "Not recorded",
+                      reference: detailEntry.reference || "Not recorded",
+                      balance_in_displayed_statement: fmt(detailEntry.running),
+                      transaction_id: detailEntry.id,
+                    }} />
+                    {Object.keys(savedMetadata(detailEntry.metadata)).length > 0 && (
+                      <section className="border-t pt-4">
+                        <h3 className="mb-3 text-sm font-semibold">Saved Transaction Details</h3>
+                        <MetadataDetails value={savedMetadata(detailEntry.metadata)} />
+                      </section>
+                    )}
+                  </div>
+                )}
+                <DialogFooter><Button variant="outline" onClick={() => setDetailEntry(null)}>Close</Button></DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <Dialog open={printOpen} onOpenChange={setPrintOpen}>
               <DialogContent>
