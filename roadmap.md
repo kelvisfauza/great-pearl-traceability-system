@@ -1,5 +1,10 @@
 # Roadmap
 
+## System email delivery investigation
+- [x] Read shared transactional sender, internal authentication and report/approval/access sender call sites; existing sending logs show 69 accepted sends on 23 November and 8 on 24 November, not confirmed inbox delivery. Channel preferences have no overriding rows.
+- [x] Checked Fauza's connected Outlook across mailbox folders: system messages reached Inbox through 23 November 17:00 UTC (20:00 Uganda); no messages from any sender appear after that time. Today's saved meal approval send is absent. This verifies the missing message in one real mailbox, not a proven outage cause or every employee mailbox.
+- [ ] Trace missing delivery with mail-provider message tracing: provider bounce/delivery receipts unavailable in current tools; Outlook mailbox-rule inspection denied for missing MailboxSettings.Read. Sender is reported Active but project setup also reports verification timed out; external DNS lookup unavailable in sandbox. Preserve sender domain, security checks, settings and delivered records until a blocking cause is verified.
+
 ## Selected security findings — 24 November
 - [x] Reviewed the 170 selected findings; marked 117 verified fixes through the security manager without fixing or ignoring other findings. Removed 31 selected personal-data log exposures; escaped ten document generators and four email builders; protected three CSV exports, settings merge, credential randomness, recording ownership, deposit ownership and four saved recipient/action boundaries.
 - [x] Deployed 32 early-authenticated staff/report/airtime entry points and associated fixes; all 32 deployed anonymous calls denied before side effects. Seven internal database helpers now deny anon/authenticated execution and retain server/owner access. No balances recalculated, historical records removed, funds sent or test messages sent.
