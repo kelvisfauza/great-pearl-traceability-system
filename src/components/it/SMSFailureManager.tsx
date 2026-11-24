@@ -78,15 +78,15 @@ export const SMSFailureManager = () => {
   const sendCodeManually = async (phone: string, code: string, userName: string) => {
     try {
       // Call the SMS edge function directly to resend
-      const { error } = await supabase.functions.invoke('send-sms', {
+      const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
           phone: phone.replace('+256', '0').replace('+', ''),
-          message: `${userName} - Agro Coffee\nCode: ${code}\n(Manual delivery by IT Support)\n(5min only)`,
-          userName: userName
+          action: 'resend_login_code',
+          messageType: 'verification'
         }
       });
 
-      if (error) throw error;
+      if (error || data?.success !== true) throw new Error(error?.message || data?.error || 'No saved code could be sent.');
 
       toast({
         title: "Code Sent",

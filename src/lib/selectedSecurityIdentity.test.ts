@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { Script } from 'node:vm';
 import ts from 'typescript';
 import { operationsReportRecipients } from '../../supabase/functions/_shared/operations-report-recipients';
+import { deliveryAccepted } from '../../supabase/functions/_shared/message-policy';
 
 function handler(name: string, context: Record<string, unknown>) {
   let source = readFileSync(`supabase/functions/${name}/index.ts`, 'utf8');
@@ -19,7 +20,7 @@ function handler(name: string, context: Record<string, unknown>) {
     exports: {}, Request, Response, URL, console: { log() {}, error() {}, warn() {} },
     Deno: { env: { get: (key: string) => key === 'SUPABASE_SERVICE_ROLE_KEY' ? 'service-key' : 'public-key' }, serve: (fn: typeof serve) => { serve = fn; } },
     serve: (fn: typeof serve) => { serve = fn; },
-    autoTableMod: {}, operationsReportRecipients, ...context,
+    autoTableMod: {}, corsHeaders: {}, operationsReportRecipients, deliveryAccepted, ...context,
   });
   if (!serve) throw new Error('Missing handler');
   return (body: unknown, token = '') => serve(new Request('https://example.test', {

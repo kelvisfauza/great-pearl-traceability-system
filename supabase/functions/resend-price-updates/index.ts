@@ -2,6 +2,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { compactLegacyPriceSms } from '../_shared/compact-price-sms.ts'
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { registeredPhone } from '../_shared/message-policy.ts';
+import { z } from 'npm:zod@3';
 
 // One-off / on-demand resender for failed price_update SMS.
 // Sends directly via YoolaSMS using LOCAL Uganda format (07XXXXXXXX),
@@ -26,6 +28,8 @@ Deno.serve(async (req) => {
 
     let body: Record<string, unknown> = {}
     try { body = await req.json() } catch { /* no body */ }
+    const parsed = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), dry_run: z.boolean().optional() }).strict().safeParse(body);
+    if (!parsed.success) return new Response(JSON.stringify({ ok: false, error: 'Choose a valid date and dry-run option.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     const day = typeof body.date === 'string' ? body.date : new Date().toISOString().slice(0, 10)
     const dryRun = body.dry_run === true
 
@@ -64,6 +68,10 @@ Deno.serve(async (req) => {
 
     for (const [phone, info] of targets) {
       try {
+        if (!await registeredPhone(supabase, phone) || !info.message.trim() || info.message.length > 4000) {
+          failed++;
+          continue;
+        }
         const res = await fetch('https://yoolasms.com/api/v1/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

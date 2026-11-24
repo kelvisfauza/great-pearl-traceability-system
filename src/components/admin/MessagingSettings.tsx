@@ -5,11 +5,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Mail, MessageSquare, Phone, Send, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import NotificationChannelPrefs from './NotificationChannelPrefs';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProviderStatus {
   sendgrid: boolean;
@@ -18,6 +18,7 @@ interface ProviderStatus {
 }
 
 const MessagingSettings = () => {
+  const { employee } = useAuth();
   const [smsProvider, setSmsProvider] = useState('yoola');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -28,9 +29,8 @@ const MessagingSettings = () => {
   });
 
   // Test message states
-  const [testEmail, setTestEmail] = useState('');
-  const [testPhone, setTestPhone] = useState('');
-  const [testMessage, setTestMessage] = useState('This is a test message from Great Agro Coffee System.');
+  const testEmail = employee?.email || '';
+  const testPhone = employee?.phone || '';
   const [sendingTest, setSendingTest] = useState<string | null>(null);
 
   useEffect(() => {
@@ -104,8 +104,6 @@ const MessagingSettings = () => {
         body: {
           channel,
           to,
-          subject: channel === 'email' ? 'Test Email from Great Agro Coffee' : undefined,
-          message: testMessage
         }
       });
 
@@ -252,16 +250,6 @@ const MessagingSettings = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div>
-            <Label>Test Message Content</Label>
-            <Textarea
-              value={testMessage}
-              onChange={(e) => setTestMessage(e.target.value)}
-              placeholder="Enter your test message..."
-              className="mt-1"
-            />
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Email Test */}
             <div className="space-y-2">
@@ -270,7 +258,7 @@ const MessagingSettings = () => {
                 type="email"
                 placeholder="test@example.com"
                 value={testEmail}
-                onChange={(e) => setTestEmail(e.target.value)}
+                readOnly
               />
               <Button 
                 onClick={() => sendTestMessage('email')} 
@@ -294,7 +282,7 @@ const MessagingSettings = () => {
                 type="tel"
                 placeholder="0779123456"
                 value={testPhone}
-                onChange={(e) => setTestPhone(e.target.value)}
+                readOnly
               />
               <Button 
                 onClick={() => sendTestMessage('sms')} 
@@ -318,7 +306,7 @@ const MessagingSettings = () => {
                 type="tel"
                 placeholder="0779123456"
                 value={testPhone}
-                onChange={(e) => setTestPhone(e.target.value)}
+                readOnly
                 disabled={!providerStatus.twilio}
               />
               <Button 

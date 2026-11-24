@@ -1,9 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { deliveryAccepted } from '../_shared/message-policy.ts';
 
 function respond(ok: boolean, payload: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify({ ok, ...payload }), {
@@ -173,7 +170,7 @@ Deno.serve(async (req) => {
           const r = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
             method: "POST",
             headers: {
-              Authorization: authHeader || `Bearer ${serviceKey}`,
+              Authorization: `Bearer ${serviceKey}`,
               apikey: anonKey,
               "Content-Type": "application/json",
             },
@@ -185,7 +182,7 @@ Deno.serve(async (req) => {
               recipientEmail: email,
             }),
           });
-          results.sms = { ok: r.ok, status: r.status };
+          results.sms = { ok: deliveryAccepted(r.ok, await r.json().catch(() => null)), status: r.status };
         } catch (e) {
           results.sms = { ok: false, error: (e as Error).message };
         }

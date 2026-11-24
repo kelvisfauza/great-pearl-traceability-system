@@ -1,10 +1,8 @@
 import { requireStaff } from "../_shared/internal-auth.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { z } from 'npm:zod@3';
+import { ownTestDestination, SETTINGS_TEST_MESSAGE, SETTINGS_TEST_SUBJECT } from '../_shared/message-policy.ts';
 
 interface MessageRequest {
   channel: 'email' | 'sms' | 'whatsapp'
@@ -160,34 +158,27 @@ async function sendSMSViaYoola(to: string, message: string): Promise<{ success: 
   }
 
   try {
-    // Format phone number
-    let formattedPhone = to.replace(/\s+/g, '').replace(/^0/, '+256')
-    if (!formattedPhone.startsWith('+')) {
-      formattedPhone = '+' + formattedPhone
-    }
-
     console.log('Operation recorded; private details omitted')
 
-    const response = await fetch('https://api.yoolasms.com/v1/send', {
+    const response = await fetch('https://yoolasms.com/api/v1/send', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        to: formattedPhone,
+        phone: to,
         message: message,
-        sender_id: 'GreatAgro'
+        api_key: apiKey,
       })
     })
 
-    if (response.ok) {
+    const providerResult = await response.json().catch(() => null);
+    if (response.ok && (providerResult?.status === 'success' || providerResult?.success === true)) {
       console.log(`✅ SMS sent successfully via Yoola`)
       return { success: true }
     }
 
-    const errorText = await response.text()
-    console.error(`❌ Yoola error: ${response.status} - ${errorText}`)
+    console.error(`Yoola test was not accepted: ${response.status}`)
     return { success: false, error: `Yoola error: ${response.status}` }
   } catch (error) {
     console.error('❌ Yoola exception:', error)
@@ -201,6 +192,11 @@ Deno.serve(async (req) => {
   }
   const __caller = await requireStaff(req, corsHeaders);
   if (__caller instanceof Response) return __caller;
+  const itClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', { global: { headers: { Authorization: req.headers.get('Authorization') || '' } } });
+  const { data: itAllowed } = __caller.email ? await itClient.rpc('user_has_permission', { permission_name: 'IT Management' }) : { data: false };
+  if ((!__caller.isAdmin && itAllowed !== true) || !__caller.email) return new Response(JSON.stringify({ success: false, error: 'Only signed-in administrators or IT managers can run message tests.' }), {
+    status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
   try {
     const supabase = createClient(
@@ -208,13 +204,25 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { channel, to, subject, message, from, provider } = await req.json() as MessageRequest
-
-    if (!channel || !to || !message) {
-      throw new Error('Missing required fields: channel, to, message')
-    }
-
-    console.log(`📨 Processing ${channel} message to: ${to}`)
+    const parsed = z.object({ channel: z.enum(['email', 'sms', 'whatsapp']), to: z.string().max(255).optional() }).strict().safeParse(await req.json());
+    if (!parsed.success) throw new Error('Choose a test channel. Custom content and sender overrides are not allowed.');
+    const { channel } = parsed.data;
+    const { data: employee, error: employeeError } = await supabase.from('employees')
+      .select('email,phone,alt_phone,status,disabled').ilike('email', __caller.email).maybeSingle();
+    if (employeeError || !employee || employee.disabled === true || String(employee.status).toLowerCase() !== 'active') throw new Error('Your saved active account could not be checked.');
+    const to = ownTestDestination(channel, parsed.data.to, employee);
+    const subject = SETTINGS_TEST_SUBJECT;
+    const message = SETTINGS_TEST_MESSAGE;
+    const { data: recent, error: recentError } = await supabase.from('audit_logs').select('id')
+      .eq('action', 'message_test').eq('record_id', __caller.userId)
+      .gte('created_at', new Date(Date.now() - 60_000).toISOString()).limit(1);
+    if (recentError) throw new Error('The test limit could not be checked.');
+    if (recent?.length) throw new Error('Please wait one minute before another message test.');
+    const { error: auditError } = await supabase.from('audit_logs').insert({
+      action: 'message_test', table_name: 'employees', record_id: __caller.userId,
+      performed_by: __caller.email, record_data: { channel, template: 'connection_test' },
+    });
+    if (auditError) throw new Error('The test could not be registered. No message was sent.');
 
     // Get system settings for default providers
     const { data: settings } = await supabase
@@ -231,11 +239,11 @@ Deno.serve(async (req) => {
 
     switch (channel) {
       case 'email':
-        result = await sendEmailViaSendGrid(to, subject || 'Notification', message, from)
+        result = await sendEmailViaSendGrid(to, subject, message)
         break
 
       case 'sms':
-        const smsProvider = provider || settingsMap['sms_provider'] || 'yoola'
+        const smsProvider = settingsMap['sms_provider'] || 'yoola'
         if (smsProvider === 'twilio') {
           result = await sendSMSViaTwilio(to, message)
         } else {
@@ -249,21 +257,6 @@ Deno.serve(async (req) => {
 
       default:
         throw new Error(`Unsupported channel: ${channel}`)
-    }
-
-    // Log the message
-    try {
-      await supabase.from('message_logs').insert({
-        channel,
-        recipient: to,
-        message: message.substring(0, 500),
-        status: result.success ? 'sent' : 'failed',
-        error: result.error,
-        provider: channel === 'sms' ? (provider || settingsMap['sms_provider'] || 'yoola') : 
-                  channel === 'email' ? 'sendgrid' : 'twilio'
-      })
-    } catch (logErr) {
-      console.log('Failed to log message:', logErr)
     }
 
     return new Response(

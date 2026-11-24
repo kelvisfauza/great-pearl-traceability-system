@@ -70,32 +70,23 @@ export const ComprehensiveSMSManager = () => {
       console.log('📱 Sending test SMS...');
       toast({
         title: "Sending Test SMS",
-        description: "Sending test message to 0393001626...",
+        description: "Sending a connection test to your saved number...",
       });
 
-      const { data, error } = await supabase.functions.invoke('send-sms', {
-        body: {
-          phone: '0393001626',
-          message: 'Test message from IT Department - SMS system is working properly!',
-          userName: 'Test User',
-          messageType: 'test',
-          triggeredBy: 'IT Department Test',
-          department: 'IT'
-        }
-      });
+      const { data, error } = await supabase.functions.invoke('send-message', { body: { channel: 'sms' } });
 
       console.log('📱 Test SMS result:', { data, error });
       
-      if (error) {
+      if (error || data?.success !== true) {
         toast({
           title: "Test SMS Failed",
-          description: error.message,
+          description: error?.message || data?.error || 'The test was not accepted.',
           variant: "destructive",
         });
       } else {
         toast({
           title: "Test SMS Sent Successfully", 
-          description: "Test message sent to 0393001626",
+          description: "The connection test was accepted for your saved number.",
         });
         // Refresh data to show the new SMS log
         setTimeout(() => fetchSMSData(), 2000);
@@ -216,18 +207,17 @@ export const ComprehensiveSMSManager = () => {
 
   const sendCodeManually = async (phone: string, code: string, userName: string) => {
     try {
-      const { error } = await supabase.functions.invoke('send-sms', {
+      const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
           phone: phone.replace('+256', '0').replace('+', ''),
-          message: `${userName} - Agro Coffee\nCode: ${code}\n(Manual delivery by IT Support)\n(5min only)`,
-          userName: userName,
+          action: 'resend_login_code',
           messageType: 'verification',
           triggeredBy: 'IT Support Manual Delivery',
           department: 'IT'
         }
       });
 
-      if (error) throw error;
+      if (error || data?.success !== true) throw new Error(error?.message || data?.error || 'The saved code was not accepted.');
 
       toast({
         title: "Code Sent",

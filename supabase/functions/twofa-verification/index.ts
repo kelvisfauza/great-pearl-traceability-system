@@ -1,11 +1,8 @@
 import "../_shared/redact-logs.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5'
 import { sendWhatsAppOtp } from '../_shared/whatsapp.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { deliveryAccepted } from '../_shared/message-policy.ts';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -297,17 +294,19 @@ LINK: ${loginLink}
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
         },
         body: JSON.stringify({
           phone: phone,
           message: smsMessage,
-          userName: userName
+          userName: userName,
+          messageType: 'verification',
         })
       });
 
-      if (!smsResponse.ok) {
-        const smsError = await smsResponse.text();
+      const smsAccepted = deliveryAccepted(smsResponse.ok, await smsResponse.json().catch(() => null));
+      if (!smsAccepted) {
+        const smsError = 'The message service did not accept this verification notice.';
         console.error('SMS sending failed:', smsError);
         
         // Log SMS failure for IT support
@@ -345,7 +344,7 @@ LINK: ${loginLink}
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+                    'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
                   },
                   body: JSON.stringify({
                     phone: itUser.phone,

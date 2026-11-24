@@ -1,10 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.5";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { z } from 'npm:zod@3';
+import { ownTestDestination, registeredPhone, deliveryAccepted } from '../_shared/message-policy.ts';
 
 const ADMIN_ROLES = ['Administrator', 'Super Admin', 'Managing Director'];
 
@@ -44,21 +42,30 @@ serve(async (req) => {
 
     const { data: sender } = await admin
       .from('employees')
-      .select('name, email, role, status')
+      .select('name, email, role, status, disabled, phone, alt_phone')
       .ilike('email', user.email)
       .maybeSingle();
 
-    if (!sender || !ADMIN_ROLES.includes(sender.role) || sender.status !== 'Active') {
+    if (!sender || sender.disabled === true || !ADMIN_ROLES.includes(sender.role) || String(sender.status).toLowerCase() !== 'active') {
       return json({ ok: false, error: 'Only administrators can send company communications' }, 403);
     }
 
-    const body = await req.json();
+    const parsed = z.object({
+      audience: z.enum(['employees', 'suppliers', 'both']).default('employees'),
+      sendSms: z.boolean().default(true), sendEmail: z.boolean().default(false),
+      subject: z.string().trim().min(1).max(150).default('Company Communication'),
+      message: z.string().trim().min(1).max(900),
+      testPhone: z.string().max(32).nullable().optional(),
+      extraPhones: z.array(z.string().max(32)).max(20).default([]),
+    }).strict().safeParse(await req.json());
+    if (!parsed.success) return json({ ok: false, error: 'Choose a saved audience and a message of up to 900 characters.' }, 400);
+    const body = parsed.data;
     const audience: string = body.audience || 'employees';
     const sendSms: boolean = body.sendSms !== false;
     const sendEmail: boolean = body.sendEmail === true;
     const subject: string = (body.subject || 'Company Communication').toString().trim().slice(0, 150);
     const message: string = (body.message || '').toString().trim();
-    const testPhone: string | null = body.testPhone ? normalizePhone(body.testPhone) : null;
+    const testPhone: string | null = body.testPhone ? ownTestDestination('sms', body.testPhone, sender) : null;
     const extraPhones: string[] = Array.isArray(body.extraPhones) ? body.extraPhones : [];
 
     if (!message) return json({ ok: false, error: 'Message is required' }, 400);
@@ -106,13 +113,25 @@ serve(async (req) => {
         for (const a of agents.data || []) { const n = normalizePhone(a.phone); if (n) phones.add(n); }
       }
 
-      for (const p of extraPhones) { const n = normalizePhone(p); if (n) phones.add(n); }
+      for (const p of extraPhones) {
+        const recipient = await registeredPhone(admin, p);
+        if (!recipient) return json({ ok: false, error: 'Additional recipients must be saved active contacts.' });
+        phones.add(recipient.phone);
+      }
     }
+
+    // Saved-contact suppression takes precedence even when a number also belongs to a supplier.
+    for (const phone of [...phones]) if (!await registeredPhone(admin, phone)) phones.delete(phone);
+    const { data: recent, error: recentError } = await admin.from('broadcast_communications').select('id')
+      .eq('created_by_email', sender.email).eq('message', message)
+      .gte('created_at', new Date(Date.now() - 60_000).toISOString()).limit(1);
+    if (recentError) return json({ ok: false, error: 'The broadcast limit could not be checked.' });
+    if (recent?.length) return json({ ok: false, error: 'Please wait before sending this same broadcast again.' });
 
     const phoneList = sendSms ? Array.from(phones) : [];
     const emailList = sendEmail && !testPhone ? Array.from(emails.entries()) : [];
 
-    const { data: logRow } = await admin
+    const { data: logRow, error: logError } = await admin
       .from('broadcast_communications')
       .insert({
         audience: testPhone ? 'test' : audience,
@@ -129,6 +148,7 @@ serve(async (req) => {
       .single();
 
     const logId = logRow?.id;
+    if (logError || !logId) return json({ ok: false, error: 'The broadcast could not be registered. No messages were sent.' });
 
     let smsSent = 0;
     let smsFailed = 0;
@@ -147,7 +167,7 @@ serve(async (req) => {
             triggeredBy: sender.email,
           }),
         });
-        if (res.ok) smsSent++; else smsFailed++;
+        if (deliveryAccepted(res.ok, await res.json())) smsSent++; else smsFailed++;
       } catch {
         smsFailed++;
       }
@@ -175,7 +195,7 @@ serve(async (req) => {
             },
           }),
         });
-        if (res.ok) emailsSent++; else emailsFailed++;
+        if (deliveryAccepted(res.ok, await res.json())) emailsSent++; else emailsFailed++;
       } catch {
         emailsFailed++;
       }

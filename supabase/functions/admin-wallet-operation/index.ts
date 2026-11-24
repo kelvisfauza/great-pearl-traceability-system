@@ -3,11 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 import { sixDigitCode } from "../_shared/secure-random.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 function respond(ok: boolean, payload: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify({ ok, ...payload }), {
@@ -40,8 +36,7 @@ async function sendSms(
 ) {
   if (!phone) return;
   try {
-    // Call send-sms directly with the caller's JWT — invoking via the
-    // service-role client returns 401 (send-sms requires a bearer user token).
+    // Caller authorization and saved-target checks precede this server notice.
     const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-sms`;
     const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
     const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -50,7 +45,7 @@ async function sendSms(
       headers: {
         "Content-Type": "application/json",
         "apikey": anon,
-        "Authorization": authHeader || `Bearer ${service}`,
+        "Authorization": `Bearer ${service}`,
       },
       body: JSON.stringify({
         phone,

@@ -50,9 +50,9 @@ export const PriceUpdateModal = ({ open, onOpenChange }: PriceUpdateModalProps) 
         created_at: new Date().toISOString()
       };
 
-      const { error: insertError } = await supabase
+      const { data: savedUpdate, error: insertError } = await supabase
         .from('market_updates' as any)
-        .insert(marketUpdate);
+        .insert(marketUpdate).select('id').single();
 
       if (insertError) {
         throw insertError;
@@ -72,7 +72,9 @@ export const PriceUpdateModal = ({ open, onOpenChange }: PriceUpdateModalProps) 
           .catch((e) => console.error('teams-notify (price) failed', e));
       }
 
-      // Send SMS notifications if checked
+      let accepted = 0;
+      let notAccepted = 0;
+      // Send only the saved market update, never caller-composed prices.
       if (formData.sendNotification) {
         const { data: suppliers, error: suppliersError } = await supabase
           .from('suppliers')
@@ -85,37 +87,28 @@ export const PriceUpdateModal = ({ open, onOpenChange }: PriceUpdateModalProps) 
 
         const suppliersList = suppliers?.filter(s => s.phone) || [];
 
-        const date = new Date().toLocaleDateString('en-GB');
-        const message = `Great Agro Coffee updates\nToday: ${date}\n\nArabica Price Update:\nOutturn:     ${formData.outturn}%\nMoisture:    ${formData.moisture}%\nFM:          ${formData.fm}%\nPrice:  UGX ${parseFloat(formData.price).toLocaleString()}/kg\n\nDeliver now to get served best.`;
-
         // Send SMS to each supplier
         console.log(`📱 Sending SMS to ${suppliersList.length} suppliers`);
         const smsPromises = suppliersList.map(async (supplier) => {
           try {
             console.log(`Sending to ${supplier.name} at ${supplier.phone}`);
-            const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
-              },
-              body: JSON.stringify({
+            const { data: result, error } = await supabase.functions.invoke('send-sms', {
+              body: {
                 phone: supplier.phone,
-                message: message,
-                userName: supplier.name,
+                requestId: (savedUpdate as any)?.id,
+                priceSource: 'market_update',
                 messageType: 'price_update',
-                triggeredBy: 'Data Analyst',
-                department: 'Analyst'
-              })
+              }
             });
-
-            const result = await response.json();
-            if (!response.ok) {
+            if (error || result?.success !== true) {
+              notAccepted++;
               console.error(`❌ Failed to send SMS to ${supplier.name}:`, result);
             } else {
+              accepted++;
               console.log(`✅ SMS sent to ${supplier.name}`);
             }
           } catch (error) {
+            notAccepted++;
             console.error(`❌ Error sending SMS to ${supplier.name}:`, error);
           }
         });
@@ -126,7 +119,7 @@ export const PriceUpdateModal = ({ open, onOpenChange }: PriceUpdateModalProps) 
       toast({
         title: "Success",
         description: formData.sendNotification 
-          ? "Price updated and notifications sent to suppliers"
+          ? `Price updated. ${accepted} supplier texts accepted; ${notAccepted} not accepted.`
           : "Price updated successfully"
       });
 

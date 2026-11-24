@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { deliveryAccepted } from '../../supabase/functions/_shared/message-policy';
 
 interface SMSProvider {
   name: string;
@@ -10,8 +11,6 @@ class SupabaseSMSProvider implements SMSProvider {
 
   async sendSMS(phone: string, message: string): Promise<boolean> {
     try {
-      console.log('Attempting to send SMS via Supabase Edge Function to:', phone);
-      console.log('Message content:', message);
       
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: { 
@@ -21,12 +20,11 @@ class SupabaseSMSProvider implements SMSProvider {
         }
       });
 
-      if (error) {
+      if (error || !deliveryAccepted(true, data)) {
         console.error('Supabase SMS error:', error);
         return false;
       }
 
-      console.log('SMS sent successfully via Supabase:', data);
       return true;
     } catch (error) {
       console.error('Supabase SMS request failed:', error);
@@ -35,22 +33,9 @@ class SupabaseSMSProvider implements SMSProvider {
   }
 }
 
-class DevelopmentProvider implements SMSProvider {
-  name = 'Development';
-
-  async sendSMS(phone: string, message: string): Promise<boolean> {
-    console.log('=== DEVELOPMENT SMS ===');
-    console.log('Phone:', phone);
-    console.log('Message:', message);
-    console.log('======================');
-    return true;
-  }
-}
-
 export class SMSService {
   private providers: SMSProvider[] = [
-    new SupabaseSMSProvider(),
-    new DevelopmentProvider() // Always works for testing
+    new SupabaseSMSProvider()
   ];
 
   private formatPhoneNumber(phone: string): string {
@@ -76,7 +61,6 @@ export class SMSService {
   async sendVerificationSMS(phone: string, code: string, userName?: string): Promise<{ success: boolean; error?: string }> {
     const formattedPhone = this.formatPhoneNumber(phone);
     
-    console.log('Sending SMS to:', formattedPhone, 'Code:', code);
 
     for (const provider of this.providers) {
       try {
@@ -125,7 +109,6 @@ export class SMSService {
   async sendSMS(phone: string, message: string): Promise<{ success: boolean; error?: string }> {
     const formattedPhone = this.formatPhoneNumber(phone);
     
-    console.log('Sending SMS to:', formattedPhone, 'Message:', message);
 
     for (const provider of this.providers) {
       try {

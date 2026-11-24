@@ -2,11 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 const json = (b: unknown) =>
   new Response(JSON.stringify(b), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
@@ -23,7 +19,9 @@ Deno.serve(async (req) => {
   try {
     const url = Deno.env.get("SUPABASE_URL")!;
     const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!service) return json({ ok: false, error: 'Notification service is not configured.' });
+    const admin = createClient(url, service);
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace("Bearer ", "");
     if (!token) return json({ ok: false, error: "Please sign in" });
@@ -76,7 +74,7 @@ Deno.serve(async (req) => {
 
       await fetch(`${url}/functions/v1/send-sms`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: anon, Authorization: authHeader },
+        headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${service}` },
         body: JSON.stringify({
           phone: emp.phone,
           message: `Great Agro Coffee: Finance (${myName}) wants to withdraw UGX ${amount.toLocaleString()} from your wallet for: ${reason}. Code: ${code}. Give this code only if you agree. Valid 10 min.`,
@@ -185,7 +183,7 @@ Deno.serve(async (req) => {
 
       await fetch(`${url}/functions/v1/send-sms`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: anon, Authorization: authHeader },
+        headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${service}` },
         body: JSON.stringify({
           phone: emp.phone,
           message: `Great Agro Coffee: UGX ${amount.toLocaleString()} withdrawn from your wallet by Finance (${myName}) for ${reason}, paid by ${methodLabel}${method === "cash" ? "" : ` to ${payPhone}`}. Ref ${reference}.`,

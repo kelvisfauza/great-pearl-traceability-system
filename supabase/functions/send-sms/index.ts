@@ -3,11 +3,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { loadProviderSettings } from "../_shared/provider-settings.ts"
 import { compactLegacyPriceSms } from "../_shared/compact-price-sms.ts"
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { z } from 'npm:zod@3';
+import { prepareBrowserSms } from '../_shared/browser-sms.ts';
+import { registeredPhone, deliveryAccepted, employeePhoneBlocked } from '../_shared/message-policy.ts';
 
 async function sendInfobipSmsFallback(phone: string, message: string, supabase: any, meta: any) {
   try {
@@ -62,7 +61,7 @@ async function sendInfobipSmsFallback(phone: string, message: string, supabase: 
 
     return { success: response.ok, details: result };
   } catch (err) {
-    console.error('Infobip SMS fallback error:', err.message);
+    console.error('Infobip SMS fallback error:', err instanceof Error ? err.message : String(err));
     return { success: false };
   }
 }
@@ -119,7 +118,7 @@ async function sendBulkSmsPremium(phone: string, message: string, supabase: any,
 
     return { success: response.ok, details: result };
   } catch (err) {
-    console.error('BulkSMS Premium error:', err.message);
+    console.error('BulkSMS Premium error:', err instanceof Error ? err.message : String(err));
     return { success: false };
   }
 }
@@ -281,7 +280,12 @@ serve(async (req) => {
   let rawBody = ''
   try { rawBody = await req.text() } catch {}
   let parsedBody: any = {}
-  try { parsedBody = JSON.parse(rawBody) } catch {}
+  try { parsedBody = JSON.parse(rawBody) } catch {
+    return new Response(JSON.stringify({ ok: false, error: 'Invalid message request.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+  if (rawBody.length > 32_000 || !parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return new Response(JSON.stringify({ ok: false, error: 'Invalid message request.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
   
   if (parsedBody.action === 'process_queue') {
     // Require service-role bearer or dedicated QUEUE_SECRET to prevent abuse
@@ -317,6 +321,11 @@ serve(async (req) => {
       const results = []
       for (const msg of pendingMessages) {
         try {
+          const recipient = await registeredPhone(supabase, msg.recipient_phone);
+          if (!recipient || typeof msg.message !== 'string' || !msg.message.trim() || msg.message.length > 4000) {
+            results.push({ id: msg.id, success: false, skipped: true, error: 'Saved recipient or message is unavailable.' });
+            continue;
+          }
           // Format phone
           let formattedPhone = msg.recipient_phone.toString().trim()
           if (!formattedPhone.startsWith('+')) {
@@ -337,7 +346,8 @@ serve(async (req) => {
             body: JSON.stringify({ phone: yoolaPhone, message: queuedMessage, api_key: apiKey })
           })
 
-          const success = smsResponse.ok
+          const queueProviderResult = await smsResponse.json().catch(() => null);
+          let success = smsResponse.ok && (queueProviderResult?.status === 'success' || queueProviderResult?.success === true);
           console.log(`Queue SMS to ${formattedPhone}: ${success ? 'sent' : 'failed'} (${smsResponse.status})`)
 
           await supabase.from('sms_notification_queue').update({
@@ -352,22 +362,25 @@ serve(async (req) => {
               userName: 'Employee', recipientEmail: msg.recipient_email, messageType: msg.notification_type
             })
             if (infobipResult.success) {
+              success = true;
               await supabase.from('sms_notification_queue').update({ status: 'sent', sent_at: new Date().toISOString(), error_message: 'Sent via Infobip fallback' }).eq('id', msg.id)
             }
           }
 
           results.push({ id: msg.id, success })
         } catch (err) {
-          console.error(`Failed to process queue item ${msg.id}:`, err.message)
-          await supabase.from('sms_notification_queue').update({ status: 'failed', error_message: err.message }).eq('id', msg.id)
-          results.push({ id: msg.id, success: false, error: err.message })
+          const failure = err instanceof Error ? err.message : String(err);
+          console.error(`Failed to process queue item ${msg.id}:`, failure)
+          await supabase.from('sms_notification_queue').update({ status: 'failed', error_message: failure }).eq('id', msg.id)
+          results.push({ id: msg.id, success: false, error: failure })
         }
       }
 
       return new Response(JSON.stringify({ success: true, processed: results.length, results }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     } catch (err) {
-      console.error('Queue processing error:', err.message)
-      return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      const failure = err instanceof Error ? err.message : String(err);
+      console.error('Queue processing error:', failure)
+      return new Response(JSON.stringify({ error: failure }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
   }
 
@@ -401,18 +414,43 @@ serve(async (req) => {
     userId = user.id
     // Only active employees may send texts; self-registered or disabled accounts cannot.
     const staffDb = createClient(supabaseUrl, serviceRoleKey)
-    const { data: staff } = await staffDb.from('employees').select('id, disabled').ilike('email', user.email || '').maybeSingle()
-    if (!staff || staff.disabled === true) {
+    const { data: staff } = await staffDb.from('employees').select('id,name,email,phone,alt_phone,role,permissions,status,disabled').ilike('email', user.email || '').maybeSingle()
+    if (!staff || staff.disabled === true || String(staff.status).toLowerCase() !== 'active') {
       return new Response(
         JSON.stringify({ error: 'Only active staff can send messages' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+    const [{ data: privileged }, { data: admin }, { data: analyst }, { data: it }] = await Promise.all([
+      supabaseAuth.rpc('is_admin_hr_or_finance'), supabaseAuth.rpc('is_current_user_admin'),
+      supabaseAuth.rpc('user_has_permission', { permission_name: 'Data Analysis' }),
+      supabaseAuth.rpc('user_has_permission', { permission_name: 'IT' }),
+    ]);
+    try {
+      const validated = z.object({
+        phone: z.string().max(32), message: z.string().max(4000).optional(),
+        messageType: z.string().max(80).optional(), requestId: z.string().uuid().optional(),
+        action: z.string().max(40).optional(),
+      }).passthrough().parse(parsedBody);
+      const prepared = await prepareBrowserSms(staffDb, validated, staff,
+        privileged === true || admin === true,
+        privileged === true || admin === true || analyst === true,
+        admin === true || it === true || staff.role === 'IT' || staff.permissions?.includes('IT Management'));
+      Object.assign(parsedBody, prepared);
+      delete parsedBody.priority;
+    } catch (error) {
+      return new Response(JSON.stringify({ ok: false, success: false, error: error instanceof Error ? error.message : 'This message is not authorized.' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
   }
   console.log('Authenticated:', isServiceRole ? 'service-role' : userId)
 
   try {
     const { phone, userName, messageType, triggeredBy, requestId, department, recipientEmail } = parsedBody
+    if (isServiceRole && await employeePhoneBlocked(supabase, phone)) {
+      return new Response(JSON.stringify({ ok: false, success: false, blocked: true, error: 'Recipient is disabled or unavailable.' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     // Flatten to GSM-7 so emoji/em-dash bodies don't silently become
     // 70-char UCS-2 segments (which is what was burning BulkSMS credits).
     const rawMessage: string = parsedBody.message || ''
@@ -577,7 +615,7 @@ serve(async (req) => {
             }
             const title = titleMap[messageType?.toLowerCase() || ''] || 'Notification from Great Pearl Coffee'
 
-            const { error: emailErr } = await supabase.functions.invoke('send-transactional-email', {
+            const { data: emailResult, error: emailErr } = await supabase.functions.invoke('send-transactional-email', {
               body: {
                 templateName: 'general-notification',
                 recipientEmail: resolvedEmail,
@@ -589,7 +627,7 @@ serve(async (req) => {
                 },
               },
             })
-            if (emailErr) {
+            if (emailErr || !deliveryAccepted(true, emailResult)) {
               console.error('SMS→email redirect failed to invoke send-transactional-email:', emailErr)
             } else {
               emailSent = true
@@ -624,7 +662,7 @@ serve(async (req) => {
       
       return new Response(
         JSON.stringify({ 
-          success: true, 
+          success: emailSent,
           blocked: true, 
           emailSent,
           reason: emailSent
@@ -875,7 +913,7 @@ serve(async (req) => {
 
     // Send SMS using YoolaSMS API with retry logic
     const maxRetries = 3;
-    let lastError: Error | null = null;
+    let lastErrorMessage = 'All providers failed';
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -1083,7 +1121,7 @@ serve(async (req) => {
 
       } catch (error) {
         console.error(`YoolaSMS request failed (attempt ${attempt}/${maxRetries}):`, (error as Error).message);
-        lastError = error;
+        lastErrorMessage = error instanceof Error ? error.message : String(error);
         
         if (attempt < maxRetries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
@@ -1094,7 +1132,7 @@ serve(async (req) => {
     }
     
     // All YoolaSMS retries failed - try Infobip SMS fallback
-    console.error('All YoolaSMS retry attempts failed:', lastError?.message);
+    console.error('All YoolaSMS retry attempts failed:', lastErrorMessage);
     console.log('Attempting Infobip SMS fallback...');
     
     const infobipResult = await sendInfobipSmsFallback(formattedPhone, message, supabase, {
@@ -1142,7 +1180,7 @@ serve(async (req) => {
         success: false,
         queued_for_retry: true,
         error: 'SMS failed via all providers (YoolaSMS, Infobip, BulkSMS)',
-        details: lastError?.message || 'All providers failed',
+        details: lastErrorMessage,
         phone: formattedPhone
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

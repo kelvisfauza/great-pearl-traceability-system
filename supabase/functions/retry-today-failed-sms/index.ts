@@ -1,10 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { registeredPhone } from '../_shared/message-policy.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
@@ -77,6 +74,11 @@ Deno.serve(async (req) => {
   for (const msg of toRetry) {
     const newRetryCount = (msg.retry_count || 0) + 1
     try {
+      if (!await registeredPhone(supabase, msg.recipient_phone) || typeof msg.message_content !== 'string' || !msg.message_content.trim() || msg.message_content.length > 4000) {
+        stillFailed++;
+        results.push({ id: msg.id, status: 'skipped', error: 'Saved recipient or message is unavailable.' });
+        continue;
+      }
       const resp = await fetch('https://yoolasms.com/api/v1/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -86,7 +86,7 @@ const Communications = () => {
   const [sendEmail, setSendEmail] = useState(false);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
-  const [testPhone, setTestPhone] = useState("");
+  const testPhone = employee?.phone || '';
   const [sending, setSending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [history, setHistory] = useState<BroadcastRow[]>([]);
@@ -245,7 +245,7 @@ const Communications = () => {
                   <Label className="text-xs uppercase text-muted-foreground">Try it on one number first</Label>
                   <Input
                     value={testPhone}
-                    onChange={(e) => setTestPhone(e.target.value)}
+                    readOnly
                     placeholder="07XX XXX XXX"
                   />
                 </div>

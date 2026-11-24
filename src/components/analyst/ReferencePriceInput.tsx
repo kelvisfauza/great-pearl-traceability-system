@@ -241,36 +241,16 @@ const handleReset = () => {
 const handleTestSMS = async (phoneNumber: string) => {
     try {
       setTestLoading(true);
-      const date = new Date().toLocaleDateString('en-GB');
-      const message = buildPriceSms({ drugar_local: prices.drugarLocal, sorted_price: prices.sortedPrice, robusta_faq_local: prices.robustaFaqLocal, wugar_local: prices.wugarLocal, parchment_premium: prices.parchmentPremium, parchment_price: prices.parchmentPrice, kyarumba_sorted: prices.kyarumbaSorted, kyarumba_ordinary: prices.kyarumbaOrdinary, kyarumba_undergrades: prices.kyarumbaUndergrades, rubirizi_drugar_clean: prices.rubiriziDrugarClean, rubirizi_ordinary: prices.rubiriziOrdinary }, date);
-
-      console.log(`📱 Sending test SMS to ${phoneNumber}`);
-      console.log('Message:', message);
-
-      const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
-        },
-        body: JSON.stringify({
-          phone: phoneNumber,
-          message: message,
-          userName: 'Test User',
-          messageType: 'price_update_test',
-          triggeredBy: 'Data Analyst',
-          department: 'Analyst'
-        })
+      const { data: result, error } = await supabase.functions.invoke('send-sms', {
+        body: { phone: employee?.phone || '', messageType: 'price_update_test' }
       });
-
-      const result = await response.json();
-      if (response.ok) {
+      if (!error && result?.success === true) {
         toast({
           title: "Test SMS Sent",
-          description: `SMS sent to ${phoneNumber} - check your phone!`
+          description: 'Saved prices accepted for delivery to your registered number.'
         });
       } else {
-        throw new Error(result.error || 'Failed to send test SMS');
+        throw new Error(error?.message || result?.error || 'Failed to send test SMS');
       }
     } catch (error) {
       console.error('Error sending test SMS:', error);

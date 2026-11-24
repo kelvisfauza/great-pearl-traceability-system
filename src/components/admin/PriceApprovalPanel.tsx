@@ -20,6 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { buildStationPriceRows, buildPriceSms } from '@/utils/stationPrices';
 import { formatDistanceToNow } from 'date-fns';
+import { deliveryAccepted } from '../../../supabase/functions/_shared/message-policy';
 
 // Percentage change chip: green for up, red for down, neutral when unchanged
 const ChangePill = ({ current, next, suffix = '' }: { current: number; next: number | null | undefined; suffix?: string }) => {
@@ -142,13 +143,11 @@ const PriceApprovalPanel: React.FC = () => {
         .from('employees')
         .select('phone, name')
         .eq('status', 'Active')
+        .not('disabled', 'is', true)
         .not('phone', 'is', null);
 
       const staffList = employees?.filter(e => e.phone) || [];
-      const additionalRecipients = [
-        '0772272455', '0777510755', '0791052941', '0779637836', '0791832118', '0778970844', '0777676992'
-      ];
-      const allPhones = dedupePhones([...staffList.map(e => e.phone!), ...additionalRecipients]);
+      const allPhones = dedupePhones(staffList.map(e => e.phone));
 
       const date = new Date().toLocaleDateString('en-GB');
       const message = buildPriceSms(stationValues(currentPrices), date);
@@ -166,7 +165,7 @@ const PriceApprovalPanel: React.FC = () => {
             },
             body: JSON.stringify({ phone: allPhones[i], message: staffMessage, messageType: 'price_update' })
           });
-          if (response.ok) sent++;
+          if (deliveryAccepted(response.ok, await response.json())) sent++;
         } catch { /* continue */ }
       }
 
@@ -227,16 +226,14 @@ await savePrices({
         });
 
         // Send SMS notifications to suppliers & registered recipients
-        await sendPriceNotifications(request);
+        const textResults = await sendPriceNotifications(request);
 
         // Send detailed email notifications to employees/users
         await sendPriceEmailNotifications(request);
 
         toast({
           title: request.is_correction ? "Price Correction Approved" : "Prices Updated & Notifications Sent",
-          description: request.is_correction 
-            ? "The corrected prices are now active and CORRECTION SMS has been sent."
-            : "The new prices are now active and SMS has been sent to staff."
+          description: `Prices are active. ${textResults.sent} texts accepted; ${textResults.failed} not accepted.`
         });
 
         fetchPendingRequests();
@@ -256,8 +253,10 @@ await savePrices({
       
       if (!accessToken) {
         console.error('No active session for sending SMS');
-        return;
+        return { sent: 0, failed: 1 };
       }
+      let sent = 0;
+      let failed = 0;
 
       // Helper function to send SMS with delay
       const sendSmsWithDelay = async (
@@ -276,12 +275,15 @@ await savePrices({
             },
             body: JSON.stringify({
               phone,
-              message,
+              requestId: request.id,
               messageType: messageTypeOverride || (request.is_correction ? 'price_correction' : 'price_update')
             })
           });
-          return response.ok;
+          const accepted = deliveryAccepted(response.ok, await response.json());
+          if (accepted) sent++; else failed++;
+          return accepted;
         } catch {
+          failed++;
           return false;
         }
       };
@@ -307,13 +309,8 @@ await savePrices({
       const staffList = (employees || []).filter(e => e.phone && !isTrainee(e.role));
 
       // External contacts
-      const additionalRecipients = [
-        '0772272455', '0777510755', '0791052941', '0779637836', '0791832118', '0778970844', '0777676992'
-      ];
-      
       const allPhones = dedupePhones([
-        ...staffList.map(e => e.phone!),
-        ...additionalRecipients
+        ...staffList.map(e => e.phone)
       ]).filter(p => !traineeSet.has(p));
 
       const date = new Date().toLocaleDateString('en-GB');
@@ -367,8 +364,10 @@ await savePrices({
       for (let i = 0; i < supplierPhones.length; i++) {
         await sendSmsWithDelay(supplierPhones[i], supplierMessage, 500);
       }
+      return { sent, failed };
     } catch (error) {
       console.error('Error sending price notifications:', error);
+      return { sent: 0, failed: 1 };
     }
   };
 

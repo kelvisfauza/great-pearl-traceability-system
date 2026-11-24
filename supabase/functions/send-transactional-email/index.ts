@@ -5,6 +5,8 @@ import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5'
 import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
 import { toGsm7 } from '../_shared/gsm7.ts'
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { mayMirrorEmailToSms } from '../_shared/message-policy.ts';
 
 const SITE_NAME = "Great Agro Coffee"
 const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site"
@@ -14,12 +16,6 @@ function generateToken(): string {
   const bytes = new Uint8Array(32)
   crypto.getRandomValues(bytes)
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
-}
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
 }
 
 function isRateLimitedError(error: unknown): boolean {
@@ -82,6 +78,10 @@ Deno.serve(async (req) => {
     recipientEmail = body.recipientEmail || body.recipient_email
     idempotencyKey = body.idempotencyKey || body.idempotency_key || crypto.randomUUID()
     skipSms = body.skipSms === true
+    // Ordinary browser mail cannot become a company-paid SMS relay.
+    // Dedicated saved-code/guarantor handlers send their own verified texts;
+    // trusted background notifications retain parallel email + SMS delivery.
+    if (!mayMirrorEmailToSms(__caller)) skipSms = true;
     const rawData = body.templateData || body.data
     if (rawData && typeof rawData === 'object') {
       templateData = rawData
@@ -359,7 +359,7 @@ Deno.serve(async (req) => {
         )
         console.log(`📋 Operations CC sent for ${templateName} (original: ${effectiveRecipient})`)
       } catch (ccErr) {
-        console.warn('⚠️ Failed to send operations CC:', ccErr.message)
+        console.warn('⚠️ Failed to send operations CC:', ccErr instanceof Error ? ccErr.message : String(ccErr))
       }
     }
 
@@ -379,7 +379,7 @@ Deno.serve(async (req) => {
           metadata: { ...templateData, sms_status: smsStatus },
       })
     } catch (logErr) {
-      console.warn('⚠️ Failed to log email send:', logErr.message)
+      console.warn('⚠️ Failed to log email send:', logErr instanceof Error ? logErr.message : String(logErr))
     }
 
     return new Response(
@@ -405,7 +405,7 @@ Deno.serve(async (req) => {
         metadata: templateData,
       })
     } catch (logErr) {
-      console.warn('⚠️ Failed to log email failure:', logErr.message)
+      console.warn('⚠️ Failed to log email failure:', logErr instanceof Error ? logErr.message : String(logErr))
     }
 
     return new Response(

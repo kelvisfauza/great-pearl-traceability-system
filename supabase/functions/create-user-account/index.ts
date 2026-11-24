@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 import { temporaryPassword } from '../_shared/secure-random.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { deliveryAccepted } from '../_shared/message-policy.ts';
 
 // Verify the caller is an authenticated admin
 async function verifyAdminCaller(req: Request, supabaseAdmin: any): Promise<{ isAdmin: boolean; error?: string }> {
@@ -69,7 +66,14 @@ serve(async (req) => {
       )
     }
 
-    const { email, employeeId, phone } = await req.json()
+    const { email, employeeId } = await req.json();
+    const { data: savedEmployee, error: savedError } = await supabaseAdmin.from('employees')
+      .select('email,phone,disabled,status').eq('id', employeeId).maybeSingle();
+    if (savedError || !savedEmployee || savedEmployee.disabled === true || String(savedEmployee.status).toLowerCase() !== 'active' || String(savedEmployee.email).toLowerCase() !== String(email).toLowerCase()) {
+      return new Response(JSON.stringify({ success: false, error: 'Choose a saved active employee with the matching email.' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const phone = savedEmployee.phone;
+    let passwordSentViaSms = false;
 
     console.log('Creating auth account for:', email)
 
@@ -113,7 +117,7 @@ serve(async (req) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
           },
           body: JSON.stringify({
             phone: phone,
@@ -123,7 +127,8 @@ serve(async (req) => {
           })
         })
         
-        if (smsResponse.ok) {
+        passwordSentViaSms = deliveryAccepted(smsResponse.ok, await smsResponse.json().catch(() => null));
+        if (passwordSentViaSms) {
           console.log('Temporary password sent via SMS')
         } else {
           console.error('Failed to send SMS with credentials')
@@ -137,12 +142,12 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: phone 
+        message: passwordSentViaSms
           ? 'Auth account created. Temporary password sent via SMS.' 
           : 'Auth account created. Please notify the user of their temporary password securely.',
         authUserId: authData.user.id,
         email: email,
-        passwordSentViaSms: !!phone
+        passwordSentViaSms
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

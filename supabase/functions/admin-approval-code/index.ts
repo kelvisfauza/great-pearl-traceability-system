@@ -1,9 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { deliveryAccepted } from '../_shared/message-policy.ts';
 
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), {
@@ -71,15 +68,12 @@ Deno.serve(async (req) => {
         .single();
       if (insErr) return json({ ok: false, error: insErr.message });
 
-      const label = body.label ? String(body.label) : targetType.replace(/_/g, " ");
-      const smsText = `Great Agro Coffee approval code: ${code}. Approving ${label}${
-        amount ? ` of UGX ${amount.toLocaleString()}` : ""
-      }. Valid 10 minutes. Do not share.`;
+      const smsText = `Great Agro Coffee approval code: ${code}. Valid 10 minutes. Review the saved request before approving. Do not share.`;
 
       // Deliver via BulkSMS.com premium route
       const res = await fetch(`${url}/functions/v1/send-sms`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: anon, Authorization: authHeader },
+        headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${service}` },
         body: JSON.stringify({
           phone,
           message: smsText,
@@ -88,8 +82,8 @@ Deno.serve(async (req) => {
           messageType: "admin_approval_code",
         }),
       });
-      const smsOk = res.ok;
-      if (!smsOk) console.warn("[admin-approval-code] SMS non-OK", res.status, (await res.text()).slice(0, 200));
+      const smsOk = deliveryAccepted(res.ok, await res.json().catch(() => null));
+      if (!smsOk) console.warn("[admin-approval-code] SMS not accepted", res.status);
 
       const masked = phone.replace(/^(\+?\d{3})\d+(\d{3})$/, "$1*****$2");
       return json({ ok: true, codeId: row.id, phone: masked, sms_sent: smsOk });
