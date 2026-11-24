@@ -7,6 +7,7 @@ import { shouldEnforceMaintenance } from './maintenanceEnvironment';
 
 test('Lovable preview is exempt while the published and custom sites enforce maintenance', () => {
   assert.equal(shouldEnforceMaintenance('id-preview--0ab47c69-3f36-4407-b03c-de1f9684ac9a.lovable.app'), false);
+  assert.equal(shouldEnforceMaintenance('0ab47c69-3f36-4407-b03c-de1f9684ac9a.lovableproject.com'), false);
   assert.equal(shouldEnforceMaintenance('localhost'), false);
   assert.equal(shouldEnforceMaintenance('great-pearl-traceability-system.lovable.app'), true);
   assert.equal(shouldEnforceMaintenance('greatpearlcoffeesystem.site'), true);
