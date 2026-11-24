@@ -19553,6 +19553,10 @@ export type Database = {
         Args: { p_accepted: boolean; p_reference: string }
         Returns: boolean
       }
+      mark_maintenance_recovery_sms: {
+        Args: { p_id: string; p_phone: string }
+        Returns: Json
+      }
       mark_meal_forms_printed: {
         Args: { p_numbers: string[] }
         Returns: number
@@ -19819,6 +19823,17 @@ export type Database = {
       }
       set_loyalty_awards_enabled: {
         Args: { p_enabled: boolean }
+        Returns: Json
+      }
+      set_maintenance_mode: {
+        Args: {
+          p_activate: boolean
+          p_activated_by?: string
+          p_expected_back_online?: string
+          p_reason?: string
+          p_recovery_key?: string
+          p_recovery_pin?: string
+        }
         Returns: Json
       }
       settings_alert_auth: { Args: { p_token: string }; Returns: boolean }
