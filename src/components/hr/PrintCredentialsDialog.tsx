@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/escapeHtml";
 
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -137,27 +138,27 @@ const PrintCredentialsDialog = ({ isOpen, onClose, employee }: PrintCredentialsD
             <div class="credentials">
               <div class="field">
                 <span class="label">Full Name:</span>
-                <span class="value">${employee.name}</span>
+                <span class="value">${escapeHtml(employee.name)}</span>
               </div>
               <div class="field">
                 <span class="label">Email/Username:</span>
-                <span class="value">${employee.email}</span>
+                <span class="value">${escapeHtml(employee.email)}</span>
               </div>
               <div class="field password-field">
                 <span class="label">Password:</span>
-                <span class="value" style="font-family: monospace; font-size: 16px; font-weight: bold;">${password}</span>
+                <span class="value" style="font-family: monospace; font-size: 16px; font-weight: bold;">${escapeHtml(password)}</span>
               </div>
               <div class="field">
                 <span class="label">Department:</span>
-                <span class="value">${employee.department}</span>
+                <span class="value">${escapeHtml(employee.department)}</span>
               </div>
               <div class="field">
                 <span class="label">Role:</span>
-                <span class="value">${employee.role}</span>
+                <span class="value">${escapeHtml(employee.role)}</span>
               </div>
               <div class="field">
                 <span class="label">Employee ID:</span>
-                <span class="value">${employee.employee_id || 'N/A'}</span>
+                <span class="value">${escapeHtml(employee.employee_id || 'N/A')}</span>
               </div>
               <div class="field">
                 <span class="label">Print Date:</span>

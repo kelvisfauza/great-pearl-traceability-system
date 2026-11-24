@@ -1,3 +1,5 @@
+import { escapeHtml } from "../_shared/escape-html.ts";
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 
@@ -31,7 +33,7 @@ const HTML = (name: string) => `<!doctype html>
           <div style="display:inline-block;background:#e5e7eb;color:#1f2937;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;margin-top:6px;">With Deep Sympathy</div>
         </td></tr>
         <tr><td style="padding:32px;">
-          <p style="font-size:16px;margin:0 0 14px;">Dear <strong>${name || 'Colleague'}</strong>,</p>
+          <p style="font-size:16px;margin:0 0 14px;">Dear <strong>${escapeHtml(name || 'Colleague')}</strong>,</p>
           <p style="font-size:15px;line-height:1.75;margin:0 0 18px;">
             It is with deep sorrow that we inform you of the passing on of the <strong>grandmother (mother to the father) of our colleague Timothy</strong>.
             On behalf of management and the entire Great Agro Coffee family, we extend our heartfelt condolences to Timothy and his family
@@ -121,6 +123,9 @@ Head Office - P.O Box 431420, Kasese, Uganda`
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
+
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
 
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
   if (!lovableApiKey) return new Response(JSON.stringify({ ok: false, error: 'Email service not configured' }),

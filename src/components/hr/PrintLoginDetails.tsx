@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/escapeHtml";
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,7 @@ export default function PrintLoginDetails({ employees }: PrintLoginDetailsProps)
 
   const printSlip = (emp: Employee, pwd: string) => {
     const html = `
-      <!DOCTYPE html><html><head><title>Login Details - ${emp.name}</title>
+      <!DOCTYPE html><html><head><title>Login Details - ${escapeHtml(emp.name)}</title>
       <style>
         body { font-family: Arial, sans-serif; padding: 28px; color: #1f2937; }
         .header { text-align: center; margin-bottom: 24px; }
@@ -56,12 +57,12 @@ export default function PrintLoginDetails({ employees }: PrintLoginDetailsProps)
           <div class="sub">Issued on ${new Date().toLocaleString()}</div>
         </div>
         <div class="box">
-          <div class="row"><div class="label">Name:</div><div class="value">${emp.name}</div></div>
-          <div class="row"><div class="label">Position:</div><div class="value">${emp.position || '-'}</div></div>
-          <div class="row"><div class="label">Department:</div><div class="value">${emp.department || '-'}</div></div>
-          <div class="row"><div class="label">Role:</div><div class="value">${emp.role || '-'}</div></div>
-          <div class="row"><div class="label">Login email:</div><div class="value">${emp.email}</div></div>
-          <div class="row"><div class="label">Temporary password:</div><div class="value">${pwd}</div></div>
+          <div class="row"><div class="label">Name:</div><div class="value">${escapeHtml(emp.name)}</div></div>
+          <div class="row"><div class="label">Position:</div><div class="value">${escapeHtml(emp.position || '-')}</div></div>
+          <div class="row"><div class="label">Department:</div><div class="value">${escapeHtml(emp.department || '-')}</div></div>
+          <div class="row"><div class="label">Role:</div><div class="value">${escapeHtml(emp.role || '-')}</div></div>
+          <div class="row"><div class="label">Login email:</div><div class="value">${escapeHtml(emp.email)}</div></div>
+          <div class="row"><div class="label">Temporary password:</div><div class="value">${escapeHtml(pwd)}</div></div>
         </div>
         <div class="note">
           Keep this slip confidential. Sign in at the system web address using the email and temporary

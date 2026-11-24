@@ -96,8 +96,6 @@ Deno.serve(async (req) => {
       const code = String(body.code || "").trim();
       const method = String(body.method || "cash");
       if (!["cash", "gosentepay", "yo"].includes(method)) return json({ ok: false, error: "Choose cash, GosentePay or Yo" });
-      const payPhone = String(body.payPhone || emp.phone || "").trim();
-      if (method !== "cash" && !/^(\+?256|0)?7\d{8}$/.test(payPhone.replace(/\s/g, ""))) return json({ ok: false, error: "Enter a valid mobile money number" });
       if (!/^\d{4}$/.test(code)) return json({ ok: false, error: "Enter the 4-digit code" });
       const targetId = `${emp.email.toLowerCase()}:${amount}`;
       const { data: rows } = await admin.from("admin_approval_codes").select("*")
@@ -105,6 +103,8 @@ Deno.serve(async (req) => {
         .is("used_at", null).order("created_at", { ascending: false }).limit(1);
       const row = rows?.[0];
       if (!row) return json({ ok: false, error: "No pending code. Send a new one." });
+      const payPhone = String(row.phone || "").trim();
+      if (method !== "cash" && !/^(\+?256|0)?7\d{8}$/.test(payPhone.replace(/\s/g, ""))) return json({ ok: false, error: "No valid approved mobile money number" });
       if (new Date(row.expires_at).getTime() < Date.now()) return json({ ok: false, error: "Code expired. Send a new one." });
       if ((row.attempts || 0) >= 5) return json({ ok: false, error: "Too many attempts. Send a new code." });
       if ((await hash(code, `${TARGET}:${targetId}`)) !== row.code_hash) {

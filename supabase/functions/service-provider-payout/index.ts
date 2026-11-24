@@ -81,7 +81,7 @@ serve(async (req) => {
 
     // Initiate payout via selected provider
     const narrative = `Service provider payment - ${description} - ${receiverName || cleanPhone}`;
-    console.log(`[Service Provider Payout] (${provider}) Sending UGX ${totalAmount} to ${cleanPhone}: ${narrative}`);
+    console.log('Operation recorded; private details omitted');
 
     let yoStatus = "failed";
     let displayMessage = "Payment failed";
@@ -205,7 +205,7 @@ serve(async (req) => {
             triggeredBy: initiatedBy,
           },
         });
-        console.log(`[Service Provider Payout] SMS sent to ${cleanPhone}`);
+        console.log('Operation recorded; private details omitted');
       } catch (smsErr) {
         console.error(`[Service Provider Payout] SMS failed:`, smsErr);
       }
@@ -226,7 +226,7 @@ serve(async (req) => {
             },
           },
         });
-        console.log(`[Service Provider Payout] Email sent to ${providerEmail}`);
+        console.log('Operation recorded; private details omitted');
       } catch (emailErr) {
         console.error(`[Service Provider Payout] Email to provider failed:`, emailErr);
       }
@@ -263,7 +263,7 @@ serve(async (req) => {
             },
           });
         } catch (emailErr) {
-          console.error(`Email to ${admin.email} failed:`, emailErr);
+          console.error('Operation failed; private details omitted');
         }
       }
     }

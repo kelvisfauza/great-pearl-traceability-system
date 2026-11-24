@@ -27,6 +27,9 @@ const json = (body: unknown) =>
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -371,6 +374,4 @@ Deno.serve(async (req) => {
   } catch (e) {
     return json({ ok: false, error: (e as Error).message })
   }
-
-  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 })

@@ -1,3 +1,4 @@
+import { escapeHtml } from "../_shared/escape-html.ts";
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
@@ -35,7 +36,7 @@ const HTML = (name: string) => `<!doctype html>
         </tr>
         <tr>
           <td style="padding:30px 32px;">
-            <p style="font-size:16px;margin:0 0 14px;">Dear <strong>${name || 'Team'}</strong>,</p>
+            <p style="font-size:16px;margin:0 0 14px;">Dear <strong>${escapeHtml(name || 'Team')}</strong>,</p>
             <p style="font-size:15px;line-height:1.7;margin:0 0 16px;color:#475569;">
               Management has noted a significant rise in <strong>late arrivals</strong>
               across departments this month. This has affected morning briefings,

@@ -1,3 +1,4 @@
+import { requireStaff } from "../_shared/internal-auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
@@ -11,12 +12,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const caller = await requireStaff(req, corsHeaders);
+  if (caller instanceof Response) return caller;
+
   try {
     const { newRequest, userEmail } = await req.json();
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } }
     );
 
     // Fetch user's recent expense requests (last 30 days)

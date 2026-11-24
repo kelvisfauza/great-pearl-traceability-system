@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { normalizePhone } from "../_shared/yo-payments.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { gosenteDeposit, isGosenteSuccess } from "../_shared/gosentepay.ts";
+import { ownedDepositMatches } from '../_shared/deposit-authorization.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -104,6 +105,22 @@ serve(async (req) => {
       );
     }
 
+    // Authorize the saved transaction before contacting either provider.
+    const svcUpdate = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+    const { data: saved, error: savedError } = await svcUpdate
+      .from('mobile_money_transactions')
+      .select('user_id, amount, phone, status, transaction_type')
+      .eq('transaction_ref', ref)
+      .eq('user_id', userData.user.id)
+      .maybeSingle();
+    const savedRequest = saved ? { ...saved, phone: normalizePhone(saved.phone) } : null;
+    if (savedError || !ownedDepositMatches(savedRequest, userData.user.id, numAmount, cleanPhone)) {
+      return new Response(JSON.stringify({ ok: false, error: 'Deposit request not authorized' }), {
+        status: savedError ? 503 : 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Build callback URL for Yo Payments notification
     const callbackUrl = await withIpnSecret(`${supabaseUrl}/functions/v1/gosentepay-callback`);
 
@@ -116,14 +133,11 @@ serve(async (req) => {
         console.log(`[Deposit Router] Routing UGX ${numAmount} deposit via GosentePay for ${cleanPhone}, ref: ${ref}`);
 
         // Flag the transaction as gosentepay so status-check + callback know how to handle it.
-        const svcUpdate = createClient(
-          supabaseUrl,
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-        );
         await svcUpdate
           .from("mobile_money_transactions")
           .update({ provider: "gosentepay" })
-          .eq("transaction_ref", ref);
+          .eq("transaction_ref", ref)
+          .eq("user_id", userData.user.id);
 
         const { status, body: gpBody } = await gosenteDeposit({
           phone: cleanPhone,

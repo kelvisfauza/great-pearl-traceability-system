@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/escapeHtml";
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL } from './companyBrand';
 
 const LOAN_LABELS: Record<string, string> = {
@@ -43,21 +44,21 @@ const footer = () => `<div class="ft">${COMPANY_NAME} &mdash; Staff Credit Facil
 
 const loanFacts = (loan: any) => `
 <table>
-  <tr><th>Loan reference</th><td>LOAN-${String(loan.id || '').substring(0, 8).toUpperCase()}</td><th>Loan product</th><td>${LOAN_LABELS[loan.loan_type] || loan.loan_type || 'Staff Loan'}</td></tr>
-  <tr><th>Borrower</th><td>${loan.employee_name || '—'}</td><th>Email / Phone</th><td>${loan.employee_email || '—'}${loan.employee_phone ? ' / ' + loan.employee_phone : ''}</td></tr>
-  <tr><th>Principal</th><td>${money(loan.loan_amount)}</td><th>Interest rate</th><td>${loan.interest_rate ?? '—'}% per month</td></tr>
-  <tr><th>Total repayable</th><td>${money(loan.total_repayable)}</td><th>Installment</th><td>${money(loan.weekly_installment || loan.monthly_installment)} (${loan.repayment_frequency || 'monthly'})</td></tr>
-  <tr><th>Duration</th><td>${loan.duration_months || '—'} month(s)</td><th>Approved on</th><td>${day(loan.admin_approved_at || loan.approved_at)}</td></tr>
+  <tr><th>Loan reference</th><td>LOAN-${String(loan.id || '').substring(0, 8).toUpperCase()}</td><th>Loan product</th><td>${escapeHtml(LOAN_LABELS[loan.loan_type] || loan.loan_type || 'Staff Loan')}</td></tr>
+  <tr><th>Borrower</th><td>${escapeHtml(loan.employee_name || '—')}</td><th>Email / Phone</th><td>${escapeHtml(loan.employee_email || '—')}${escapeHtml(loan.employee_phone ? ' / ' + loan.employee_phone : '')}</td></tr>
+  <tr><th>Principal</th><td>${money(loan.loan_amount)}</td><th>Interest rate</th><td>${escapeHtml(loan.interest_rate ?? '—')}% per month</td></tr>
+  <tr><th>Total repayable</th><td>${money(loan.total_repayable)}</td><th>Installment</th><td>${money(loan.weekly_installment || loan.monthly_installment)} (${escapeHtml(loan.repayment_frequency || 'monthly')})</td></tr>
+  <tr><th>Duration</th><td>${escapeHtml(loan.duration_months || '—')} month(s)</td><th>Approved on</th><td>${day(loan.admin_approved_at || loan.approved_at)}</td></tr>
 </table>`;
 
 export const buildBorrowerTermsHtml = (loan: any) => `<!doctype html><html><head><meta charset="utf-8">
-<title>Loan Terms &amp; Conditions – ${loan.employee_name || ''}</title><style>${BASE_CSS}</style></head><body>
+<title>Loan Terms &amp; Conditions – ${escapeHtml(loan.employee_name || '')}</title><style>${BASE_CSS}</style></head><body>
 ${header('Employee Loan Agreement — Terms &amp; Conditions')}
 ${loanFacts(loan)}
 <h2>1. Terms and Conditions</h2>
 <ol>
   <li>The Borrower acknowledges receipt of the facility stated above and undertakes to repay the total repayable amount in full, on the agreed schedule, until the balance is cleared.</li>
-  <li>Interest accrues at ${loan.interest_rate ?? '—'}% per month on the outstanding principal and is already reflected in the total repayable amount.</li>
+  <li>Interest accrues at ${escapeHtml(loan.interest_rate ?? '—')}% per month on the outstanding principal and is already reflected in the total repayable amount.</li>
   <li>Repayments are recovered automatically from the Borrower's company wallet, salary, per diem, allowances, bonuses and any other credit due to the Borrower on each due date.</li>
   <li>Where the wallet balance is insufficient on a due date, the Company may place the wallet into overdraft and apply the prevailing overdraft access and maintenance fees.</li>
   <li>Where an installment remains unpaid, the Company may recover the outstanding amount from the wallet(s) of the Guarantor(s) named in this agreement, without further notice.</li>
@@ -67,7 +68,7 @@ ${loanFacts(loan)}
   <li>The Borrower shall promptly notify Administration of any change in employment status, salary, contact details or ability to repay.</li>
   <li>This agreement is governed by the laws of the Republic of Uganda and is binding upon signature and disbursement.</li>
 </ol>
-<div class="dec"><b>Borrower declaration:</b> I, ${loan.employee_name || '____________________'}, confirm that I have read and understood the terms and conditions above, that the information supplied in my application is true, and that I accept the repayment obligations of this facility.</div>
+<div class="dec"><b>Borrower declaration:</b> I, ${escapeHtml(loan.employee_name || '____________________')}, confirm that I have read and understood the terms and conditions above, that the information supplied in my application is true, and that I accept the repayment obligations of this facility.</div>
 <div class="sign">
   <div>Borrower<div class="line"></div>Name, signature &amp; date</div>
   <div>Witness / Administrator<div class="line"></div>Name, signature &amp; date</div>
@@ -80,12 +81,12 @@ export const buildGuarantorTermsHtml = (loan: any, slot: 1 | 2) => {
     ? { name: loan.guarantor_name, email: loan.guarantor_email, phone: loan.guarantor_phone, at: loan.guarantor_approved_at }
     : { name: loan.guarantor2_name, email: loan.guarantor2_email, phone: loan.guarantor2_phone, at: loan.guarantor2_approved_at };
   return `<!doctype html><html><head><meta charset="utf-8">
-<title>Guarantor Terms – ${g.name || ''}</title><style>${BASE_CSS}</style></head><body>
+<title>Guarantor Terms – ${escapeHtml(g.name || '')}</title><style>${BASE_CSS}</style></head><body>
 ${header(`Guarantor Undertaking &amp; Terms — Guarantor ${slot}`)}
 ${loanFacts(loan)}
 <table>
-  <tr><th>Guarantor name</th><td>${g.name || '—'}</td><th>Slot</th><td>Guarantor ${slot}</td></tr>
-  <tr><th>Email / Phone</th><td>${g.email || '—'}${g.phone ? ' / ' + g.phone : ''}</td><th>Consent given on</th><td>${day(g.at)}</td></tr>
+  <tr><th>Guarantor name</th><td>${escapeHtml(g.name || '—')}</td><th>Slot</th><td>Guarantor ${slot}</td></tr>
+  <tr><th>Email / Phone</th><td>${escapeHtml(g.email || '—')}${escapeHtml(g.phone ? ' / ' + g.phone : '')}</td><th>Consent given on</th><td>${day(g.at)}</td></tr>
 </table>
 <h2>1. Guarantor Terms and Conditions</h2>
 <ol>
@@ -100,7 +101,7 @@ ${loanFacts(loan)}
   <li>The Guarantor confirms having no undisclosed default, overdue loan or existing guarantee that would impair the capacity to honour this undertaking.</li>
   <li>This undertaking is governed by the laws of the Republic of Uganda.</li>
 </ol>
-<div class="dec"><b>Guarantor declaration:</b> I, ${g.name || '____________________'}, agree to stand as Guarantor ${slot} for the facility described above and accept the terms and conditions set out in this undertaking.</div>
+<div class="dec"><b>Guarantor declaration:</b> I, ${escapeHtml(g.name || '____________________')}, agree to stand as Guarantor ${slot} for the facility described above and accept the terms and conditions set out in this undertaking.</div>
 <div class="sign">
   <div>Guarantor ${slot}<div class="line"></div>Name, signature &amp; date</div>
   <div>Witness / Administrator<div class="line"></div>Name, signature &amp; date</div>
@@ -116,7 +117,7 @@ export const buildFullLoanTermsPackHtml = (loan: any) => {
   if (loan.guarantor_name || loan.guarantor_email) parts.push(strip(buildGuarantorTermsHtml(loan, 1)));
   if (loan.guarantor2_name || loan.guarantor2_email) parts.push(strip(buildGuarantorTermsHtml(loan, 2)));
   return `<!doctype html><html><head><meta charset="utf-8">
-<title>Loan Terms Pack – ${loan.employee_name || ''}</title><style>${BASE_CSS}</style></head><body>
+<title>Loan Terms Pack – ${escapeHtml(loan.employee_name || '')}</title><style>${BASE_CSS}</style></head><body>
 ${parts.map((p, i) => `<div class="${i < parts.length - 1 ? 'pb' : ''}">${p}</div>`).join('')}
 </body></html>`;
 };

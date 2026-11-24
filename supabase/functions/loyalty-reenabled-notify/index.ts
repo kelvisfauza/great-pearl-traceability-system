@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
             smsSent++
           }
         } catch (e) {
-          console.error(`SMS error for ${emp.name}:`, e)
+          console.error('Operation failed; private details omitted')
           failed++
         }
       }

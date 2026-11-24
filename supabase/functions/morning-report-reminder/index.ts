@@ -141,7 +141,7 @@ serve(async (req) => {
         });
 
       } catch (smsError) {
-        console.error(`Error sending reminder to ${emp.name}:`, smsError);
+        console.error('Operation failed; private details omitted');
       }
     }
 

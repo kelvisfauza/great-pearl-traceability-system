@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/safeCsv";
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -115,7 +116,7 @@ const SessionLogs = () => {
       l.latitude?.toString() || '',
       l.longitude?.toString() || '',
     ]);
-    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const csv = [headers, ...rows].map(r => r.map(csvCell).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

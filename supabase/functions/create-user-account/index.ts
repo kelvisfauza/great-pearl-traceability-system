@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { temporaryPassword } from '../_shared/secure-random.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -73,7 +74,7 @@ serve(async (req) => {
     console.log('Creating auth account for:', email)
 
     // Generate a random temporary password
-    const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`
+    const tempPassword = temporaryPassword()
 
     // Create the auth user
     const { data: authData, error: authError2 } = await supabaseAdmin.auth.admin.createUser({

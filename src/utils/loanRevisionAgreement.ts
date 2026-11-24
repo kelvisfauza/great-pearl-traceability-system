@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/escapeHtml";
 /**
  * Printable "Loan Terms Revision & Acceptance" form.
  *
@@ -42,7 +43,7 @@ export const printLoanRevisionAgreement = (loan: LoanRevisionPrintData) => {
     ? loan.weekly_installment
     : loan.monthly_installment;
 
-  w.document.write(`<html><head><title>Loan Terms Revision – ${loan.employee_name}</title>
+  w.document.write(`<html><head><title>Loan Terms Revision – ${escapeHtml(loan.employee_name)}</title>
   <style>
     body{font-family:Georgia,serif;padding:28px;color:#111;font-size:12px;line-height:1.55}
     h1{font-size:17px;margin:0}
@@ -65,36 +66,36 @@ export const printLoanRevisionAgreement = (loan: LoanRevisionPrintData) => {
 
   <h2>A. Applicant</h2>
   <table>
-    <tr><td class="l">Full Name</td><td>${loan.employee_name}</td><td class="l">Email</td><td>${loan.employee_email || '—'}</td></tr>
-    <tr><td class="l">Phone</td><td>${loan.employee_phone || '—'}</td><td class="l">Loan Product</td><td>${loan.loan_type || 'Quick Loan'}</td></tr>
-    <tr><td class="l">Revised By</td><td>${loan.revision_by || '—'}</td><td class="l">Revision Date</td><td>${day(loan.revision_at)}</td></tr>
+    <tr><td class="l">Full Name</td><td>${escapeHtml(loan.employee_name)}</td><td class="l">Email</td><td>${escapeHtml(loan.employee_email || '—')}</td></tr>
+    <tr><td class="l">Phone</td><td>${escapeHtml(loan.employee_phone || '—')}</td><td class="l">Loan Product</td><td>${escapeHtml(loan.loan_type || 'Quick Loan')}</td></tr>
+    <tr><td class="l">Revised By</td><td>${escapeHtml(loan.revision_by || '—')}</td><td class="l">Revision Date</td><td>${day(loan.revision_at)}</td></tr>
   </table>
 
   <h2>B. Original vs Revised Terms</h2>
   <table>
     <tr><th>Item</th><th>Original terms</th><th>Revised terms</th></tr>
     <tr><td>Loan amount</td><td>${fmt(loan.loan_amount)}</td><td class="new">${fmt(loan.revision_amount)}</td></tr>
-    <tr><td>Duration</td><td>${loan.duration_months || '—'} month(s)</td><td class="new">${loan.revision_duration_months || '—'} month(s)</td></tr>
-    <tr><td>Repayment</td><td>${loan.repayment_frequency || 'monthly'}</td><td class="new">${loan.revision_frequency || loan.repayment_frequency || 'monthly'}</td></tr>
+    <tr><td>Duration</td><td>${escapeHtml(loan.duration_months || '—')} month(s)</td><td class="new">${escapeHtml(loan.revision_duration_months || '—')} month(s)</td></tr>
+    <tr><td>Repayment</td><td>${escapeHtml(loan.repayment_frequency || 'monthly')}</td><td class="new">${escapeHtml(loan.revision_frequency || loan.repayment_frequency || 'monthly')}</td></tr>
     <tr><td>Installment</td><td>${fmt(currentInstallment)}</td><td class="new">${fmt(loan.revision_installment)}</td></tr>
     <tr><td>Total repayable</td><td>${fmt(loan.total_repayable)}</td><td class="new">${fmt(loan.revision_total_repayable)}</td></tr>
-    <tr><td>Interest rate</td><td colspan="2">${loan.interest_rate || '—'}% per month (flat), applied to the revised principal</td></tr>
+    <tr><td>Interest rate</td><td colspan="2">${escapeHtml(loan.interest_rate || '—')}% per month (flat), applied to the revised principal</td></tr>
   </table>
 
   <h2>C. Reason for the revision</h2>
-  <div class="note">${loan.revision_note || '—'}</div>
+  <div class="note">${escapeHtml(loan.revision_note || '—')}</div>
 
   <h2>D. Applicant declaration</h2>
   <div class="note">
-    I, <b>${loan.employee_name}</b>, confirm that the revised terms above have been explained to me and that I accept them in
+    I, <b>${escapeHtml(loan.employee_name)}</b>, confirm that the revised terms above have been explained to me and that I accept them in
     full. I understand that these revised terms replace the terms of my original loan application, and that recovery may be made
     from my salary, wallet, allowances and terminal benefits, including the creation of a wallet overdraft where funds are short.
     The loan is only disbursed after final management approval.
   </div>
 
   <div class="sig">
-    <div>Applicant: ${loan.employee_name} — Signature &amp; Date</div>
-    <div>For the Company: ${loan.revision_by || 'Authorised Approver'} — Signature &amp; Date</div>
+    <div>Applicant: ${escapeHtml(loan.employee_name)} — Signature &amp; Date</div>
+    <div>For the Company: ${escapeHtml(loan.revision_by || 'Authorised Approver')} — Signature &amp; Date</div>
   </div>
   </body></html>`);
   w.document.close();

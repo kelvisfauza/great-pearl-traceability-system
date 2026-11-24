@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
+import { sixDigitCode } from "../_shared/secure-random.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -149,9 +150,7 @@ async function notifyWalletOperation(supabase: any, args: {
 
 // ------------------------------------------------------------------ OTP utils
 function generateOtp(): string {
-  // 6-digit numeric, no leading zero problem (padded).
-  const n = Math.floor(Math.random() * 1_000_000);
-  return n.toString().padStart(6, "0");
+  return sixDigitCode();
 }
 
 async function hashOtp(code: string, opId: string): Promise<string> {

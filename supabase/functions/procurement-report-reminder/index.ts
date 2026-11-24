@@ -1,3 +1,4 @@
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 
@@ -57,6 +58,9 @@ const HTML = (name: string, dateLabel: string) => `<!doctype html>
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
+
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
 
   const json = (body: unknown) =>
     new Response(JSON.stringify(body), {

@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/escapeHtml";
 import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -112,8 +113,8 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
   const handlePrint = () => {
     const win = window.open('', '_blank', 'width=900,height=1000');
     if (!win) return;
-    const rows = schedule.map(r => `<tr><td>${r.installment_number}</td><td>${day(r.due_date)}</td><td>${money(r.amount_due)}</td><td>${money(r.amount_paid)}</td><td>${r.status}</td></tr>`).join('');
-    win.document.write(`<!doctype html><html><head><title>Loan Review – ${loan.employee_name}</title>
+    const rows = schedule.map(r => `<tr><td>${escapeHtml(r.installment_number)}</td><td>${day(r.due_date)}</td><td>${money(r.amount_due)}</td><td>${money(r.amount_paid)}</td><td>${escapeHtml(r.status)}</td></tr>`).join('');
+    win.document.write(`<!doctype html><html><head><title>Loan Review – ${escapeHtml(loan.employee_name)}</title>
       <style>body{font:12px/1.5 system-ui;padding:24px;color:#111}h1{font-size:18px;margin:0 0 4px}h2{font-size:13px;margin:16px 0 6px;border-bottom:1px solid #ccc;padding-bottom:3px}
       table{width:100%;border-collapse:collapse;margin-top:6px}th,td{border:1px solid #ccc;padding:4px 6px;text-align:left;font-size:11px}
       .grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px}.r{display:flex;justify-content:space-between;border-bottom:1px dotted #ddd;padding:2px 0}
@@ -121,51 +122,51 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
       <h1>Loan Review Form — Great Agro Coffee</h1>
       <div>Member of YEDA Coffee Company Limited • Printed ${dayTime(new Date())}</div>
       <h2>Borrower</h2><div class="grid">
-        <div class="r"><span>Name</span><b>${loan.employee_name || '—'}</b></div>
-        <div class="r"><span>Email</span><b>${loan.employee_email || '—'}</b></div>
-        <div class="r"><span>Phone</span><b>${loan.employee_phone || borrower?.phone || '—'}</b></div>
-        <div class="r"><span>Department</span><b>${borrower?.department || '—'}</b></div>
-        <div class="r"><span>Position</span><b>${borrower?.position || '—'}</b></div>
+        <div class="r"><span>Name</span><b>${escapeHtml(loan.employee_name || '—')}</b></div>
+        <div class="r"><span>Email</span><b>${escapeHtml(loan.employee_email || '—')}</b></div>
+        <div class="r"><span>Phone</span><b>${escapeHtml(loan.employee_phone || borrower?.phone || '—')}</b></div>
+        <div class="r"><span>Department</span><b>${escapeHtml(borrower?.department || '—')}</b></div>
+        <div class="r"><span>Position</span><b>${escapeHtml(borrower?.position || '—')}</b></div>
         <div class="r"><span>Monthly salary</span><b>${money(borrower?.salary)}</b></div>
       </div>
       <h2>Loan</h2><div class="grid">
-        <div class="r"><span>Loan type</span><b>${typeLabel}</b></div>
-        <div class="r"><span>Status</span><b>${loan.status}</b></div>
+        <div class="r"><span>Loan type</span><b>${escapeHtml(typeLabel)}</b></div>
+        <div class="r"><span>Status</span><b>${escapeHtml(loan.status)}</b></div>
         <div class="r"><span>Principal</span><b>${money(loan.loan_amount)}</b></div>
-        <div class="r"><span>Interest rate</span><b>${loan.interest_rate}% / month</b></div>
-        <div class="r"><span>Duration</span><b>${loan.duration_months} months (${loan.repayment_frequency || 'monthly'})</b></div>
+        <div class="r"><span>Interest rate</span><b>${escapeHtml(loan.interest_rate)}% / month</b></div>
+        <div class="r"><span>Duration</span><b>${escapeHtml(loan.duration_months)} months (${escapeHtml(loan.repayment_frequency || 'monthly')})</b></div>
         <div class="r"><span>Total repayable</span><b>${money(loan.total_repayable)}</b></div>
         <div class="r"><span>Installment</span><b>${money(loan.weekly_installment || loan.monthly_installment)}</b></div>
         <div class="r"><span>Remaining balance</span><b>${money(loan.remaining_balance)}</b></div>
         <div class="r"><span>Applied on</span><b>${dayTime(loan.created_at)}</b></div>
-        <div class="r"><span>Awaiting</span><b>${awaiting}</b></div>
+        <div class="r"><span>Awaiting</span><b>${escapeHtml(awaiting)}</b></div>
       </div>
       <h2>Guarantors</h2><div class="grid">
-        <div class="r"><span>Guarantor 1</span><b>${loan.guarantor_name || '—'} — ${loan.guarantor_approved ? 'Approved' : loan.guarantor_declined ? 'Declined' : 'Pending'}</b></div>
-        <div class="r"><span>Contact</span><b>${loan.guarantor_phone || loan.guarantor_email || '—'}</b></div>
-        ${needsG2 ? `<div class="r"><span>Guarantor 2</span><b>${loan.guarantor2_name} — ${loan.guarantor2_approved ? 'Approved' : loan.guarantor2_declined ? 'Declined' : 'Pending'}</b></div>
-        <div class="r"><span>Contact</span><b>${loan.guarantor2_phone || loan.guarantor2_email || '—'}</b></div>` : ''}
+        <div class="r"><span>Guarantor 1</span><b>${escapeHtml(loan.guarantor_name || '—')} — ${escapeHtml(loan.guarantor_approved ? 'Approved' : loan.guarantor_declined ? 'Declined' : 'Pending')}</b></div>
+        <div class="r"><span>Contact</span><b>${escapeHtml(loan.guarantor_phone || loan.guarantor_email || '—')}</b></div>
+        ${needsG2 ? `<div class="r"><span>Guarantor 2</span><b>${escapeHtml(loan.guarantor2_name)} — ${escapeHtml(loan.guarantor2_approved ? 'Approved' : loan.guarantor2_declined ? 'Declined' : 'Pending')}</b></div>
+        <div class="r"><span>Contact</span><b>${escapeHtml(loan.guarantor2_phone || loan.guarantor2_email || '—')}</b></div>` : ''}
       </div>
       <h2>Amounts &amp; approval</h2><div class="grid">
         <div class="r"><span>Amount requested</span><b>${money(loan.original_loan_amount || loan.loan_amount)}</b></div>
         ${loan.counter_offer_amount ? `<div class="r"><span>Counter-offer</span><b>${money(loan.counter_offer_amount)}</b></div>` : ''}
         <div class="r"><span>Approved amount</span><b>${approvedAmount != null ? money(approvedAmount) : 'Not yet approved'}</b></div>
-        <div class="r"><span>Disbursed amount</span><b>${loan.disbursed_amount ? money(loan.disbursed_amount) : 'Not disbursed'}</b></div>
-        <div class="r"><span>Approved by</span><b>${loan.admin_approved_by || loan.approved_by || '—'}</b></div>
+        <div class="r"><span>Disbursed amount</span><b>${escapeHtml(loan.disbursed_amount ? money(loan.disbursed_amount) : 'Not disbursed')}</b></div>
+        <div class="r"><span>Approved by</span><b>${escapeHtml(loan.admin_approved_by || loan.approved_by || '—')}</b></div>
         <div class="r"><span>Approved on</span><b>${dayTime(loan.admin_approved_at || loan.approved_at)}</b></div>
       </div>
       ${evaluation ? `<h2>System evaluation report</h2><div class="grid">
-        <div class="r"><span>Decision</span><b>${evaluation.decision || '—'}</b></div>
-        <div class="r"><span>Risk score</span><b>${evaluation.risk_score ?? '—'}</b></div>
+        <div class="r"><span>Decision</span><b>${escapeHtml(evaluation.decision || '—')}</b></div>
+        <div class="r"><span>Risk score</span><b>${escapeHtml(evaluation.risk_score ?? '—')}</b></div>
         <div class="r"><span>Max eligible limit</span><b>${money(evaluation.max_limit)}</b></div>
         <div class="r"><span>Recommended amount</span><b>${money(evaluation.recommended_amount)}</b></div>
-        <div class="r"><span>Recommended type</span><b>${LOAN_LABELS[evaluation.recommended_loan_type] || evaluation.recommended_loan_type || '—'}</b></div>
-        <div class="r"><span>Recommended duration</span><b>${evaluation.recommended_duration_months ? `${evaluation.recommended_duration_months} months` : '—'}</b></div>
+        <div class="r"><span>Recommended type</span><b>${escapeHtml(LOAN_LABELS[evaluation.recommended_loan_type] || evaluation.recommended_loan_type || '—')}</b></div>
+        <div class="r"><span>Recommended duration</span><b>${evaluation.recommended_duration_months ? `${escapeHtml(evaluation.recommended_duration_months)} months` : '—'}</b></div>
         <div class="r"><span>Evaluated on</span><b>${dayTime(evaluation.created_at)}</b></div>
         <div class="r"><span>Valid until</span><b>${dayTime(evaluation.valid_until)}</b></div>
       </div>
-      ${factorList.length ? `<table><thead><tr><th>Assessment factor</th><th>Value</th></tr></thead><tbody>${factorList.map(f => `<tr><td>${f.label}</td><td>${f.value}</td></tr>`).join('')}</tbody></table>` : ''}
-      ${historyList.length ? `<table><thead><tr><th>Borrowing history</th><th>Value</th></tr></thead><tbody>${historyList.map(f => `<tr><td>${f.label}</td><td>${f.value}</td></tr>`).join('')}</tbody></table>` : ''}` : '<h2>System evaluation report</h2><div>No evaluation report was issued for this application.</div>'}
+      ${factorList.length ? `<table><thead><tr><th>Assessment factor</th><th>Value</th></tr></thead><tbody>${factorList.map(f => `<tr><td>${escapeHtml(f.label)}</td><td>${escapeHtml(f.value)}</td></tr>`).join('')}</tbody></table>` : ''}
+      ${historyList.length ? `<table><thead><tr><th>Borrowing history</th><th>Value</th></tr></thead><tbody>${historyList.map(f => `<tr><td>${escapeHtml(f.label)}</td><td>${escapeHtml(f.value)}</td></tr>`).join('')}</tbody></table>` : ''}` : '<h2>System evaluation report</h2><div>No evaluation report was issued for this application.</div>'}
       ${rows ? `<h2>Repayment schedule</h2><table><thead><tr><th>#</th><th>Due date</th><th>Due</th><th>Paid</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
       <div class="sign"><div>Reviewed by (Administrator)<br/><br/>__________________<br/>Name / Date</div><div>Borrower acknowledgement<br/><br/>__________________<br/>Name / Date</div></div>
       </body></html>`);

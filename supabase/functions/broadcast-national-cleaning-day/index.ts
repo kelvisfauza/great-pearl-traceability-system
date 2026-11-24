@@ -1,3 +1,4 @@
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 
 const corsHeaders = {
@@ -7,6 +8,9 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
+
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')

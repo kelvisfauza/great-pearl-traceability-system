@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/safeCsv";
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -289,7 +290,7 @@ const EUDRDocumentation = () => {
       ])
     ];
 
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const csvContent = csvData.map(row => row.map(csvCell).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');

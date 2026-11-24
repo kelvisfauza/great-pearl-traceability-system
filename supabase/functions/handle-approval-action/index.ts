@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { approvalActionAllowed } from '../_shared/approval-action-scope.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -114,6 +115,12 @@ Deno.serve(async (req) => {
       }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
+    }
+
+    if (!approvalActionAllowed(req.method, action, tokenRecord.action_type)) {
+      return new Response(JSON.stringify({ error: 'invalid_action' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Self-approval check

@@ -20,6 +20,9 @@ const TARGET_MONTH = '2026-06'
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
+
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -211,6 +214,4 @@ Deno.serve(async (req) => {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
-
-  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 })

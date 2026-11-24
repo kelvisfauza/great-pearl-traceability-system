@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { ownsRecordingPath } from "../_shared/recording-path.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -150,6 +151,9 @@ Deno.serve(async (req) => {
     if (!callRow) return json({ ok: false, error: "Call not found" });
     if (callRow.host_id !== user.id) {
       return json({ ok: false, error: "Only the host can record" });
+    }
+    if (!ownsRecordingPath(storage_path, user.id, callRow.id)) {
+      return json({ ok: false, error: "Invalid recording path" }, 403);
     }
 
     // Insert recording row (processing)

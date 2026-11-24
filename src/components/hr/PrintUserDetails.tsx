@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/escapeHtml";
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ export default function PrintUserDetails({ employees }: PrintUserDetailsProps) {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Employee Details - ${employee.name}</title>
+          <title>Employee Details - ${escapeHtml(employee.name)}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
             .header { text-align: center; margin-bottom: 30px; }
@@ -88,43 +89,43 @@ export default function PrintUserDetails({ employees }: PrintUserDetailsProps) {
           <div class="employee-details">
             <div class="detail-row">
               <div class="detail-label">Employee ID:</div>
-              <div class="detail-value">${employee.id}</div>
+              <div class="detail-value">${escapeHtml(employee.id)}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Full Name:</div>
-              <div class="detail-value">${employee.name}</div>
+              <div class="detail-value">${escapeHtml(employee.name)}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Email:</div>
-              <div class="detail-value">${employee.email}</div>
+              <div class="detail-value">${escapeHtml(employee.email)}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Phone:</div>
-              <div class="detail-value">${employee.phone || 'N/A'}</div>
+              <div class="detail-value">${escapeHtml(employee.phone || 'N/A')}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Position:</div>
-              <div class="detail-value">${employee.position}</div>
+              <div class="detail-value">${escapeHtml(employee.position)}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Department:</div>
-              <div class="detail-value">${employee.department}</div>
+              <div class="detail-value">${escapeHtml(employee.department)}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Role:</div>
-              <div class="detail-value">${employee.role}</div>
+              <div class="detail-value">${escapeHtml(employee.role)}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Status:</div>
-              <div class="detail-value">${employee.status}</div>
+              <div class="detail-value">${escapeHtml(employee.status)}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Salary:</div>
-              <div class="detail-value">UGX ${employee.salary?.toLocaleString() || 'N/A'}</div>
+              <div class="detail-value">UGX ${escapeHtml(employee.salary?.toLocaleString() || 'N/A')}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Created At:</div>
-              <div class="detail-value">${employee.created_at ? new Date(employee.created_at).toLocaleDateString() : 'N/A'}</div>
+              <div class="detail-value">${escapeHtml(employee.created_at ? new Date(employee.created_at).toLocaleDateString() : 'N/A')}</div>
             </div>
           </div>
           

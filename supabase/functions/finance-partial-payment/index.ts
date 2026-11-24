@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
       walletOp = o;
       total = Number(o.amount); title = "Wallet Withdrawal";
       payeeName = o.target_name || o.target_email || "Staff member"; payeeEmail = o.target_email || null;
-      payeePhone = body?.phone ? String(body.phone) : (o.destination_phone || o.target_phone || null);
+      payeePhone = o.destination_phone || o.target_phone || null;
       approver = o.approved_by_name || o.approved_by_email || "";
     } else {
       const { data: r } = await db.from("approval_requests").select("*").eq("id", sourceId).maybeSingle();

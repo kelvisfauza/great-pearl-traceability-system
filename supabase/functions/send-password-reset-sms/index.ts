@@ -1,6 +1,8 @@
 import "../_shared/redact-logs.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { requireStaff } from '../_shared/internal-auth.ts';
+import { temporaryPassword } from '../_shared/secure-random.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,6 +12,23 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const caller = await requireStaff(req, corsHeaders);
+  if (caller instanceof Response) return caller;
+  if (!caller.internal) {
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } },
+    );
+    const { data: isAdmin, error: permissionError } = await userClient.rpc('is_current_user_admin');
+    if (permissionError || isAdmin !== true) {
+      return new Response(JSON.stringify({ success: false, error: 'Administrator access required' }), {
+        status: permissionError ? 503 : 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
   }
 
   try {
@@ -53,7 +72,7 @@ serve(async (req) => {
     }
     
     // Generate temporary password (8 characters, mix of letters and numbers)
-    const tempPassword = 'Reset' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const tempPassword = temporaryPassword();
     
     console.log('🔑 Generated temporary password for:', email);
     

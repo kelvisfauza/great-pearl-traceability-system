@@ -1,3 +1,4 @@
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 // Daily orchestrator: pushes Daily Coffee Intake, Finance Day Book, and EUDR
 // snapshots into the admin's OneDrive (/GAC-System-Reports/*.xlsx) via excel-sync.
 
@@ -33,6 +34,9 @@ async function callSync(payload: any) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
   const results: any[] = [];

@@ -1,5 +1,12 @@
 # Roadmap
 
+## Selected security findings — 24 November
+- [x] Reviewed the 170 selected findings; marked 117 verified fixes through the security manager without fixing or ignoring other findings. Removed 31 selected personal-data log exposures; escaped ten document generators and four email builders; protected three CSV exports, settings merge, credential randomness, recording ownership, deposit ownership and four saved recipient/action boundaries.
+- [x] Deployed 32 early-authenticated staff/report/airtime entry points and associated fixes; all 32 deployed anonymous calls denied before side effects. Seven internal database helpers now deny anon/authenticated execution and retain server/owner access. No balances recalculated, historical records removed, funds sent or test messages sent.
+- [x] Forty-nine focused browser-rule/handler/document tests and eight Deno rules tests passed; actual terms builder renders injected names as text with no injected images or executed handler. Latest preview build clean. Shared Deno test-tool run hit unrelated pre-existing extensionless test imports; exact new test files pass directly.
+- [ ] Remaining 53 selected findings await explicit decisions where fixes change existing workflows: arbitrary/manual messaging and external recipients; generic report/workbook targets; reward eligibility proofs and meeting payouts; own attendance/budget authority; public QR/fingerprint approval/job/attachment flows; private receipt/payslip access; and remaining payout destination/collection contracts. None ignored or marked fixed. Asked about saved-recipient messages and signed-in email approval links; wider workflow decisions still need confirmation.
+- [ ] Verify real authorized staff success paths after hardening — external unmanaged Supabase supplies no automated staff browser session. Anonymous denial, isolated handlers and browser print escaping are verified, not real signed-in approval/payment flows.
+
 ## Shared service-provider accounts
 - [x] Shared Finance/Procurement vendor directory, unique numbers, creation, account histories, recorded payments and existing paid-meal receipt printing; historical requests match only a unique name plus normalized phone, and request-linked payouts are not counted twice.
 - [x] Staff select vendors on the request link and paper meal entry; unknown public submissions remain for staff confirmation, and Procurement cannot clear meal/service requests without an attached account. Recipient snapshots and existing approval/payment powers remain unchanged.

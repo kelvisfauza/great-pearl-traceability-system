@@ -109,7 +109,7 @@ serve(async (req) => {
 
               if (smsResponse.ok) {
                 smsSuccessCount++;
-                console.log(`SMS sent successfully to ${formattedPhone}`);
+                console.log('Operation recorded; private details omitted');
                 
                 // Log to sms_logs
                 await supabase.from('sms_logs').insert({
@@ -126,7 +126,7 @@ serve(async (req) => {
                 });
               } else {
                 const errText = await smsResponse.text();
-                console.error(`SMS failed for ${formattedPhone}:`, errText);
+                console.error('Operation failed; private details omitted');
                 
                 await supabase.from('sms_logs').insert({
                   recipient_phone: formattedPhone,
@@ -143,11 +143,11 @@ serve(async (req) => {
               console.error('YOOLA_SMS_API_KEY not configured');
             }
           } catch (smsError) {
-            console.error(`SMS error for ${employee.phone}:`, smsError);
+            console.error('Operation failed; private details omitted');
           }
         }
       } catch (error) {
-        console.error(`Error processing employee ${employee.email}:`, error);
+        console.error('Operation failed; private details omitted');
       }
     }
 

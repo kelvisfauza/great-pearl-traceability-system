@@ -25,7 +25,7 @@ async function sendEmailViaSendGrid(to: string, subject: string, message: string
   const fromEmail = from || 'noreply@greatagrocoffee.com'
 
   try {
-    console.log(`📧 Sending email via SendGrid to: ${to}`)
+    console.log('Operation recorded; private details omitted')
     
     const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
@@ -45,7 +45,7 @@ async function sendEmailViaSendGrid(to: string, subject: string, message: string
     })
 
     if (response.status === 202 || response.status === 200) {
-      console.log(`✅ Email sent successfully to ${to}`)
+      console.log('Operation recorded; private details omitted')
       return { success: true }
     }
 
@@ -69,7 +69,7 @@ async function sendSMSViaTwilio(to: string, message: string): Promise<{ success:
   }
 
   try {
-    console.log(`📱 Sending SMS via Twilio to: ${to}`)
+    console.log('Operation recorded; private details omitted')
     
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
@@ -119,7 +119,7 @@ async function sendWhatsAppViaTwilio(to: string, message: string): Promise<{ suc
       formattedTo = '+' + formattedTo
     }
     
-    console.log(`💬 Sending WhatsApp via Twilio to: whatsapp:${formattedTo}`)
+    console.log('Operation recorded; private details omitted')
     
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
@@ -166,7 +166,7 @@ async function sendSMSViaYoola(to: string, message: string): Promise<{ success: 
       formattedPhone = '+' + formattedPhone
     }
 
-    console.log(`📱 Sending SMS via Yoola to: ${formattedPhone}`)
+    console.log('Operation recorded; private details omitted')
 
     const response = await fetch('https://api.yoolasms.com/v1/send', {
       method: 'POST',

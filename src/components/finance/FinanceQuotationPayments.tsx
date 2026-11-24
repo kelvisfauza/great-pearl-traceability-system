@@ -74,7 +74,7 @@ const FinanceQuotationPayments: React.FC = () => {
                 <SelectItem value="Cheque">Cheque (already issued)</SelectItem>
               </SelectContent>
             </Select>
-            {live && <Input placeholder="Phone number to receive the money" value={phone} onChange={(e) => setPhone(e.target.value)} />}
+            {live && <Input aria-label="Approved quotation recipient" placeholder="Approved recipient number" value={phone} readOnly />}
             <Input placeholder="Payment reference (optional)" value={ref} onChange={(e) => setRef(e.target.value)} />
             <p className="text-xs text-muted-foreground">
               {live ? 'The money is sent now from the Operations account. If it is short, the system waits up to 2 minutes for funds.' : 'Records a payment you have already made.'} The company gets a text and email once paid.

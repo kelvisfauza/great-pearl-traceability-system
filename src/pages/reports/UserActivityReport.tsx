@@ -1,3 +1,5 @@
+import { csvCell } from "@/lib/safeCsv";
+import { escapeHtml } from "@/lib/escapeHtml";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
@@ -318,30 +320,30 @@ export default function UserActivityReport() {
     const rowsHtml = filtered.map((r) => `
       <tr>
         <td>${format(new Date(r.occurred_at), "yyyy-MM-dd HH:mm")}</td>
-        <td>${r.employee_name}</td>
-        <td>${r.event}</td>
-        <td>${r.action}</td>
-        <td>${(r.details || "").replace(/</g, "&lt;")}</td>
-        <td>${(r.location || "").replace(/</g, "&lt;")}</td>
-        <td>${r.ip || ""}</td>
-        <td>${(r.device || "").replace(/</g, "&lt;")}</td>
+        <td>${escapeHtml(r.employee_name)}</td>
+        <td>${escapeHtml(r.event)}</td>
+        <td>${escapeHtml(r.action)}</td>
+        <td>${escapeHtml((r.details || ""))}</td>
+        <td>${escapeHtml((r.location || ""))}</td>
+        <td>${escapeHtml(r.ip || "")}</td>
+        <td>${escapeHtml((r.device || ""))}</td>
       </tr>`).join("");
     const missedHtml = missedDays.map((m) => `
       <tr>
-        <td>${m.name}</td>
-        <td style="text-align:right">${m.loggedDays}</td>
-        <td>${m.missed.join(", ") || "—"}</td>
+        <td>${escapeHtml(m.name)}</td>
+        <td style="text-align:right">${escapeHtml(m.loggedDays)}</td>
+        <td>${escapeHtml(m.missed.join(", ") || "—")}</td>
       </tr>`).join("");
     const scoreHtml = scorecard.map((s) => `
       <tr>
-        <td>${s.name}</td>
-        <td style="text-align:right">${s.loginDayCount}</td>
-        <td style="text-align:right">${s.engagement}</td>
-        <td style="text-align:right">${s.attDays}</td>
-        <td style="text-align:right">${s.lateDays}</td>
-        <td style="text-align:right">${s.lateMin}</td>
-        <td style="text-align:right">${s.otMin}</td>
-        <td style="text-align:right">${s.punctuality == null ? "—" : s.punctuality + "%"}</td>
+        <td>${escapeHtml(s.name)}</td>
+        <td style="text-align:right">${escapeHtml(s.loginDayCount)}</td>
+        <td style="text-align:right">${escapeHtml(s.engagement)}</td>
+        <td style="text-align:right">${escapeHtml(s.attDays)}</td>
+        <td style="text-align:right">${escapeHtml(s.lateDays)}</td>
+        <td style="text-align:right">${escapeHtml(s.lateMin)}</td>
+        <td style="text-align:right">${escapeHtml(s.otMin)}</td>
+        <td style="text-align:right">${escapeHtml(s.punctuality == null ? "—" : s.punctuality + "%")}</td>
       </tr>`).join("");
     w.document.write(`<!doctype html><html><head><title>User Activity Report</title>
       <style>
@@ -363,7 +365,7 @@ export default function UserActivityReport() {
       <div class="meta">
         ${COMPANY_TAGLINE} • P.O Box 431420, Kasese, Uganda<br/>
         Period: ${startDate} to ${endDate} • Generated: ${format(new Date(), "yyyy-MM-dd HH:mm")}<br/>
-        Employee: ${employee === "all" ? "All" : employee} • Event: ${event === "all" ? "All" : event}
+        Employee: ${escapeHtml(employee === "all" ? "All" : employee)} • Event: ${escapeHtml(event === "all" ? "All" : event)}
       </div>
       <div class="stats">
         <div class="stat"><div class="l">Total Events</div><div class="v">${stats.total}</div></div>
@@ -399,12 +401,12 @@ export default function UserActivityReport() {
       r.employee_email,
       r.event,
       r.action,
-      (r.details || "").replace(/"/g, '""'),
-      (r.location || "").replace(/"/g, '""'),
+      r.details || "",
+      r.location || "",
       r.ip,
-      (r.device || "").replace(/"/g, '""'),
+      r.device || "",
     ]);
-    const csv = [headers, ...rows].map((row) => row.map((v) => `"${v}"`).join(",")).join("\n");
+    const csv = [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

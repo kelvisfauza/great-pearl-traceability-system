@@ -44,7 +44,14 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     })
 
-    const { email, action } = await req.json()
+    const { action } = await req.json()
+    const { data: identity, error: identityError } = await supabaseAuth.auth.getUser(token)
+    if (identityError || !identity.user?.email) {
+      return new Response(JSON.stringify({ success: false, message: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const email = identity.user.email.trim().toLowerCase()
 
     console.log(`🔐 SMS Bypass request: { email: "${email}", action: "${action}" }`)
 

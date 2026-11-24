@@ -296,7 +296,7 @@ async function sendReceiverSms(
       },
     });
 
-    console.log(`[Payout Poller] SMS sent to ${smsPhone} for ${label}`);
+    console.log('Operation recorded; private details omitted');
   } catch (err) {
     console.error(`[Payout Poller] Failed to send SMS to ${opts.phone}:`, err);
   }

@@ -1,3 +1,5 @@
+import { escapeHtml } from "../_shared/escape-html.ts";
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 
@@ -23,11 +25,11 @@ const day = (v: any) => (v ? new Date(v).toLocaleDateString('en-GB') : '—')
 
 const rows = (list: any[]) => list.map((a: any) => `
   <tr>
-    <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${a.batch_number || '—'}</td>
-    <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${a.supplier_name || '—'}</td>
-    <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${a.moisture ?? '—'}%</td>
+    <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${escapeHtml(a.batch_number || '—')}</td>
+    <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${escapeHtml(a.supplier_name || '—')}</td>
+    <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${escapeHtml(a.moisture ?? '—')}%</td>
     <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${money(a.suggested_price)}</td>
-    <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${a.assessed_by || '—'}</td>
+    <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${escapeHtml(a.assessed_by || '—')}</td>
     <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;">${day(a.created_at)}</td>
   </tr>`).join('')
 
@@ -42,7 +44,7 @@ const HTML = (name: string, list: any[], oldest: number) => `<!doctype html>
           <h1 style="color:#ffffff;font-size:21px;margin:8px 0 0;font-weight:700;">QUALITY APPROVALS PENDING</h1>
         </td></tr>
         <tr><td style="padding:28px;">
-          <p style="font-size:15px;margin:0 0 14px;">Dear <strong>${name || 'Head of Quality'}</strong>,</p>
+          <p style="font-size:15px;margin:0 0 14px;">Dear <strong>${escapeHtml(name || 'Head of Quality')}</strong>,</p>
           <p style="font-size:15px;line-height:1.7;margin:0 0 16px;">
             You have <strong>${list.length}</strong> quality assessment${list.length === 1 ? '' : 's'} awaiting your approval.
             ${oldest > 0 ? `The oldest has been waiting <strong>${oldest} day${oldest === 1 ? '' : 's'}</strong>.` : ''}
@@ -89,6 +91,9 @@ Member of Hello YEDA COFFEE COMPANY LIMITED`
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
+
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
 
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
   if (!lovableApiKey) {

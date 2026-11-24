@@ -1,3 +1,4 @@
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 
@@ -48,6 +49,9 @@ async function listActiveEmployees(supabase: any, department?: string) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
+
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no LOVABLE_API_KEY' }),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

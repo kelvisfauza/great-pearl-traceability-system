@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { fourDigitCode } from '../_shared/secure-random.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -161,7 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
         .eq("email", normalizedEmail)
         .is("verified_at", null);
 
-      const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
+      const verificationCode = fourDigitCode();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
       const { error: dbError } = await supabase

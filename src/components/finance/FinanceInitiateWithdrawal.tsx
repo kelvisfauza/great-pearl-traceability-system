@@ -35,7 +35,7 @@ export const FinanceInitiateWithdrawal = () => {
       if (!(data as any)?.ok) throw new Error((data as any)?.error || 'Failed');
       if (action === 'send') {
         setSentTo((data as any).phone);
-        if (!payPhone) setPayPhone((data as any).payPhone || '');
+        setPayPhone((data as any).payPhone || '');
         toast.success(`4-digit code sent to the employee (${(data as any).phone})`);
       } else {
         toast.success(`Withdrawn UGX ${Number(amount).toLocaleString()} — paid by ${method === 'cash' ? 'cash' : method === 'gosentepay' ? 'GosentePay' : 'Yo'} — ref ${(data as any).reference}`);
@@ -100,8 +100,7 @@ export const FinanceInitiateWithdrawal = () => {
             {method !== 'cash' && (
               <div>
                 <Label className="text-xs">Number to send to</Label>
-                <Input value={payPhone} placeholder="07XXXXXXXX" className="w-40" inputMode="tel"
-                  onChange={(e) => setPayPhone(e.target.value)} />
+                <Input value={payPhone} placeholder="07XXXXXXXX" className="w-40" inputMode="tel" readOnly />
               </div>
             )}
             <Button disabled={code.length !== 4 || busy || (method !== 'cash' && !payPhone.trim())} onClick={() => call('verify')}>

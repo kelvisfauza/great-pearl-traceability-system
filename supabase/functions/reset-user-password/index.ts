@@ -121,7 +121,7 @@ serve(async (req) => {
     }
 
     // Log the password reset action (without the password itself)
-    console.log(`Password reset by admin ${callerEmail} for user: ${email}`)
+    console.log('Operation recorded; private details omitted')
 
     return new Response(
       JSON.stringify({ 

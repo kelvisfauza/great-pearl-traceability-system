@@ -9,6 +9,9 @@ import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
+
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -96,5 +99,4 @@ Deno.serve(async (req) => {
     })
   }
 
-  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 })

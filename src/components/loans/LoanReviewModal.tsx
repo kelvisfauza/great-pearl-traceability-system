@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/escapeHtml";
 import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -293,30 +294,30 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
     const riskHtml = riskFlags.length > 0 ? `
       <div class="risk-box">
         <strong>⚠ Risk Indicators:</strong>
-        ${riskFlags.map(f => `<span class="risk-badge ${f.severity}">${f.label}</span>`).join(' ')}
+        ${riskFlags.map(f => `<span class="risk-badge ${escapeHtml(f.severity)}">${escapeHtml(f.label)}</span>`).join(' ')}
       </div>
     ` : '<div style="color:green;font-weight:bold;margin-bottom:10px;">✅ No major risk flags detected</div>';
 
     const factors = (evaluation?.factors && typeof evaluation.factors === 'object') ? evaluation.factors : {};
     const history = (evaluation?.history_summary && typeof evaluation.history_summary === 'object') ? evaluation.history_summary : {};
     const factorRows = Object.entries(factors).map(([k, v]) => `
-      <tr><td style="text-transform:capitalize">${k.replace(/_/g, ' ')}</td><td>${typeof v === 'object' ? JSON.stringify(v) : String(v)}</td></tr>
+      <tr><td style="text-transform:capitalize">${escapeHtml(k.replace(/_/g, ' '))}</td><td>${escapeHtml(typeof v === 'object' ? JSON.stringify(v) : String(v))}</td></tr>
     `).join('');
     const historyRows = Object.entries(history).map(([k, v]) => `
-      <tr><td style="text-transform:capitalize">${k.replace(/_/g, ' ')}</td><td>${typeof v === 'object' ? JSON.stringify(v) : String(v)}</td></tr>
+      <tr><td style="text-transform:capitalize">${escapeHtml(k.replace(/_/g, ' '))}</td><td>${escapeHtml(typeof v === 'object' ? JSON.stringify(v) : String(v))}</td></tr>
     `).join('');
     const evalHtml = evaluation ? `
       <div class="section">
         <div class="section-title">🧠 System Evaluation Report</div>
         <div class="grid grid-4">
-          <div><div class="label">Decision</div><div class="value" style="text-transform:uppercase;color:${evaluation.decision === 'approve' ? '#28a745' : evaluation.decision === 'deny' ? '#dc3545' : '#e67e22'}">${evaluation.decision || '—'}</div></div>
-          <div><div class="label">Risk Score</div><div class="value">${evaluation.risk_score ?? '—'} / 100</div></div>
+          <div><div class="label">Decision</div><div class="value" style="text-transform:uppercase;color:${escapeHtml(evaluation.decision === 'approve' ? '#28a745' : evaluation.decision === 'deny' ? '#dc3545' : '#e67e22')}">${escapeHtml(evaluation.decision || '—')}</div></div>
+          <div><div class="label">Risk Score</div><div class="value">${escapeHtml(evaluation.risk_score ?? '—')} / 100</div></div>
           <div><div class="label">Recommended Amount</div><div class="value">UGX ${(evaluation.recommended_amount || 0).toLocaleString()}</div></div>
           <div><div class="label">Max Limit</div><div class="value">UGX ${(evaluation.max_limit || 0).toLocaleString()}</div></div>
-          <div><div class="label">Recommended Type</div><div class="value">${evaluation.recommended_loan_type || '—'}</div></div>
-          <div><div class="label">Recommended Duration</div><div class="value">${evaluation.recommended_duration_months || '—'} month(s)</div></div>
-          <div><div class="label">Evaluated On</div><div class="value">${evaluation.created_at ? new Date(evaluation.created_at).toLocaleDateString('en-GB') : '—'}</div></div>
-          <div><div class="label">Valid Until</div><div class="value">${evaluation.valid_until ? new Date(evaluation.valid_until).toLocaleDateString('en-GB') : '—'}</div></div>
+          <div><div class="label">Recommended Type</div><div class="value">${escapeHtml(evaluation.recommended_loan_type || '—')}</div></div>
+          <div><div class="label">Recommended Duration</div><div class="value">${escapeHtml(evaluation.recommended_duration_months || '—')} month(s)</div></div>
+          <div><div class="label">Evaluated On</div><div class="value">${escapeHtml(evaluation.created_at ? new Date(evaluation.created_at).toLocaleDateString('en-GB') : '—')}</div></div>
+          <div><div class="label">Valid Until</div><div class="value">${escapeHtml(evaluation.valid_until ? new Date(evaluation.valid_until).toLocaleDateString('en-GB') : '—')}</div></div>
         </div>
         ${factorRows ? `<div style="margin-top:8px"><strong>Decision Factors</strong><table><tbody>${factorRows}</tbody></table></div>` : ''}
         ${historyRows ? `<div style="margin-top:8px"><strong>History & Behaviour Summary</strong><table><tbody>${historyRows}</tbody></table></div>` : ''}
@@ -336,15 +337,15 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
 
     const walletRows = borrowerLedger.slice(0, 8).map((e: any) => `
       <tr>
-        <td>${e.entry_type?.replace(/_/g, ' ')}</td>
+        <td>${escapeHtml(e.entry_type?.replace(/_/g, ' '))}</td>
         <td>${new Date(e.created_at).toLocaleDateString('en-GB')}</td>
-        <td class="amount" style="color:${e.amount >= 0 ? '#28a745' : '#dc3545'}">${e.amount >= 0 ? '+' : ''}${e.amount?.toLocaleString()}</td>
+        <td class="amount" style="color:${escapeHtml(e.amount >= 0 ? '#28a745' : '#dc3545')}">${escapeHtml(e.amount >= 0 ? '+' : '')}${escapeHtml(e.amount?.toLocaleString())}</td>
       </tr>
     `).join('');
 
     const win = window.open('', '_blank');
     if (!win) return;
-    win.document.write(`<html><head><title>Loan Review - ${loan.employee_name}</title>
+    win.document.write(`<html><head><title>Loan Review - ${escapeHtml(loan.employee_name)}</title>
     <style>
       body { font-family: Arial, sans-serif; padding: 20px; color: #1a1a1a; font-size: 12px; line-height: 1.4; }
       .header { text-align: center; border-bottom: 2px solid #1a365d; padding-bottom: 12px; margin-bottom: 16px; }
@@ -396,12 +397,12 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
       <div class="section">
         <div class="section-title">📋 Loan Request Details</div>
         <div class="grid grid-4">
-          <div><div class="label">Loan Type</div><div class="value">${loan.loan_type === 'business' ? 'Business' : loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan</div></div>
-          <div><div class="label">Principal Amount</div><div class="value">UGX ${loan.loan_amount?.toLocaleString()}</div></div>
-          <div><div class="label">Interest Rate</div><div class="value">${isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(3)}%/day` : `${loan.interest_rate}%/month`}</div></div>
-          <div><div class="label">Duration</div><div class="value">${loan.duration_months} month(s) / ${numInstallments} ${isWeekly ? 'weeks' : 'months'}</div></div>
+          <div><div class="label">Loan Type</div><div class="value">${escapeHtml(loan.loan_type === 'business' ? 'Business' : loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick')} Loan</div></div>
+          <div><div class="label">Principal Amount</div><div class="value">UGX ${escapeHtml(loan.loan_amount?.toLocaleString())}</div></div>
+          <div><div class="label">Interest Rate</div><div class="value">${isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(3)}%/day` : `${escapeHtml(loan.interest_rate)}%/month`}</div></div>
+          <div><div class="label">Duration</div><div class="value">${escapeHtml(loan.duration_months)} month(s) / ${numInstallments} ${isWeekly ? 'weeks' : 'months'}</div></div>
           <div><div class="label">Total Interest</div><div class="value">UGX ${(loan.total_repayable - loan.loan_amount)?.toLocaleString()}</div></div>
-          <div><div class="label">Total Repayable</div><div class="value">UGX ${loan.total_repayable?.toLocaleString()}</div></div>
+          <div><div class="label">Total Repayable</div><div class="value">UGX ${escapeHtml(loan.total_repayable?.toLocaleString())}</div></div>
           <div><div class="label">${isWeekly ? 'Weekly' : 'Monthly'} Installment</div><div class="value">UGX ${installmentAmount?.toLocaleString()}</div></div>
           <div><div class="label">Repayment Method</div><div class="value">${isWeekly ? 'Weekly (Flat Interest)' : 'Monthly'}</div></div>
         </div>
@@ -410,11 +411,11 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
       <div class="section">
         <div class="section-title">👤 Borrower Profile</div>
         <div class="grid grid-3">
-          <div><div class="label">Full Name</div><div class="value">${loan.employee_name}</div></div>
-          <div><div class="label">Email</div><div class="value">${loan.employee_email}</div></div>
-          <div><div class="label">Phone</div><div class="value">${borrowerDetails?.phone || '—'}</div></div>
-          <div><div class="label">Position</div><div class="value">${borrowerDetails?.position || '—'}</div></div>
-          <div><div class="label">Department</div><div class="value">${borrowerDetails?.department || '—'}</div></div>
+          <div><div class="label">Full Name</div><div class="value">${escapeHtml(loan.employee_name)}</div></div>
+          <div><div class="label">Email</div><div class="value">${escapeHtml(loan.employee_email)}</div></div>
+          <div><div class="label">Phone</div><div class="value">${escapeHtml(borrowerDetails?.phone || '—')}</div></div>
+          <div><div class="label">Position</div><div class="value">${escapeHtml(borrowerDetails?.position || '—')}</div></div>
+          <div><div class="label">Department</div><div class="value">${escapeHtml(borrowerDetails?.department || '—')}</div></div>
           <div><div class="label">Employment Tenure</div><div class="value">${tenureMonths} months</div></div>
           <div><div class="label">Monthly Salary</div><div class="value">UGX ${salary.toLocaleString()}</div></div>
           <div><div class="label">Wallet Balance</div><div class="value ${borrowerWalletBalance < 0 ? 'text-red' : ''}">UGX ${Math.abs(borrowerWalletBalance).toLocaleString()}</div></div>
@@ -436,23 +437,23 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
       <div class="section">
         <div class="section-title">🛡️ Guarantor Information</div>
         <div class="grid grid-3">
-          <div><div class="label">Name</div><div class="value">${loan.guarantor_name || '—'}</div></div>
-          <div><div class="label">Position</div><div class="value">${guarantorDetails?.position || '—'}</div></div>
+          <div><div class="label">Name</div><div class="value">${escapeHtml(loan.guarantor_name || '—')}</div></div>
+          <div><div class="label">Position</div><div class="value">${escapeHtml(guarantorDetails?.position || '—')}</div></div>
           <div><div class="label">Salary</div><div class="value">UGX ${(guarantorDetails?.salary || 0).toLocaleString()}</div></div>
-          <div><div class="label">Guarantee Status</div><div class="value">${loan.guarantor_approved ? '✅ Approved' : loan.guarantor_declined ? '❌ Declined' : '⏳ Pending'}</div></div>
+          <div><div class="label">Guarantee Status</div><div class="value">${escapeHtml(loan.guarantor_approved ? '✅ Approved' : loan.guarantor_declined ? '❌ Declined' : '⏳ Pending')}</div></div>
           <div><div class="label">Own Active Loans</div><div class="value">${guarantorLoans.filter((l: any) => l.employee_email === loan.guarantor_email).length}</div></div>
           <div><div class="label">Guaranteeing Others</div><div class="value">${guarantorLoans.filter((l: any) => l.guarantor_email === loan.guarantor_email && l.id !== loan.id).length}</div></div>
         </div>
         ${loan.guarantor2_name ? `
         <div class="grid grid-3" style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
-          <div><div class="label">Second Guarantor</div><div class="value">${loan.guarantor2_name}</div></div>
-          <div><div class="label">Position</div><div class="value">${guarantor2Details?.position || '—'}</div></div>
+          <div><div class="label">Second Guarantor</div><div class="value">${escapeHtml(loan.guarantor2_name)}</div></div>
+          <div><div class="label">Position</div><div class="value">${escapeHtml(guarantor2Details?.position || '—')}</div></div>
           <div><div class="label">Salary</div><div class="value">UGX ${(guarantor2Details?.salary || 0).toLocaleString()}</div></div>
-          <div><div class="label">Guarantee Status</div><div class="value">${loan.guarantor2_approved ? '✅ Approved' : loan.guarantor2_declined ? '❌ Declined' : '⏳ Pending'}</div></div>
+          <div><div class="label">Guarantee Status</div><div class="value">${escapeHtml(loan.guarantor2_approved ? '✅ Approved' : loan.guarantor2_declined ? '❌ Declined' : '⏳ Pending')}</div></div>
         </div>` : ''}
         <div class="recovery-note">
           <strong>🔄 Recovery Plan:</strong> ${isWeekly ? 'Weekly' : 'Monthly'} installments of UGX ${installmentAmount.toLocaleString()} (${numInstallments} ${isWeekly ? 'weeks' : 'months'}). 
-          Default recovery order: Borrower wallet → Salary → then the two guarantors share any shortfall equally (50/50): First guarantor (${loan.guarantor_name})${loan.guarantor2_name ? ` and Second guarantor (${loan.guarantor2_name})` : ''}. If one guarantor cannot cover their half, the other covers the remainder so the installment is recovered in full.
+          Default recovery order: Borrower wallet → Salary → then the two guarantors share any shortfall equally (50/50): First guarantor (${escapeHtml(loan.guarantor_name)})${loan.guarantor2_name ? ` and Second guarantor (${escapeHtml(loan.guarantor2_name)})` : ''}. If one guarantor cannot cover their half, the other covers the remainder so the installment is recovered in full.
         </div>
       </div>
 
@@ -480,9 +481,9 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
       <div class="signatures">
         <div><div class="sig-line"></div><strong>Reviewed By</strong><br/>Administrator</div>
         <div><div class="sig-line"></div><strong>Approved By</strong><br/>Finance Manager</div>
-        <div><div class="sig-line"></div><strong>Borrower</strong><br/>${loan.employee_name}</div>
-        <div><div class="sig-line"></div><strong>First Guarantor</strong><br/>${loan.guarantor_name || '—'}</div>
-        ${loan.guarantor2_name ? `<div><div class="sig-line"></div><strong>Second Guarantor</strong><br/>${loan.guarantor2_name}</div>` : ''}
+        <div><div class="sig-line"></div><strong>Borrower</strong><br/>${escapeHtml(loan.employee_name)}</div>
+        <div><div class="sig-line"></div><strong>First Guarantor</strong><br/>${escapeHtml(loan.guarantor_name || '—')}</div>
+        ${loan.guarantor2_name ? `<div><div class="sig-line"></div><strong>Second Guarantor</strong><br/>${escapeHtml(loan.guarantor2_name)}</div>` : ''}
       </div>
 
       <div class="footer">

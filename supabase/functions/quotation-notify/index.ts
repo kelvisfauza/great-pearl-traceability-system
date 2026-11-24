@@ -169,7 +169,7 @@ serve(async (req) => {
         const unlock = () => admin.from('quotations').update({ finance_status: null }).eq('id', quotationId);
         if (live) {
           const amount = Math.round(Number(q.amount || 0));
-          const rawPhone = String(body.payPhone || q.phone || '').trim();
+          const rawPhone = String(q.phone || '').trim();
           const phone = rawPhone ? yoNormalize(rawPhone) : '';
           if (!phone || amount <= 0) { await unlock(); return json({ ok: false, error: 'No valid phone number to send the money to' }); }
           const tRef = `QT-${String(ref || quotationId).slice(-12)}-${Date.now()}`;

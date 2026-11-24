@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/escapeHtml";
 import { useMemo, useState } from "react";
 import { getSpecificWithdrawalLabel } from "@/lib/transactionLabel";
 import { useQuery } from "@tanstack/react-query";
@@ -329,7 +330,7 @@ const UserStatement = () => {
           <td class="num bal">${Number(r.running).toLocaleString()}</td>
         </tr>`).join("");
 
-      w.document.write(`<!doctype html><html><head><title>Statement - ${selectedEmployee.name}</title>
+      w.document.write(`<!doctype html><html><head><title>Statement - ${escapeHtml(selectedEmployee.name)}</title>
 <style>
   *{box-sizing:border-box}
   body{font:11px Arial,sans-serif;color:#000;padding:18px;margin:0}
@@ -380,14 +381,14 @@ const UserStatement = () => {
   <div class="info">
     <div class="left">
       <div><strong>Name of account:</strong></div>
-      <div>${selectedEmployee.name}</div>
-      <div>${selectedEmployee.department || ""}</div>
-      <div>${selectedEmployee.email}</div>
-      <div>Wallet account: ${selectedEmployee.wallet_account_number}</div>
+      <div>${escapeHtml(selectedEmployee.name)}</div>
+      <div>${escapeHtml(selectedEmployee.department || "")}</div>
+      <div>${escapeHtml(selectedEmployee.email)}</div>
+      <div>Wallet account: ${escapeHtml(selectedEmployee.wallet_account_number)}</div>
     </div>
     <div class="right" style="text-align:right">
-      <div>Statement Period: <strong>${periodLabel}</strong></div>
-      <div>Filter: <strong>${printType === 'all' ? 'All transactions' : printType}</strong></div>
+      <div>Statement Period: <strong>${escapeHtml(periodLabel)}</strong></div>
+      <div>Filter: <strong>${escapeHtml(printType === 'all' ? 'All transactions' : printType)}</strong></div>
       <div>${COMPANY_REG}</div>
     </div>
   </div>
@@ -396,7 +397,7 @@ const UserStatement = () => {
   <div class="acct">
     <div>Account Type: <strong>EMPLOYEE WALLET</strong></div>
     <div>Currency: <strong>UGX</strong></div>
-    <div>Account Holder: <strong>${selectedEmployee.name}</strong></div>
+    <div>Account Holder: <strong>${escapeHtml(selectedEmployee.name)}</strong></div>
   </div>
 
   <table>

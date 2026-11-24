@@ -1,3 +1,4 @@
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5'
 
 const corsHeaders = {
@@ -10,6 +11,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
 
   try {
     const supabase = createClient(
@@ -79,7 +83,7 @@ Deno.serve(async (req) => {
     for (const admin of admins) {
       if (admin.phone) {
         try {
-          console.log(`📱 Sending SMS to ${admin.name} at ${admin.phone}`)
+          console.log('Operation recorded; private details omitted')
           
           const message = `APPROVAL REQUEST\n\nFrom: ${senderName}\nType: ${request.type}\nAmount: UGX ${request.amount.toLocaleString()}\nTitle: ${request.title}\n\nPlease review this request in the system.`
 

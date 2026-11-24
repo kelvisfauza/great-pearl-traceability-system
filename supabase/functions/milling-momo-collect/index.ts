@@ -125,7 +125,7 @@ serve(async (req) => {
   </Request>
 </AutoCreate>`;
 
-    console.log(`[Milling MoMo] Collecting UGX ${numAmount} from ${cleanPhone} for customer ${customer_name}, ref: ${ref}`);
+    console.log('Operation recorded; private details omitted');
 
     const response = await fetch(YO_API_URL, {
       method: "POST",

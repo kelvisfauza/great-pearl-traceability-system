@@ -1,3 +1,4 @@
+import { escapeHtml } from "../_shared/escape-html.ts";
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
@@ -32,7 +33,7 @@ const HTML = (name: string) => `<!doctype html>
           <div style="display:inline-block;background:#ecfdf5;color:#065f46;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;margin-top:6px;">New Feature</div>
         </td></tr>
         <tr><td style="padding:32px;">
-          <p style="font-size:16px;margin:0 0 14px;">Dear <strong>${name || 'Colleague'}</strong>,</p>
+          <p style="font-size:16px;margin:0 0 14px;">Dear <strong>${escapeHtml(name || 'Colleague')}</strong>,</p>
           <p style="font-size:15px;line-height:1.75;margin:0 0 18px;">
             You can now withdraw money from your wallet <strong>directly to your bank account</strong>, in addition to mobile money.
             This is useful for larger amounts and for saving straight into your bank.

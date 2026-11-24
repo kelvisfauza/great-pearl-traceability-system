@@ -993,7 +993,7 @@ serve(async (req) => {
 
     const sanitizedQuery = sanitizeQuery(query);
     const searchTerms = extractSearchTerms(sanitizedQuery);
-    console.log(`🧠 AI Command: "${sanitizedQuery}" by ${userEmail}`);
+    console.log('Operation recorded; private details omitted');
 
     // Pull permission-filtered data snapshots
     const hasFullAccess = userPermissions.includes("*") || userPermissions.includes("Administration");

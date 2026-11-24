@@ -1,3 +1,4 @@
+import { requireStaff } from "../_shared/internal-auth.ts";
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 
@@ -99,6 +100,9 @@ const TEXT = (r: any) => [
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
+  const caller = await requireStaff(req, corsHeaders);
+  if (caller instanceof Response) return caller;
+
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
       status,
@@ -126,6 +130,10 @@ Deno.serve(async (req) => {
 
     if (error) return json({ ok: false, error: error.message })
     if (!report) return json({ ok: false, error: 'Report not found' })
+
+    if (!caller.internal && !caller.isAdmin && String(report.submitted_by_email || '').trim().toLowerCase() !== caller.email) {
+      return json({ ok: false, error: 'Forbidden' }, 403);
+    }
 
     // Recipients: administrators (never disabled accounts)
     const { data: admins } = await supabase

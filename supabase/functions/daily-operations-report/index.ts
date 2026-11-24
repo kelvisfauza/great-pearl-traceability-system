@@ -38,6 +38,9 @@ const money = (n: number) => `UGX ${fmt(n)}`
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
+
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
@@ -385,6 +388,4 @@ Download the PDF: ${downloadUrl}`
     console.error('❌ daily-operations-report failed:', (error as Error).message)
     return json({ ok: false, error: (error as Error).message })
   }
-
-  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 })

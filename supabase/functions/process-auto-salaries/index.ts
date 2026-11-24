@@ -335,7 +335,7 @@ Deno.serve(async (req) => {
             }
           }
         } catch (remErr) {
-          console.error(`⚠️ Remittance processing error for ${emp.name}:`, remErr);
+          console.error('Operation failed; private details omitted');
         }
 
         const walletCredit = Math.max(0, netAfterLoans - remittanceAmount);
@@ -390,7 +390,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (paymentError) {
-          console.error(`❌ Failed to create payment for ${emp.name}:`, paymentError);
+          console.error('Operation failed; private details omitted');
           errors.push({ employee: emp.name, error: paymentError.message });
           continue;
         }
@@ -413,7 +413,7 @@ Deno.serve(async (req) => {
         }));
         if (statutoryRows.length) {
           const { error: statErr } = await supabase.from('statutory_liabilities').insert(statutoryRows);
-          if (statErr) console.error(`❌ Statutory write failed for ${emp.name}:`, statErr);
+          if (statErr) console.error('Operation failed; private details omitted');
         }
 
         // 4. Credit employee wallet via ledger entry
@@ -457,13 +457,13 @@ Deno.serve(async (req) => {
             });
 
           if (ledgerError) {
-            console.error(`❌ Failed to credit wallet for ${emp.name}:`, ledgerError);
+            console.error('Operation failed; private details omitted');
             errors.push({ employee: emp.name, error: `Ledger: ${ledgerError.message}` });
           } else {
-            console.log(`💰 Credited ${emp.name}: UGX ${walletCredit.toLocaleString()} (Gross: ${grossSalary.toLocaleString()}, Advance: ${totalAdvanceDeduction.toLocaleString()}, Remittance: ${remittanceAmount.toLocaleString()})`);
+            console.log('Operation recorded; private details omitted');
           }
         } else {
-          console.warn(`⚠️ No auth user found for ${emp.name} (${emp.email}) - wallet not credited`);
+          console.warn('Operation needs review; private details omitted');
           errors.push({ employee: emp.name, error: 'No auth user ID found' });
         }
 
@@ -562,7 +562,7 @@ Deno.serve(async (req) => {
             console.log(`📧 Salary email sent to ${emp.name}`);
           }
         } else {
-          console.warn(`⚠️ Salary email skipped for ${emp.name}: invalid email ${emp.email}`);
+          console.warn('Operation needs review; private details omitted');
         }
 
         results.push({
@@ -596,7 +596,7 @@ Deno.serve(async (req) => {
       errors_detail: errors,
     };
 
-    console.log(`✅ Auto-salary processing complete:`, JSON.stringify(summary, null, 2));
+    console.log('Operation recorded; private details omitted');
 
     return new Response(JSON.stringify(summary), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

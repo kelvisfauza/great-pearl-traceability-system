@@ -1,3 +1,4 @@
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5';
 
 const corsHeaders = {
@@ -25,6 +26,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
 
   try {
     console.log('📊 Starting metrics calculation...');

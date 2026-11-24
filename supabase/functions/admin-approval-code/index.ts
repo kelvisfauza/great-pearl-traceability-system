@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (action === "send") {
-      const phone = (body.phone || emp?.phone || "").toString().trim();
+      const phone = String(emp?.phone || "").trim();
       if (!phone) return json({ ok: false, error: "No phone number on your employee profile" });
 
       const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));

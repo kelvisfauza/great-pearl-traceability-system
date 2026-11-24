@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/escapeHtml";
 import React, { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -121,7 +122,7 @@ const LoanTermsDialog: React.FC<Props> = ({ open, onOpenChange, application, sub
   const printForm = () => {
     const w = window.open('', '_blank', 'width=900,height=700');
     if (!w) return;
-    w.document.write(`<html><head><title>Loan Application Form – ${a.borrowerName}</title>
+    w.document.write(`<html><head><title>Loan Application Form – ${escapeHtml(a.borrowerName)}</title>
     <style>body{font-family:Georgia,serif;padding:28px;color:#111;font-size:12px;line-height:1.5}
     h1{font-size:17px;margin:0}h2{font-size:13px;margin:16px 0 6px;border-bottom:1px solid #999;padding-bottom:3px}
     .head{text-align:center;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:14px}
@@ -136,27 +137,27 @@ const LoanTermsDialog: React.FC<Props> = ({ open, onOpenChange, application, sub
     <div style="margin-top:6px;font-weight:bold">STAFF LOAN APPLICATION &amp; AGREEMENT FORM (${LOAN_TERMS_VERSION})</div></div>
     <h2>A. Applicant Details</h2>
     <table>
-      <tr><td class="l">Full Name</td><td>${a.borrowerName}</td><td class="l">Email</td><td>${a.borrowerEmail}</td></tr>
-      <tr><td class="l">Phone</td><td>${a.borrowerPhone || '-'}</td><td class="l">Department</td><td>${a.borrowerDepartment || '-'}</td></tr>
-      <tr><td class="l">Position</td><td>${a.borrowerPosition || '-'}</td><td class="l">Monthly Salary</td><td>${a.borrowerSalary ? fmt(a.borrowerSalary) : '-'}</td></tr>
+      <tr><td class="l">Full Name</td><td>${escapeHtml(a.borrowerName)}</td><td class="l">Email</td><td>${escapeHtml(a.borrowerEmail)}</td></tr>
+      <tr><td class="l">Phone</td><td>${escapeHtml(a.borrowerPhone || '-')}</td><td class="l">Department</td><td>${escapeHtml(a.borrowerDepartment || '-')}</td></tr>
+      <tr><td class="l">Position</td><td>${escapeHtml(a.borrowerPosition || '-')}</td><td class="l">Monthly Salary</td><td>${escapeHtml(a.borrowerSalary ? fmt(a.borrowerSalary) : '-')}</td></tr>
     </table>
     <h2>B. Facility Applied For</h2>
     <table>
-      <tr><td class="l">Loan Product</td><td>${a.loanTypeLabel}</td><td class="l">Requested Amount</td><td>${fmt(a.requestedAmount)}</td></tr>
+      <tr><td class="l">Loan Product</td><td>${escapeHtml(a.loanTypeLabel)}</td><td class="l">Requested Amount</td><td>${fmt(a.requestedAmount)}</td></tr>
       <tr><td class="l">Evaluation Fee (capitalised)</td><td>${fmt(a.evaluationFee)}</td><td class="l">Contract Principal</td><td>${fmt(a.principal)}</td></tr>
-      <tr><td class="l">Interest Rate</td><td>${a.monthlyRate}% / month (${a.dailyRate.toFixed(3)}% / day)</td><td class="l">Interest Cap</td><td>${a.maxRate}% of principal</td></tr>
-      <tr><td class="l">Duration</td><td>${a.durationMonths} month(s)</td><td class="l">Repayment</td><td>${a.frequency}, ${a.numInstallments} installment(s)</td></tr>
-      <tr><td class="l">Installment</td><td>${fmt(a.installmentAmount)}</td><td class="l">First Due Date</td><td>${a.firstRepaymentDate}</td></tr>
+      <tr><td class="l">Interest Rate</td><td>${escapeHtml(a.monthlyRate)}% / month (${escapeHtml(a.dailyRate.toFixed(3))}% / day)</td><td class="l">Interest Cap</td><td>${escapeHtml(a.maxRate)}% of principal</td></tr>
+      <tr><td class="l">Duration</td><td>${escapeHtml(a.durationMonths)} month(s)</td><td class="l">Repayment</td><td>${escapeHtml(a.frequency)}, ${escapeHtml(a.numInstallments)} installment(s)</td></tr>
+      <tr><td class="l">Installment</td><td>${fmt(a.installmentAmount)}</td><td class="l">First Due Date</td><td>${escapeHtml(a.firstRepaymentDate)}</td></tr>
       <tr><td class="l">Total Interest</td><td>${fmt(a.totalInterest)}</td><td class="l">Total Repayable</td><td><b>${fmt(a.totalRepayable)}</b></td></tr>
-      ${a.purpose ? `<tr><td class="l">Purpose</td><td colspan="3">${a.purpose}</td></tr>` : ''}
+      ${a.purpose ? `<tr><td class="l">Purpose</td><td colspan="3">${escapeHtml(a.purpose)}</td></tr>` : ''}
     </table>
     <h2>C. Guarantors</h2>
-    <table>${a.guarantors.length ? a.guarantors.map((g, i) => `<tr><td class="l">Guarantor ${i + 1}</td><td>${g.name}</td><td class="l">Contact</td><td>${g.phone || g.email || '-'}</td></tr>`).join('') : '<tr><td colspan="4">No guarantor required for this product.</td></tr>'}</table>
+    <table>${a.guarantors.length ? a.guarantors.map((g, i) => `<tr><td class="l">Guarantor ${i + 1}</td><td>${escapeHtml(g.name)}</td><td class="l">Contact</td><td>${escapeHtml(g.phone || g.email || '-')}</td></tr>`).join('') : '<tr><td colspan="4">No guarantor required for this product.</td></tr>'}</table>
     <h2>D. Terms &amp; Conditions</h2>
-    ${terms.map(t => `<div class="t"><b>${t.title}</b>${t.body}</div>`).join('')}
+    ${terms.map(t => `<div class="t"><b>${escapeHtml(t.title)}</b>${escapeHtml(t.body)}</div>`).join('')}
     <h2>E. Declaration</h2>
     <div class="t">I confirm that I have read, understood and accepted the terms above; that the information given is true; and that I authorise salary and wallet deductions (including overdraft creation) for the recovery of this facility.</div>
-    <div class="sig"><div>Applicant: ${a.borrowerName} — Date: ${new Date().toLocaleDateString()}</div><div>For the Company (Authorised Approver)</div></div>
+    <div class="sig"><div>Applicant: ${escapeHtml(a.borrowerName)} — Date: ${new Date().toLocaleDateString()}</div><div>For the Company (Authorised Approver)</div></div>
     </body></html>`);
     w.document.close();
     w.print();

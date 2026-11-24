@@ -16,6 +16,9 @@ const AMOUNT = 5000
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
+
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -98,7 +101,6 @@ Deno.serve(async (req) => {
     }
   }
 
-  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 
   return new Response(JSON.stringify({ ok: true, amount: AMOUNT, results }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },

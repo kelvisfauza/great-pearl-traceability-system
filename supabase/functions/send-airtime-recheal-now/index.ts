@@ -10,6 +10,9 @@ const corsHeaders = {
 // One-off: send UGX 10,000 airtime to Masika Recheal at 0750017013
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
+
+  const accessDenied = await requireInternalOrAdmin(req, corsHeaders);
+  if (accessDenied) return accessDenied;
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -89,5 +92,4 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
-  { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 })

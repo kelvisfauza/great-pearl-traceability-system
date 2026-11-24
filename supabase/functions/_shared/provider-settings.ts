@@ -59,10 +59,13 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
   },
 };
 
-function merge(base: any, override: any): any {
-  if (!override || typeof override !== 'object') return base;
+export function merge(base: any, override: any): any {
+  if (!override || typeof override !== 'object' || Array.isArray(override)) return base;
   const out: any = Array.isArray(base) ? [...base] : { ...base };
   for (const k of Object.keys(override)) {
+    // Only merge own schema fields; never traverse an object prototype.
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype' ||
+        !Object.prototype.hasOwnProperty.call(base, k)) continue;
     const v = override[k];
     if (v && typeof v === 'object' && !Array.isArray(v)) out[k] = merge(base?.[k] ?? {}, v);
     else if (v !== undefined && v !== null) out[k] = v;
