@@ -44,21 +44,22 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
 
+    const { data: employee, error: employeeError } = await admin
+      .from('employees')
+      .select('name, email, disabled, status')
+      .ilike('email', normalizedEmail)
+      .maybeSingle();
+
+    if (employeeError || !employee || employee.disabled === true ||
+      ['inactive', 'terminated', 'disabled', 'suspended'].includes(String(employee.status ?? 'active').toLowerCase())) {
+      return json({ ok: false, error: 'This account is unavailable. Contact IT support.' });
+    }
+
     const { data: cred } = await admin
       .from('biometric_credentials')
       .select('credential_id, email')
       .ilike('email', normalizedEmail)
       .maybeSingle();
-
-    const { data: employee } = await admin
-      .from('employees')
-      .select('name, email, disabled')
-      .ilike('email', normalizedEmail)
-      .maybeSingle();
-
-    if (employee?.disabled === true) {
-      return json({ ok: false, error: 'This account has been disabled. Contact IT support.' });
-    }
 
     const displayName = employee?.name ?? normalizedEmail.split('@')[0];
 

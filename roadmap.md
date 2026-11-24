@@ -1,5 +1,10 @@
 # Roadmap
 
+## Related-flow security review — 24 November
+- [x] Re-read 30 literal-table consumers plus approval, fingerprint, alternate report/Firestore, pricing and AI/broadcast paths; read live ownership policies, relevant database routines and existing scheduler metadata. Delivered a detailed code-read/status inventory; did not claim complete signed-in or scheduler verification.
+- [x] Closed an additional gap inside the selected fingerprint-details finding: check employee availability before credential access across all four actions. Forty-five focused tests passed; deployed service and live invalid-session denial verified. Settled records, unselected settings/permissions and the 65 open selected findings unchanged.
+- [ ] Additional paths need owner approval outside the selected creation/read fixes: broad existing-record updates, calculation-author insertion, absence self-appeal status guard, missing-field SMS-failure triggers, separate legacy report storage/role rules and duplicate attendance/overtime schedulers. Real signed-in report/fingerprint/appeal/printing success remains unverified because no automated employee browser session is available on the external backend.
+
 ## Selected security follow-up — 24 November
 - [x] Reviewed only the 87 selected findings. Fixed and marked 22 through the security manager: recorded-approver rewards, owner-only fingerprint detail lookup, saved-template caller-scoped reports, and 18 selected creation/read policies. No other findings fixed or ignored; loyalty remains suspended and no funds/messages sent.
 - [x] Forty focused handler and existing payment-security tests passed; rollback-only staff checks preserve genuine attendance and reject impersonation, verify eight additional ownership predicates, protect reward helper execution and leave the ledger unchanged. Both changed services deployed; anonymous and invalid callers denied; preview build clean. A pre-existing message-failure trigger references a missing verification_code field; left unchanged as unselected, and policy validation avoids it.

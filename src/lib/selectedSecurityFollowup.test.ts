@@ -47,6 +47,41 @@ test('fingerprint lookups cannot target another employee', async () => {
   assert.equal(reads, 0);
 });
 
+for (const action of ['begin', 'enroll_begin', 'enroll_finish', 'finish']) {
+  test(`fingerprint ${action} blocks inactive employees before credential access`, async () => {
+    const tables: string[] = [];
+    const handler = load('fingerprint-approve', {
+      requireStaff: async () => ({ internal: false, email: 'owner@example.test' }),
+      createClient: () => ({ from: (table: string) => {
+        tables.push(table);
+        if (table !== 'employees') throw new Error('Credential accessed for an inactive employee');
+        return { select: () => ({ ilike: () => ({ maybeSingle: async () => ({ data: { email: 'owner@example.test', status: 'Inactive', disabled: false } }) }) }) };
+      } }),
+    });
+    const response = await handler(new Request('https://example.test', { method: 'POST', body: JSON.stringify({ action, email: 'owner@example.test', credential_id: 'test-credential' }) }));
+    assert.equal((await response.json()).ok, false);
+    assert.deepEqual(tables, ['employees']);
+  });
+}
+
+test('active employees can read only their own fingerprint details', async () => {
+  const filters: string[][] = [];
+  const handler = load('fingerprint-approve', {
+    requireStaff: async () => ({ internal: false, email: 'owner@example.test' }),
+    createClient: () => ({ from: (table: string) => ({ select: () => ({ ilike: (field: string, value: string) => {
+      filters.push([table, field, value]);
+      return { maybeSingle: async () => ({ data: table === 'employees'
+        ? { email: 'owner@example.test', name: 'Owner', status: 'Active', disabled: false }
+        : { email: 'owner@example.test', credential_id: 'owner-test-credential' } }) };
+    } }) }) }),
+  });
+  const response = await handler(new Request('https://example.test', { method: 'POST', body: JSON.stringify({ action: 'begin', email: 'owner@example.test' }) }));
+  const result = await response.json();
+  assert.equal(result.ok, true);
+  assert.equal(result.credential_id, 'owner-test-credential');
+  assert.deepEqual(filters, [['employees', 'email', 'owner@example.test'], ['biometric_credentials', 'email', 'owner@example.test']]);
+});
+
 test('reports use saved sources and the user session, ignoring injected table names', async () => {
   const tables: string[] = [];
   const clients: unknown[][] = [];
