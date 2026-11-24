@@ -10283,6 +10283,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           reviewed_by_name: string | null
+          service_provider_id: string | null
           status: string
           submitted_by: string | null
           submitter_ip: string | null
@@ -10313,6 +10314,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewed_by_name?: string | null
+          service_provider_id?: string | null
           status?: string
           submitted_by?: string | null
           submitter_ip?: string | null
@@ -10343,6 +10345,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewed_by_name?: string | null
+          service_provider_id?: string | null
           status?: string
           submitted_by?: string | null
           submitter_ip?: string | null
@@ -10355,6 +10358,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meal_plan_forms"
             referencedColumns: ["document_number"]
+          },
+          {
+            foreignKeyName: "provider_submission_requests_service_provider_id_fkey"
+            columns: ["service_provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -13069,7 +13079,9 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          service_category: string
           updated_at: string
+          vendor_number: string
         }
         Insert: {
           account_name?: string | null
@@ -13082,7 +13094,9 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          service_category?: string
           updated_at?: string
+          vendor_number?: string
         }
         Update: {
           account_name?: string | null
@@ -13095,7 +13109,9 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          service_category?: string
           updated_at?: string
+          vendor_number?: string
         }
         Relationships: []
       }
@@ -20228,6 +20244,20 @@ export type Database = {
         Returns: Json
       }
       vault_verify_pin: { Args: { p_pin: string }; Returns: Json }
+      vendor_account_action: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_offset?: number
+          p_request?: string
+          p_vendor?: string
+        }
+        Returns: Json
+      }
+      vendor_account_payments: {
+        Args: { p_offset?: number; p_vendor: string }
+        Returns: Json
+      }
       verify_2fa_code: {
         Args: { _code: string; _email: string; _phone: string }
         Returns: Json

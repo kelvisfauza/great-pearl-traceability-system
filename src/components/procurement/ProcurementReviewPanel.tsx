@@ -14,6 +14,10 @@ import { useToast } from '@/hooks/use-toast';
 import { printMealPaymentReceipt } from '@/utils/mealPaymentReceipt';
 import QuotationReviewPanel from '@/components/quotations/QuotationReviewPanel';
 import ProviderReplyDialog from '@/components/procurement/ProviderReplyDialog';
+import VendorAccounts from '@/components/vendors/VendorAccounts';
+import VendorAccountSelector from '@/components/vendors/VendorAccountSelector';
+import { vendorAction } from '@/hooks/useVendorAccounts';
+import { canClearVendorRequest, needsVendorAccount } from '@/lib/vendorAccountRules';
 
 const PENDING_STATUSES = [
   'Pending',
@@ -25,6 +29,8 @@ const PENDING_STATUSES = [
 ];
 
 interface PendingRequest {
+  request_type?: string;
+  service_provider_id?: string | null;
   source_table: string;
   id: string;
   title: string;
@@ -101,6 +107,7 @@ const ProcurementReviewPanel = () => {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const [vendorId, setVendorId] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -113,7 +120,7 @@ const ProcurementReviewPanel = () => {
           .limit(200),
         (supabase as any)
           .from('provider_submission_requests')
-          .select('id,request_type,provider_name,phone,amount,description,status,created_at,invoice_number,paper_document_number,requested_payment_method')
+          .select('id,request_type,provider_name,phone,amount,description,status,created_at,invoice_number,paper_document_number,requested_payment_method,service_provider_id')
           .eq('status', 'pending')
           .order('created_at', { ascending: false })
           .limit(200),
@@ -134,6 +141,8 @@ const ProcurementReviewPanel = () => {
 
       const providerRows: PendingRequest[] = ((providers || []) as any[]).map((r) => ({
         source_table: 'provider_submission_requests',
+        request_type: r.request_type,
+        service_provider_id: r.service_provider_id,
         id: r.id,
         title: `${PROVIDER_LABEL[String(r.request_type)] || 'Provider Request'} — ${r.provider_name || 'Unnamed'}`,
         type: PROVIDER_LABEL[String(r.request_type)] || String(r.request_type || 'Provider Request'),
@@ -247,12 +256,20 @@ const ProcurementReviewPanel = () => {
     setAmount(String(request.amount ?? ''));
     setDescription(request.description || '');
     setAdminEmail(existing?.recommended_admin_email || '');
+    setVendorId(request.service_provider_id || '');
   };
 
   const submit = async () => {
-    if (!dialog.request) return;
+    const request = dialog.request;
+    if (!request) return;
     setSaving(true);
     try {
+      if (dialog.decision === 'approved' && !canClearVendorRequest(request.source_table, request.request_type || '', vendorId)) {
+        throw new Error('Choose a vendor account before sending this request for approval. New vendors can be created in Vendor accounts.');
+      }
+      if (request.source_table === 'provider_submission_requests' && vendorId && vendorId !== request.service_provider_id) {
+        await vendorAction('link', { request: request.id, vendor: vendorId });
+      }
       const editedAmount = Number(amount);
       const changedAmount = editedAmount > 0 && editedAmount !== Number(dialog.request.amount || 0);
       const changedDescription = description !== (dialog.request.description || '');
@@ -279,8 +296,8 @@ const ProcurementReviewPanel = () => {
       setReviews((prev) => ({
         ...prev,
         [key]: {
-          source_table: dialog.request!.source_table,
-          record_id: dialog.request!.id,
+          source_table: request.source_table,
+          record_id: request.id,
           decision: dialog.decision,
           notes: notes || null,
           reviewed_by: prev[key]?.reviewed_by || 'You',
@@ -288,7 +305,7 @@ const ProcurementReviewPanel = () => {
           recommended_admin_name: admins.find((a) => a.email === adminEmail)?.name || null,
           recommended_admin_email: adminEmail || null,
           edited_amount: changedAmount ? editedAmount : null,
-          original_amount: Number(dialog.request!.amount || 0),
+          original_amount: Number(request.amount || 0),
         },
       }));
 
@@ -349,6 +366,7 @@ const ProcurementReviewPanel = () => {
           <TabsList className="mb-4">
             <TabsTrigger value="queue">Review queue ({pendingCount})</TabsTrigger>
             <TabsTrigger value="quotations">Quotations</TabsTrigger>
+            <TabsTrigger value="vendors">Vendor accounts</TabsTrigger>
             <TabsTrigger value="history">
               <History className="h-4 w-4 mr-1" /> Review history
             </TabsTrigger>
@@ -375,6 +393,7 @@ const ProcurementReviewPanel = () => {
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium truncate">{request.title}</p>
                         <Badge variant="outline">{request.type}</Badge>
+                        {needsVendorAccount(request.source_table, request.request_type || '') && <Badge variant="outline">{request.service_provider_id ? 'Vendor attached' : 'Vendor not attached'}</Badge>}
                         {decisionBadge(decision)}
                       </div>
                       {request.description && (
@@ -450,6 +469,7 @@ const ProcurementReviewPanel = () => {
           <TabsContent value="quotations">
             <QuotationReviewPanel />
           </TabsContent>
+          <TabsContent value="vendors"><VendorAccounts /></TabsContent>
           <TabsContent value="history">
             {history.length === 0 ? (
               <div className="text-center py-8">
@@ -552,6 +572,7 @@ const ProcurementReviewPanel = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {dialog.request && needsVendorAccount(dialog.request.source_table, dialog.request.request_type || '') && <VendorAccountSelector value={vendorId} onChange={setVendorId} />}
             <div>
               <Label>Amount (UGX)</Label>
               <Input
@@ -602,7 +623,7 @@ const ProcurementReviewPanel = () => {
             </Button>
             <Button
               onClick={submit}
-              disabled={saving || (dialog.decision === 'rejected' && !notes.trim())}
+              disabled={saving || (dialog.decision === 'rejected' && !notes.trim()) || (dialog.decision === 'approved' && Boolean(dialog.request) && !canClearVendorRequest(dialog.request?.source_table || '', dialog.request?.request_type || '', vendorId))}
               className={dialog.decision === 'approved' ? 'bg-green-600 hover:bg-green-700' : ''}
               variant={dialog.decision === 'rejected' ? 'destructive' : 'default'}
             >

@@ -35,6 +35,7 @@ const SupplierAdvanceModal = lazy(() => import('@/components/finance/SupplierAdv
 const SupplierLedgers = lazy(() => import('@/components/finance/SupplierLedgers'));
 const InstantWithdrawalHistory = lazy(() => import('@/components/finance/InstantWithdrawalHistory'));
 const FinanceReceiptLookup = lazy(() => import('@/components/finance/FinanceReceiptLookup'));
+const VendorAccounts = lazy(() => import('@/components/vendors/VendorAccounts'));
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center py-12">
@@ -56,6 +57,7 @@ const SECTIONS: Section[] = [
   { value: 'receipts', label: 'Payment receipts', hint: 'Find & print receipts', icon: Receipt, tone: 'bg-primary/10 text-primary' },
   { value: 'withdrawals', label: 'Withdrawals', hint: 'Staff wallet requests', icon: Wallet, tone: 'bg-accent/15 text-accent-foreground' },
   { value: 'supplier-accounts', label: 'Supplier accounts', hint: 'Kgs, payments & balances', icon: BookOpen, tone: 'bg-primary/10 text-primary' },
+  { value: 'vendor-accounts', label: 'Vendor accounts', hint: 'Services, requests & payments', icon: Users, tone: 'bg-primary/10 text-primary' },
   { value: 'advances', label: 'Advances', hint: 'Supplier advances', icon: HandCoins, tone: 'bg-warning/15 text-warning' },
   { value: 'expenses', label: 'Expenses', hint: 'Company spending', icon: DollarSign, tone: 'bg-secondary text-secondary-foreground' },
   { value: 'hr', label: 'HR payments', hint: 'Salaries & staff pay', icon: Users, tone: 'bg-primary/10 text-primary' },
@@ -121,6 +123,7 @@ const Finance = () => {
       case 'receipts': return <FinanceReceiptLookup />;
       case 'withdrawals': return <div className="space-y-6"><WithdrawalRequestsManager /><InstantWithdrawalHistory /></div>;
       case 'supplier-accounts': return <SupplierLedgers />;
+      case 'vendor-accounts': return <VendorAccounts />;
       case 'advances': return <SupplierAdvancesPage />;
       case 'expenses': return <ExpenseManagement />;
       case 'hr': return <HRPayments />;

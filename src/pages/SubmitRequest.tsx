@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle2, Loader2, Send } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useVendorAccounts } from '@/hooks/useVendorAccounts';
+import VendorAccountSelector from '@/components/vendors/VendorAccountSelector';
 
 const MEAL_ITEMS = [
   'Matooke', 'Rice', 'Groundnuts', 'Peas', 'Charcoal', 'Beans',
@@ -17,6 +20,18 @@ const MEAL_ITEMS = [
 
 const SubmitRequest = () => {
   const { toast } = useToast();
+  const { user, hasPermission, isAdmin, employee } = useAuth();
+  const staffEntry = Boolean(user) && (isAdmin() || hasPermission('Finance') || hasPermission('Procurement') || ['Finance', 'Finance Manager', 'Manager'].includes(employee?.role || ''));
+  const { data: vendors = [] } = useVendorAccounts(staffEntry);
+  const [vendorId, setVendorId] = useState('');
+  useEffect(() => {
+    if (!staffEntry) return;
+    const id = new URLSearchParams(window.location.search).get('vendor');
+    const vendor = vendors.find(v => v.id === id);
+    if (!vendor) return;
+    setVendorId(vendor.id);
+    setForm(f => ({ ...f, provider_name: vendor.name, phone: vendor.phone || '', email: vendor.email || '', request_type: vendor.service_category === 'meals_catering' ? 'meal_plan' : 'service_provider' }));
+  }, [vendors, staffEntry]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [mealItems, setMealItems] = useState<string[]>([]);
@@ -33,7 +48,10 @@ const SubmitRequest = () => {
     national_id: '',
   });
 
-  const update = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const update = (k: string, v: string) => {
+    if (k === 'provider_name' || k === 'phone') setVendorId('');
+    setForm((f) => ({ ...f, [k]: v }));
+  };
 
   const toggleMealItem = (item: string) => {
     setMealItems((prev) => prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]);
@@ -91,6 +109,7 @@ const SubmitRequest = () => {
       invoiceNo = `${prefix}-${ymd}-${rand}`;
     }
     const { error } = await supabase.from('provider_submission_requests').insert({
+      service_provider_id: staffEntry && vendorId ? vendorId : null,
       request_type: form.request_type,
       provider_name: form.provider_name.trim(),
       phone: cleanPhone,
@@ -136,7 +155,7 @@ const SubmitRequest = () => {
               Your request has been sent to Great Agro Coffee for approval. You will receive an SMS
               once the payment is processed.
             </p>
-            <Button onClick={() => { setSubmitted(false); setMealItems([]); setOtherItems(''); setCashItems(''); setForm({ request_type: 'service_provider', provider_name: '', phone: '', email: '', amount: '', description: '', invoice_number: '', national_id: '' }); }}>
+            <Button onClick={() => { setVendorId(''); setSubmitted(false); setMealItems([]); setOtherItems(''); setCashItems(''); setForm({ request_type: 'service_provider', provider_name: '', phone: '', email: '', amount: '', description: '', invoice_number: '', national_id: '' }); }}>
               Submit another request
             </Button>
           </CardContent>
@@ -161,6 +180,11 @@ const SubmitRequest = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {staffEntry && <VendorAccountSelector value={vendorId} onChange={id => {
+                setVendorId(id);
+                const vendor = vendors.find(v => v.id === id);
+                if (vendor) setForm(f => ({ ...f, provider_name: vendor.name, phone: vendor.phone || '', email: vendor.email || '' }));
+              }} />}
               <div>
                 <Label>Request Type *</Label>
                 <Select value={form.request_type} onValueChange={(v) => update('request_type', v)}>

@@ -11,10 +11,14 @@ import { Download, Loader2, Printer, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { mealPlanPayload, type MealPayment } from '@/lib/mealPlanRules';
 import { downloadMealPlanTemplate, printMealPlanTemplates } from '@/utils/mealPlanPdf';
+import VendorAccountSelector from '@/components/vendors/VendorAccountSelector';
+import { useVendorAccounts } from '@/hooks/useVendorAccounts';
 
 const empty = { documentNumber: '', name: '', phone: '', email: '', amount: '', description: '', payment: 'mobile_money' as MealPayment };
 export default function MealPlanRequests() {
   const [form, setForm] = useState(empty);
+  const [vendorId, setVendorId] = useState('');
+  const { data: vendors = [] } = useVendorAccounts();
   const [busy, setBusy] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [issued, setIssued] = useState('');
@@ -52,7 +56,10 @@ export default function MealPlanRequests() {
     if (error) throw error;
     return data || [];
   }, refetchInterval: 15000 });
-  const update = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
+  const update = (key: string, value: string) => {
+    if (key === 'name' || key === 'phone') setVendorId('');
+    setForm(prev => ({ ...prev, [key]: value }));
+  };
   async function template() {
     setPrinting(true);
     try {
@@ -69,10 +76,10 @@ export default function MealPlanRequests() {
     setBusy(true);
     try {
       const payload = mealPlanPayload(form);
-      const { error } = await (supabase as any).from('provider_submission_requests').insert(payload);
+      const { error } = await (supabase as any).from('provider_submission_requests').insert({ ...payload, service_provider_id: vendorId || null });
       if (error) throw new Error(error.code === '23505' ? 'This document number has already been used.' : error.code === '23503' ? 'Document number not found. Enter the number from an issued meal-plan form.' : error.message);
       toast.success('Meal plan submitted for Procurement review and Admin approval');
-      setForm(empty); qc.invalidateQueries({ queryKey: ['paper-meal-requests'] });
+      setVendorId(''); setForm(empty); qc.invalidateQueries({ queryKey: ['paper-meal-requests'] });
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Submission failed'); }
     finally { setBusy(false); }
   }
@@ -85,6 +92,11 @@ export default function MealPlanRequests() {
     </div></div>
     <form onSubmit={submit} className="space-y-4 max-w-2xl">
       <h3 className="font-medium">Submit completed paper form</h3>
+      <VendorAccountSelector value={vendorId} onChange={id => {
+        setVendorId(id);
+        const vendor = vendors.find(v => v.id === id);
+        if (vendor) setForm(f => ({ ...f, name: vendor.name, phone: vendor.phone || '', email: vendor.email || '' }));
+      }} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><Label htmlFor="meal-doc">Document number</Label><Input id="meal-doc" required value={form.documentNumber} onChange={e => update('documentNumber',e.target.value)} placeholder="MP-2026-000001" /></div>
         <div><Label htmlFor="meal-amount">Amount on document (UGX)</Label><Input id="meal-amount" type="number" min="500" required value={form.amount} onChange={e => update('amount',e.target.value)} /></div>

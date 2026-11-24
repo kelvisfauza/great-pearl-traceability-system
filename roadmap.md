@@ -1,5 +1,11 @@
 # Roadmap
 
+## Shared service-provider accounts
+- [x] Shared Finance/Procurement vendor directory, unique numbers, creation, account histories, recorded payments and existing paid-meal receipt printing; historical requests match only a unique name plus normalized phone, and request-linked payouts are not counted twice.
+- [x] Staff select vendors on the request link and paper meal entry; unknown public submissions remain for staff confirmation, and Procurement cannot clear meal/service requests without an attached account. Recipient snapshots and existing approval/payment powers remain unchanged.
+- [x] Eight browser-rule/meal tests and rollback-only Finance identity checks passed for automatic linkage, duplicate creation, vendor-required reviews, immutable numbers, separated totals and anonymous denial; no test records retained. Actual component mobile history/dialog and public form visually checked; preview build clean.
+- [ ] Verify real signed-in Finance entry → Procurement review → vendor history; external unmanaged Supabase provides no browser staff session, so controlled screenshots are not live end-to-end verification.
+
 ## Department document stamps
 - [x] Prepare all six supplied stamps without their photographed dates; generate dates in Uganda time.
 - [x] Apply department/business stamps to shared HTML/PDF prints and queued PDF reprints, recorded Operations/Supervisor approvals and Finance receipts; preserve signatures, payment evidence and verification footers.
