@@ -55,6 +55,15 @@ Deno.serve(async (req) => {
     const testEmail: string | null = body.testEmail || null
     const skipSms: boolean = body.skipSms === true || !!testEmail
 
+    // Test delivery must remain within the same saved administrator audience.
+    if (testEmail) {
+      if (typeof testEmail !== 'string') return json({ ok: false, error: 'Select a report recipient' });
+      const { data: recipient, error } = await supabase.from('employees')
+        .select('id').ilike('email', testEmail.trim().replace(/[\\%_]/g, '\\$&'))
+        .eq('status', 'Active').eq('role', 'Administrator').eq('disabled', false).maybeSingle();
+      if (error || !recipient) return json({ ok: false, error: 'Select an active report administrator' });
+    }
+
     const from = `${date}T00:00:00${TZ_OFFSET}`
     const to = `${date}T23:59:59${TZ_OFFSET}`
     const fromIso = new Date(from).toISOString()

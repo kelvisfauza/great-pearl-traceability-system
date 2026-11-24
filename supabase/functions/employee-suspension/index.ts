@@ -121,6 +121,33 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action: string = body.action;
 
+    if (action !== 'suspend' && action !== 'lift') return respond(false, { error: 'Unknown action' });
+    // The selected employee, never caller-supplied contact fields, owns the notice.
+    let targetQuery = admin.from('employees').select('id,name,email,phone');
+    if (typeof body.employeeId === 'string' && body.employeeId) {
+      targetQuery = targetQuery.eq('id', body.employeeId);
+    } else if (typeof body.employeeEmail === 'string' && body.employeeEmail.trim()) {
+      targetQuery = targetQuery.ilike('email', body.employeeEmail.trim().replace(/[\\%_]/g, '\\$&'));
+    } else {
+      return respond(false, { error: 'Select an employee' });
+    }
+    const { data: target, error: targetError } = await targetQuery.maybeSingle();
+    if (targetError || !target?.id || !target.email || !target.name) {
+      return respond(false, { error: 'Selected employee could not be confirmed' });
+    }
+    if (body.employeeEmail && String(body.employeeEmail).trim().toLowerCase() !== target.email.toLowerCase()) {
+      return respond(false, { error: 'Selected employee details do not match' });
+    }
+    if (action === 'lift' && body.suspensionId) {
+      const { data: suspension, error } = await admin.from('employee_suspensions')
+        .select('employee_id,employee_email').eq('id', body.suspensionId).maybeSingle();
+      if (error || !suspension ||
+        (suspension.employee_id && suspension.employee_id !== target.id) ||
+        String(suspension.employee_email).toLowerCase() !== target.email.toLowerCase()) {
+        return respond(false, { error: 'Suspension does not belong to the selected employee' });
+      }
+    }
+
     const notify = async (email: string, phone: string | null, subject: string, letter: string, smsText: string) => {
       const results: Record<string, unknown> = {};
       try {
@@ -134,7 +161,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             templateName: "general-notification",
             recipientEmail: email,
-            templateData: { title: subject, subject, message: letter, recipientName: body.employeeName },
+            templateData: { title: subject, subject, message: letter, recipientName: target.name },
           }),
         });
         results.email = { ok: r.ok, status: r.status };
@@ -153,7 +180,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               phone,
               message: smsText,
-              userName: body.employeeName,
+              userName: target.name,
               messageType: "suspension_notice",
               recipientEmail: email,
             }),
@@ -168,10 +195,10 @@ Deno.serve(async (req) => {
 
     if (action === "suspend") {
       const {
-        employeeId, employeeName, employeeEmail, employeePhone,
         reason, details, payStatus = "half_pay",
         startDate, endDate, reportBackDate,
       } = body;
+      const { id: employeeId, name: employeeName, email: employeeEmail, phone: employeePhone } = target;
 
       if (!employeeEmail || !reason || !startDate || !endDate) {
         return respond(false, { error: "employeeEmail, reason, startDate and endDate are required" });
@@ -194,7 +221,7 @@ Deno.serve(async (req) => {
           disabled_reason: `Suspended: ${reason}`,
           disabled_at: new Date().toISOString(),
         })
-        .ilike("email", employeeEmail);
+        .eq("id", employeeId);
       if (blockErr) return respond(false, { error: blockErr.message });
 
       // 2) Record the suspension
@@ -228,13 +255,14 @@ Deno.serve(async (req) => {
     }
 
     if (action === "lift") {
-      const { suspensionId, employeeEmail, employeeName, employeePhone, notes } = body;
+      const { suspensionId, notes } = body;
+      const { name: employeeName, email: employeeEmail, phone: employeePhone } = target;
       if (!employeeEmail) return respond(false, { error: "employeeEmail is required" });
 
       const { error: unblockErr } = await admin
         .from("employees")
         .update({ disabled: false, disabled_reason: null, disabled_at: null })
-        .ilike("email", employeeEmail);
+        .eq("id", target.id);
       if (unblockErr) return respond(false, { error: unblockErr.message });
 
       if (suspensionId) {

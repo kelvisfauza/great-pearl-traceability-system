@@ -46,8 +46,15 @@ Deno.serve(async (req) => {
       phone = owner.phone;
     }
 
-    // Check if this user can bypass SMS verification (like Timothy in IT)
-    if (email) {
+    // Pre-login OTP remains available, but bypass status belongs only to its
+    // authenticated owner. Never disclose another employee's exception.
+    const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+    const { data: identity, error: identityError } = token
+      ? await supabaseAdmin.auth.getUser(token)
+      : { data: { user: null }, error: null };
+    const ownsBypass = !identityError && !!identity?.user?.email && typeof email === 'string' &&
+      identity.user.email.toLowerCase() === email.trim().toLowerCase();
+    if (ownsBypass) {
       const { data: canBypass } = await supabaseAdmin
         .rpc('can_bypass_sms_verification', { user_email: email });
 

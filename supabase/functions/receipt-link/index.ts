@@ -24,6 +24,28 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const r = String(body?.ref || "").replace(/[^A-Za-z0-9._-]/g, "");
     if (!r) return new Response(JSON.stringify({ ok: false, error: "ref required" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Prove access using the same saved storage permissions as the receipt UI.
+    // Never turn a privileged signature into a bypass for an ordinary employee.
+    const storageClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      caller.internal ? (Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '') : (Deno.env.get('SUPABASE_ANON_KEY') ?? ''),
+      caller.internal ? { auth: { persistSession: false } } : {
+        auth: { persistSession: false },
+        global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+      },
+    );
+    const referenceYear = r.match(/^RCP-(\d{4})\d{4}-/)?.[1];
+    const currentYear = new Date().getUTCFullYear();
+    const years = [...new Set([referenceYear, String(currentYear), String(currentYear - 1), String(currentYear - 2)].filter(Boolean))];
+    let canRead = false;
+    for (const year of years) {
+      const { data, error } = await storageClient.storage.from('payment-receipts')
+        .createSignedUrl(`${year}/${r}.pdf`, 60);
+      if (!error && data?.signedUrl) { canRead = true; break; }
+    }
+    if (!canRead) return new Response(JSON.stringify({ ok: false, error: 'Receipt unavailable or access denied' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
     return new Response(JSON.stringify({ ok: true, url: await receiptLink(Deno.env.get("SUPABASE_URL")!, r) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
