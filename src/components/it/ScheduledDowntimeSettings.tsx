@@ -53,16 +53,18 @@ const ScheduledDowntimeSettings = () => {
 
   const save = async (next: DowntimeConfig) => {
     setSaving(true);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('system_settings')
       .update({ setting_value: next as any })
-      .eq('setting_key', 'scheduled_downtime');
+      .eq('setting_key', 'scheduled_downtime')
+      .select('setting_value')
+      .single();
     setSaving(false);
-    if (error) {
-      toast({ title: 'Failed to save', description: error.message, variant: 'destructive' });
+    if (error || !data) {
+      toast({ title: 'Failed to save', description: error?.message || 'No saved schedule was confirmed.', variant: 'destructive' });
       return;
     }
-    setCfg(next);
+    setCfg({ ...DEFAULT_CFG, ...(data.setting_value as unknown as DowntimeConfig) });
     toast({
       title: 'Schedule updated',
       description: next.enabled

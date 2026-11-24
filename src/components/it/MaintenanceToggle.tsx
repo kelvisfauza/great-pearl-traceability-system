@@ -65,7 +65,7 @@ const MaintenanceToggle = () => {
       await toggleMaintenance(false);
       toast({
         title: 'System Restored',
-        description: 'Maintenance mode has been deactivated. All users can now access the system.',
+        description: 'Manual maintenance has been deactivated. Any scheduled downtime still applies.',
       });
     } catch (error) {
       const message = (error as { message?: string })?.message;

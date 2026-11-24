@@ -19,6 +19,10 @@ BEGIN
    RAISE EXCEPTION 'Recovery credentials were not hashed';
   END IF;
   IF public.verify_and_deactivate_maintenance('0000000000','0000') THEN RAISE EXCEPTION 'Wrong credentials restored service'; END IF;
+  IF NOT public.verify_maintenance_recovery_key('2468135790') THEN RAISE EXCEPTION 'Legacy code check rejects the saved code'; END IF;
+  IF public.verify_maintenance_recovery_key('0000000000') THEN RAISE EXCEPTION 'Legacy code check accepts a wrong code'; END IF;
+  IF NOT public.verify_maintenance_recovery_pin('1357') THEN RAISE EXCEPTION 'Legacy PIN check rejects the saved PIN'; END IF;
+  IF public.verify_maintenance_recovery_pin('0000') THEN RAISE EXCEPTION 'Legacy PIN check accepts a wrong PIN'; END IF;
   IF NOT (SELECT is_active FROM public.get_maintenance_status()) THEN RAISE EXCEPTION 'Wrong credentials changed maintenance state'; END IF;
   IF NOT public.verify_and_deactivate_maintenance('2468135790','1357') THEN RAISE EXCEPTION 'Correct credentials could not restore service'; END IF;
   IF (SELECT is_active FROM public.get_maintenance_status()) THEN RAISE EXCEPTION 'Maintenance stayed active after valid recovery'; END IF;

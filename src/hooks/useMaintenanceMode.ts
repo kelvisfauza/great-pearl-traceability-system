@@ -155,6 +155,9 @@ export const useMaintenanceMode = () => {
     if (error || !data) {
       throw new Error('Invalid recovery code or PIN');
     }
+    const { data: current, error: statusError } = await supabase.rpc('get_maintenance_status').maybeSingle();
+    if (statusError || !current) throw new Error('Recovery was processed, but the current system status could not be confirmed.');
+    if (current.is_active || current.scheduled_active) throw new Error('Manual recovery was processed, but maintenance is still active. Scheduled downtime ends automatically.');
     await fetchStatus();
   }, [fetchStatus]);
 

@@ -16,7 +16,7 @@ const MaintenanceGuard = ({ children }: { children: React.ReactNode }) => {
     if (isActive && authContext?.user && authContext?.signOut) {
       authContext.signOut('inactivity');
     }
-  }, [isActive]);
+  }, [isActive, authContext?.user, authContext?.signOut]);
 
   if (loading) return null;
 

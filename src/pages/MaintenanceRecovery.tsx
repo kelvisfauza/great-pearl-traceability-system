@@ -11,7 +11,7 @@ const MaintenanceRecovery = () => {
   const [code, setCode] = useState('');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
-  const { isActive, deactivateWithKey } = useMaintenanceMode();
+  const { isActive, isManualActive, expectedBackOnline, loading: checkingStatus, deactivateWithKey } = useMaintenanceMode();
 
   const handleRecover = async () => {
     if (!code.trim() || !pin.trim()) {
@@ -23,12 +23,28 @@ const MaintenanceRecovery = () => {
       await deactivateWithKey(code.trim(), pin.trim());
       toast({ title: 'System Restored', description: 'Maintenance mode has been deactivated. All users can now access the system.' });
       setTimeout(() => { window.location.href = '/'; }, 1500);
-    } catch {
-      toast({ title: 'Invalid Credentials', description: 'The recovery code or PIN is incorrect. Please check the SMS sent to the authorized phone.', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Recovery not confirmed', description: (error as { message?: string })?.message || 'Could not restore service. Please check the recovery code and PIN.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
+
+  if (checkingStatus) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Checking maintenance status…</div>;
+
+  if (isActive && !isManualActive) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader><CardTitle>Scheduled Maintenance</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p>The system will reopen when the scheduled downtime ends. Manual recovery codes do not cancel the schedule.</p>
+            {expectedBackOnline && <p>Expected back online: {new Date(expectedBackOnline).toLocaleString()}</p>}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!isActive) {
     return (

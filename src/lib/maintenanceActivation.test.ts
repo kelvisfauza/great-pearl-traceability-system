@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { Script } from 'node:vm';
 import ts from 'typescript';
 
-function maintenance(options: { readError?: unknown; writeError?: unknown; smsSuccess?: boolean } = {}) {
+function maintenance(options: { readError?: unknown; writeError?: unknown; smsSuccess?: boolean; scheduledActive?: boolean; statusError?: unknown } = {}) {
   const source = readFileSync('src/hooks/useMaintenanceMode.ts', 'utf8');
   const parsed = ts.createSourceFile('maintenance.ts', source, ts.ScriptTarget.Latest, true);
   let stripped = source;
@@ -16,7 +16,7 @@ function maintenance(options: { readError?: unknown; writeError?: unknown; smsSu
   let messages = 0;
   const exports: Record<string, any> = {};
   const client = {
-    rpc: () => ({ maybeSingle: async () => ({ data: { is_active: false, scheduled_active: false } }) }),
+    rpc: (name: string) => name === 'verify_and_deactivate_maintenance' ? Promise.resolve({ data: true }) : ({ maybeSingle: async () => ({ data: { is_active: false, scheduled_active: options.scheduledActive ?? false }, error: options.statusError }) }),
     functions: { invoke: async () => { messages++; return { data: { success: options.smsSuccess ?? true } }; } },
     from: (table: string) => {
       const chain: any = {
@@ -79,4 +79,19 @@ test('manual deactivation clears credentials without sending another SMS', async
   assert.equal(writes[0].recovery_key, null);
   assert.equal(writes[0].recovery_pin, null);
   assert.equal(messages(), 0);
+});
+
+test('recovery cannot report online while scheduled downtime remains active', async () => {
+  const { hook } = maintenance({ scheduledActive: true });
+  await assert.rejects(hook.deactivateWithKey('2468135790', '1357'), /maintenance is still active/);
+});
+
+test('recovery requires a confirmed status after the code is accepted', async () => {
+  const { hook } = maintenance({ statusError: new Error('Status unavailable') });
+  await assert.rejects(hook.deactivateWithKey('2468135790', '1357'), /could not be confirmed/);
+});
+
+test('recovery succeeds when manual and scheduled downtime are both inactive', async () => {
+  const { hook } = maintenance();
+  await hook.deactivateWithKey('2468135790', '1357');
 });
