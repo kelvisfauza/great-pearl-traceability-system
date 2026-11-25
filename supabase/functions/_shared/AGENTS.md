@@ -5,3 +5,4 @@
 - Keep the pure station-price formatter shared with the frontend, so secure sends and displayed previews cannot silently diverge.
 - Retired alternate manual senders are side-effect-free; provider fallbacks remain in the central sender so old routes cannot bypass recipient checks.
 - Ordinary browser email never initiates company-paid SMS; verified code/guarantor workflows and trusted background notices retain their dedicated delivery paths.
+- Transactional emails send first through the company Microsoft 365 mailbox (shared m365-mail helper) and fall back to the notification-domain sender on any Graph failure, so a Microsoft outage or permission change never stops codes or notices.
