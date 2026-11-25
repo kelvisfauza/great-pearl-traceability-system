@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       for (const p of data || []) {
         const recorded = (p.partial_payment_installments || []).reduce((s: number, i: any) => s + Number(i.amount || 0), 0);
         if (Number(p.paid_amount) !== recorded && new Date(p.updated_at).getTime() < staleBefore) {
-          const status = recorded >= Number(p.total_amount) ? "fully_paid" : "part_paid";
+          const status = p.status === "balance_rejected" ? "balance_rejected" : recorded >= Number(p.total_amount) ? "fully_paid" : "part_paid";
           await db.from("partial_payments").update({ paid_amount: recorded, status }).eq("id", p.id).eq("paid_amount", p.paid_amount);
           await db.from("audit_logs").insert({ action: "FINANCE_PART_PAYMENT_HEAL", table_name: "partial_payments", record_id: p.id, performed_by: "system", department: "Finance", reason: `Paid corrected from ${p.paid_amount} to recorded installments ${recorded} after an unfinished send` });
           p.paid_amount = recorded; p.status = status; p.balance = Number(p.total_amount) - recorded;
@@ -137,6 +137,7 @@ Deno.serve(async (req) => {
       pp = created;
     }
     if (pp.status === "fully_paid") return respond(false, { error: "This payment is already fully paid" });
+    if (pp.status === "balance_rejected") return respond(false, { error: "The remaining balance of this payment was rejected, so nothing more can be paid" });
     const balanceBefore = Number(pp.total_amount) - Number(pp.paid_amount);
     if (amount > balanceBefore) return respond(false, { error: `Amount is more than the balance left (${ugx(balanceBefore)})` });
     const newPaid = Number(pp.paid_amount) + amount;

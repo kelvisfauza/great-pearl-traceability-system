@@ -92,7 +92,25 @@ serve(async (req) => {
       const { data: holds } = await supabase.from("ledger_entries").select("user_id, amount, reference")
         .eq("metadata->>instant_withdrawal_id", iw.id).lt("amount", 0);
       let refunded = 0;
-      for (const h of holds || []) {
+      // Part already paid: the money that went out stays debited; return only the unpaid balance.
+      const { data: part } = await supabase.from("partial_payments").select("id, paid_amount, balance")
+        .eq("source_type", "withdrawal").eq("source_id", iw.id).maybeSingle();
+      const partPaid = Number(part?.paid_amount || 0);
+      if (partPaid > 0) {
+        const held = (holds || []).reduce((s: number, h: any) => s + Math.abs(Number(h.amount)), 0);
+        const back = Math.min(Math.max(0, Number(part!.balance || 0)), held);
+        if (back > 0) {
+          const { error: rErr } = await supabase.from("ledger_entries").insert({
+            user_id: iw.user_id, entry_type: "DEPOSIT", amount: back, source_category: "REFUND",
+            reference: `REFUND-BAL-IW-${iw.id}`,
+            metadata: { type: "withdrawal_refund", instant_withdrawal_id: iw.id, bypass_treasury_check: true, part_paid: partPaid,
+              description: `Refund — unpaid balance of part-paid withdrawal rejected by Finance${reason ? ` (${reason})` : ""}`, initiated_by: adminEmail },
+          });
+          if (!rErr) refunded = back; else console.error("balance refund insert failed", rErr);
+        }
+        await supabase.from("partial_payments").update({ status: "balance_rejected" }).eq("id", part!.id);
+      }
+      for (const h of (partPaid > 0 ? [] : holds || [])) {
         const amt = Math.abs(Number(h.amount));
         const { error: rErr } = await supabase.from("ledger_entries").insert({
           user_id: h.user_id, entry_type: "DEPOSIT", amount: amt, source_category: "REFUND",
