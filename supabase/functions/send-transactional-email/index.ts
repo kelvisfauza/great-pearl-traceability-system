@@ -7,7 +7,6 @@ import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
 import { toGsm7 } from '../_shared/gsm7.ts'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { mayMirrorEmailToSms } from '../_shared/message-policy.ts';
-import { sendViaM365 } from '../_shared/m365-mail.ts';
 
 const SITE_NAME = "Great Agro Coffee"
 const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site"
@@ -230,9 +229,6 @@ Deno.serve(async (req) => {
     }
 
     const emailTask = allowEmail ? (async () => {
-      const m365 = await sendViaM365(effectiveRecipient, resolvedSubject, html, 'operations@greatpearlcoffee.com')
-      if (m365.ok) { console.log(`Sent via Microsoft 365: ${templateName}`); return }
-      console.warn(`Microsoft 365 send failed, using fallback sender: ${m365.error}`)
       await sendLovableEmailWithRetry(
         {
           to: effectiveRecipient,
@@ -342,8 +338,7 @@ Deno.serve(async (req) => {
         </div>`
         const opsHtml = html.replace(/<body[^>]*>/, (match: string) => `${match}${ccNote}`)
 
-        const m365cc = await sendViaM365(OPERATIONS_EMAIL, ccSubject, opsHtml, OPERATIONS_EMAIL)
-        if (!m365cc.ok) await sendLovableEmailWithRetry(
+        await sendLovableEmailWithRetry(
           {
             to: OPERATIONS_EMAIL,
             from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
