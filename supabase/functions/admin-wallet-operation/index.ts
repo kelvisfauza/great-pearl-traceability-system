@@ -543,8 +543,23 @@ serve(async (req) => {
       if (!isAdmin && op.status !== "awaiting_finance") return respond(false, { error: "Finance can only reject operations awaiting release" });
       if (!["pending", "awaiting_finance"].includes(op.status)) return respond(false, { error: `Cannot reject a ${op.status} operation` });
       {
-        const { data: part } = await supabase.from("partial_payments").select("paid_amount").eq("source_type", "wallet_op").eq("source_id", op.id).maybeSingle();
-        if (Number(part?.paid_amount || 0) > 0) return respond(false, { error: "Part of this withdrawal is already paid, so it cannot be rejected. Pay the balance instead." });
+        const { data: part } = await supabase.from("partial_payments").select("id, paid_amount, balance").eq("source_type", "wallet_op").eq("source_id", op.id).maybeSingle();
+        const paid = Number(part?.paid_amount || 0);
+        if (paid > 0) {
+          // Part already paid: each paid part debited the wallet on its own, and the
+          // unpaid balance was never taken. Close only the unpaid balance — keep the
+          // paid parts' debits and do not refund anything.
+          const dropped = Math.max(0, Number(part?.balance || 0));
+          const { error: uErr } = await supabase.from("admin_wallet_operations").update({
+            status: "rejected",
+            rejected_reason: rejected_reason || null,
+            metadata: { ...(op.metadata || {}), part_paid_on_reject: paid, unpaid_balance_rejected: dropped, rejected_by_email: actorEmail, rejected_by_name: actorEmp?.name || actorEmail, rejected_at: new Date().toISOString() },
+          }).eq("id", operation_id).eq("status", op.status);
+          if (uErr) return respond(false, { error: uErr.message });
+          await supabase.from("partial_payments").update({ status: "balance_rejected", updated_at: new Date().toISOString() }).eq("id", part!.id);
+          await supabase.from("audit_logs").insert({ action: "wallet_op_balance_rejected", table_name: "admin_wallet_operations", record_id: operation_id, performed_by: actorEmail, reason: rejected_reason || null, record_data: { paid, unpaid_balance_rejected: dropped } } as any).then(() => {}, () => {});
+          return respond(true, { message: `Remaining ${ugx(dropped)} rejected. The ${ugx(paid)} already paid stays recorded; nothing more will be taken from the wallet.`, refunded: 0 });
+        }
       }
 
       // If a previous attempt already debited the wallet (payout then failed),
