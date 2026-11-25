@@ -6,6 +6,7 @@ import { z } from 'npm:zod@3';
 const Input = z.object({ view: z.enum(['overview', 'users', 'devices', 'managed']), search: z.string().trim().max(80).optional(), next: z.string().max(2000).optional() });
 const ACTIONS = ['lock', 'restart', 'sync', 'block', 'unblock', 'retire', 'wipe'] as const;
 const Action = z.object({ action: z.enum(ACTIONS), deviceId: z.string().uuid(), confirmName: z.string().max(200), acknowledge: z.literal(true) });
+const Meeting = z.object({ meeting: z.literal('create'), organizer: z.string().email().max(200), subject: z.string().trim().min(3).max(200), start: z.string().datetime({ offset: true }), minutes: z.number().int().min(15).max(480) });
 const MANAGED_FIELDS = 'id,deviceName,userPrincipalName,userDisplayName,operatingSystem,osVersion,model,manufacturer,complianceState,lastSyncDateTime,azureADDeviceId,managedDeviceOwnerType';
 const GATEWAY = 'https://connector-gateway.lovable.dev/azure_graph';
 const USER_FIELDS = 'id,displayName,userPrincipalName,mail,jobTitle,department,accountEnabled,createdDateTime';
@@ -25,6 +26,32 @@ Deno.serve(async req => {
     const { data: roles } = await client.from('user_roles').select('role').eq('user_id', auth.user.id).in('role', ['Administrator', 'Super Admin']);
     if (!person || person.disabled === true || String(person.status).toLowerCase() !== 'active' || !roles?.length) return reply({ ok: false, error: 'Active administrator access required', denied: true });
     const raw = await req.json().catch(() => ({}));
+    if (raw && typeof raw === 'object' && 'meeting' in raw) {
+      const m = Meeting.safeParse(raw);
+      if (!m.success) return reply({ ok: false, error: 'Check the meeting details' });
+      const gk = Deno.env.get('LOVABLE_API_KEY'); const ck = Deno.env.get('AZURE_GRAPH_API_KEY');
+      if (!gk || !ck) return reply({ ok: false, error: 'Microsoft 365 connection is not configured' });
+      const { organizer, subject, start, minutes } = m.data;
+      const startAt = new Date(start); const endAt = new Date(startAt.getTime() + minutes * 60000);
+      const auditId = crypto.randomUUID();
+      const { error: aErr } = await client.from('audit_logs').insert({ id: auditId, action: 'teams_meeting_create_submitted', table_name: 'microsoft_teams_meetings', record_id: organizer, performed_by: auth.user.email, reason: `Administrator requested Teams meeting "${subject}"`, record_data: { organizer, subject, start: startAt.toISOString(), minutes } });
+      if (aErr) return reply({ ok: false, error: 'Could not record the meeting request; nothing was sent to Microsoft' });
+      const gh = { Authorization: `Bearer ${gk}`, 'X-Connection-Api-Key': ck };
+      const ur = await fetch(`${GATEWAY}/v1.0/users/${encodeURIComponent(organizer)}?$select=id`, { headers: gh, signal: AbortSignal.timeout(25000) });
+      const uid = ur.ok ? (await ur.json())?.id : null;
+      if (!uid) { await client.from('audit_logs').update({ action: 'teams_meeting_create_refused', record_data: { organizer, subject, result: `organizer not found (${ur.status})` } }).eq('id', auditId); return reply({ ok: false, error: 'That organizer email was not found in Microsoft 365' }); }
+      const r = await fetch(`${GATEWAY}/v1.0/users/${uid}/onlineMeetings`, { method: 'POST', headers: { Authorization: `Bearer ${gk}`, 'X-Connection-Api-Key': ck, 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, startDateTime: startAt.toISOString(), endDateTime: endAt.toISOString() }), signal: AbortSignal.timeout(25000) });
+      const text = await r.text();
+      let res: Record<string, unknown>;
+      if (!r.ok) { let msg = text; try { msg = JSON.parse(text)?.error?.message ?? text; } catch { /* keep */ } res = { ok: false, error: `Microsoft returned ${r.status}: ${String(msg).slice(0, 300)}` }; }
+      else { const d = JSON.parse(text); res = { ok: true, joinUrl: d.joinWebUrl, subject, start: startAt.toISOString(), end: endAt.toISOString(), organizer }; }
+      await client.from('audit_logs').update({ action: `teams_meeting_create_${res.ok ? 'created' : 'refused'}`, record_data: { organizer, subject, start: startAt.toISOString(), minutes, joinUrl: res.ok ? res.joinUrl : null, result: res.ok ? 'created' : res.error } }).eq('id', auditId);
+      return reply(res);
+    }
+    if (raw && typeof raw === 'object' && 'meetings' in raw) {
+      const { data: rows } = await client.from('audit_logs').select('record_data,performed_by,created_at').eq('action', 'teams_meeting_create_created').order('created_at', { ascending: false }).limit(20);
+      return reply({ ok: true, items: (rows ?? []).map((x: any) => ({ ...x.record_data, createdBy: x.performed_by, createdAt: x.created_at })) });
+    }
     if (raw && typeof raw === 'object' && 'action' in raw) {
       const a = Action.safeParse(raw);
       if (!a.success) return reply({ ok: false, error: 'Invalid device action' });

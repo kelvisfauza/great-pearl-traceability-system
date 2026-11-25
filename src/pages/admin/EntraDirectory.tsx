@@ -182,6 +182,60 @@ function ManagedDevices() {
   );
 }
 
+function TeamsMeetings() {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const soon = new Date(Date.now() + 10 * 60000);
+  const local = `${soon.getFullYear()}-${pad(soon.getMonth() + 1)}-${pad(soon.getDate())}T${pad(soon.getHours())}:${pad(soon.getMinutes())}`;
+  const [organizer, setOrganizer] = useState('fauzakusa@greatpearlcoffee.com');
+  const [subject, setSubject] = useState('');
+  const [start, setStart] = useState(local);
+  const [minutes, setMinutes] = useState(60);
+  const [busy, setBusy] = useState(false);
+  const [list, setList] = useState<any[]>([]);
+  const load = () => call({ meetings: 'list' }).then(d => setList(d.items)).catch(() => {});
+  useEffect(() => { load(); }, []);
+  const create = async (now: boolean) => {
+    if (subject.trim().length < 3) { toast.error('Enter a meeting title'); return; }
+    setBusy(true);
+    try {
+      const when = now ? new Date() : new Date(start);
+      const d = await call({ meeting: 'create', organizer: organizer.trim(), subject: subject.trim(), start: when.toISOString(), minutes });
+      toast.success('Teams meeting created');
+      if (now) window.open(d.joinUrl, '_blank', 'noopener');
+      setSubject(''); load();
+    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+  };
+  const copy = (u: string) => navigator.clipboard.writeText(u).then(() => toast.success('Join link copied'));
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><label className="text-xs text-muted-foreground">Title</label><Input value={subject} maxLength={200} onChange={e => setSubject(e.target.value)} placeholder="Management meeting" /></div>
+        <div><label className="text-xs text-muted-foreground">Organizer (Microsoft email)</label><Input value={organizer} onChange={e => setOrganizer(e.target.value)} /></div>
+        <div><label className="text-xs text-muted-foreground">Starts</label><Input type="datetime-local" value={start} onChange={e => setStart(e.target.value)} /></div>
+        <div><label className="text-xs text-muted-foreground">Length (minutes)</label><Input type="number" min={15} max={480} value={minutes} onChange={e => setMinutes(Math.max(15, Math.min(480, Number(e.target.value) || 60)))} /></div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button disabled={busy} onClick={() => create(true)}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Start meeting now</Button>
+        <Button variant="outline" disabled={busy} onClick={() => create(false)}>Schedule meeting</Button>
+      </div>
+      <Table>
+        <TableHeader><TableRow><TableHead>Meeting</TableHead><TableHead>Starts</TableHead><TableHead>Organizer</TableHead><TableHead /></TableRow></TableHeader>
+        <TableBody>
+          {list.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No meetings created yet</TableCell></TableRow>}
+          {list.map((m, i) => (
+            <TableRow key={i}>
+              <TableCell className="font-medium">{m.subject}</TableCell>
+              <TableCell>{m.start ? new Date(m.start).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</TableCell>
+              <TableCell>{m.organizer}</TableCell>
+              <TableCell className="space-x-2 text-right">{m.joinUrl && <><Button size="sm" variant="outline" onClick={() => copy(m.joinUrl)}>Copy link</Button><Button size="sm" onClick={() => window.open(m.joinUrl, '_blank', 'noopener')}>Join</Button></>}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 export default function EntraDirectory() {
   const [ov, setOv] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -202,9 +256,10 @@ export default function EntraDirectory() {
         <CardHeader><CardTitle className="text-base">Directory</CardTitle></CardHeader>
         <CardContent>
           <Tabs defaultValue="users">
-            <TabsList><TabsTrigger value="users">Staff</TabsTrigger><TabsTrigger value="devices">Devices</TabsTrigger></TabsList>
+            <TabsList><TabsTrigger value="users">Staff</TabsTrigger><TabsTrigger value="devices">Devices</TabsTrigger><TabsTrigger value="meetings">Meetings</TabsTrigger></TabsList>
             <TabsContent value="users"><DirectoryList view="users" /></TabsContent>
             <TabsContent value="devices"><ManagedDevices /></TabsContent>
+            <TabsContent value="meetings"><TeamsMeetings /></TabsContent>
           </Tabs>
         </CardContent>
       </Card>
