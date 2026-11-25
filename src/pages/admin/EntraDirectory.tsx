@@ -26,17 +26,19 @@ function DirectoryList({ view }: { view: View }) {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hiddenSignIn, setHiddenSignIn] = useState(false);
   const load = async (append = false) => {
     setLoading(true); setError(null);
     try {
       const d = await call({ view, search: search || undefined, next: append ? next : undefined });
-      setItems(p => (append ? [...p, ...d.items] : d.items)); setNext(d.next);
+      setItems(p => (append ? [...p, ...d.items] : d.items)); setNext(d.next); if (!append) setHiddenSignIn(!!d.signInHidden);
     } catch (e: any) { setError(e.message); if (!append) setItems([]); }
     setLoading(false);
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
   return (
     <div className="space-y-3">
+      {view === 'users' && hiddenSignIn && <p className="text-xs text-muted-foreground">Last sign-in times need the Microsoft permission AuditLog.Read.All. Each person's devices are listed in the Devices tab.</p>}
       <form className="flex gap-2" onSubmit={e => { e.preventDefault(); load(); }}>
         <Input placeholder={view === 'users' ? 'Search staff by name' : 'Search devices by name'} value={search} onChange={e => setSearch(e.target.value)} />
         <Button type="submit" disabled={loading}><Search className="h-4 w-4" /></Button>
@@ -46,7 +48,7 @@ function DirectoryList({ view }: { view: View }) {
         <Table>
           <TableHeader>
             {view === 'users' ? (
-              <TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Job / Department</TableHead><TableHead>Status</TableHead><TableHead>Created</TableHead></TableRow>
+              <TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Job / Department</TableHead><TableHead>Status</TableHead><TableHead>Last sign-in</TableHead><TableHead>Created</TableHead></TableRow>
             ) : (
               <TableRow><TableHead>Device</TableHead><TableHead>System</TableHead><TableHead>Managed</TableHead><TableHead>Status</TableHead><TableHead>Last sign-in</TableHead></TableRow>
             )}
@@ -58,6 +60,7 @@ function DirectoryList({ view }: { view: View }) {
                 <TableCell className="text-muted-foreground">{i.mail || i.userPrincipalName}</TableCell>
                 <TableCell>{[i.jobTitle, i.department].filter(Boolean).join(' · ') || '—'}</TableCell>
                 <TableCell><Badge variant={i.accountEnabled ? 'default' : 'secondary'}>{i.accountEnabled ? 'Active' : 'Disabled'}</Badge></TableCell>
+                <TableCell>{hiddenSignIn ? 'Needs permission' : fmt(i.signInActivity?.lastSuccessfulSignInDateTime || i.signInActivity?.lastSignInDateTime)}</TableCell>
                 <TableCell>{fmt(i.createdDateTime)}</TableCell>
               </TableRow>
             ) : (
@@ -69,7 +72,7 @@ function DirectoryList({ view }: { view: View }) {
                 <TableCell>{fmt(i.approximateLastSignInDateTime)}</TableCell>
               </TableRow>
             ))}
-            {!loading && !error && items.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Nothing found</TableCell></TableRow>}
+            {!loading && !error && shown.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Nothing found</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>
@@ -96,6 +99,11 @@ function ManagedDevices() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<{ device: any; action: string } | null>(null);
+  const [filter, setFilter] = useState<'all' | 'stale' | 'new'>('all');
+  const DAY = 86400000;
+  const shown = items.filter(i => filter === 'all' ? true : filter === 'stale' ? (!i.lastSyncDateTime || Date.now() - new Date(i.lastSyncDateTime).getTime() > 21 * DAY) : (i.enrolledDateTime && Date.now() - new Date(i.enrolledDateTime).getTime() < 7 * DAY));
+  const staleCount = items.filter(i => !i.lastSyncDateTime || Date.now() - new Date(i.lastSyncDateTime).getTime() > 21 * DAY).length;
+  const newCount = items.filter(i => i.enrolledDateTime && Date.now() - new Date(i.enrolledDateTime).getTime() < 7 * DAY).length;
   const [typed, setTyped] = useState('');
   const [understood, setUnderstood] = useState(false);
   const [sending, setSending] = useState(false);
@@ -126,12 +134,18 @@ function ManagedDevices() {
         <Input placeholder="Search devices by name" value={search} onChange={e => setSearch(e.target.value)} />
         <Button type="submit" disabled={loading}><Search className="h-4 w-4" /></Button>
       </form>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant={filter === 'all' ? 'default' : 'outline'} onClick={() => setFilter('all')}>All ({items.length})</Button>
+        <Button size="sm" variant={filter === 'new' ? 'default' : 'outline'} onClick={() => setFilter('new')}>New this week ({newCount})</Button>
+        <Button size="sm" variant={filter === 'stale' ? 'default' : 'outline'} onClick={() => setFilter('stale')}>Not seen for 3+ weeks ({staleCount})</Button>
+      </div>
+      {newCount > 0 && filter === 'all' && <p className="rounded-md border border-primary/40 bg-primary/5 p-2 text-sm">{newCount} device{newCount > 1 ? 's' : ''} joined in the last 7 days. Check they belong to staff.</p>}
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader><TableRow><TableHead>Device</TableHead><TableHead>User</TableHead><TableHead>System</TableHead><TableHead>Compliance</TableHead><TableHead>Last check-in</TableHead><TableHead /></TableRow></TableHeader>
           <TableBody>
-            {items.map(i => (
+            {shown.map(i => (
               <TableRow key={i.id}>
                 <TableCell className="font-medium">{i.deviceName}<div className="text-xs text-muted-foreground">{[i.manufacturer, i.model].filter(Boolean).join(' ')}</div></TableCell>
                 <TableCell>{i.userDisplayName || '—'}<div className="text-xs text-muted-foreground">{i.userPrincipalName}</div></TableCell>
@@ -182,6 +196,40 @@ function ManagedDevices() {
   );
 }
 
+function SecurityReports() {
+  const [signins, setSignins] = useState<any[]>([]); const [risky, setRisky] = useState<any[]>([]);
+  const [e1, setE1] = useState<string | null>(null); const [e2, setE2] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    Promise.all([
+      call({ view: 'signins' }).then(d => setSignins(d.items)).catch(e => setE1(e.message)),
+      call({ view: 'risky' }).then(d => setRisky(d.items)).catch(e => setE2(e.message)),
+    ]).finally(() => setLoading(false));
+  }, []);
+  const flagged = signins.filter(s => (s.riskLevelAggregated && !['none', 'hidden'].includes(s.riskLevelAggregated)) || (s.location?.countryOrRegion && s.location.countryOrRegion !== 'UG') || s.status?.errorCode);
+  return (
+    <div className="space-y-4">
+      {loading && <Loader2 className="mx-auto h-5 w-5 animate-spin" />}
+      <div>
+        <h3 className="mb-2 font-semibold">Accounts Microsoft marks as risky</h3>
+        {e2 ? <p className="text-sm text-destructive">{e2} Needed Microsoft permission: IdentityRiskyUser.Read.All (also needs Entra ID P2).</p> : (
+          <Table><TableHeader><TableRow><TableHead>Person</TableHead><TableHead>Risk</TableHead><TableHead>State</TableHead><TableHead>Updated</TableHead></TableRow></TableHeader>
+            <TableBody>{risky.length === 0 && !loading && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No risky accounts</TableCell></TableRow>}
+              {risky.map(r => <TableRow key={r.id}><TableCell>{r.userDisplayName}<div className="text-xs text-muted-foreground">{r.userPrincipalName}</div></TableCell><TableCell><Badge variant="destructive">{r.riskLevel}</Badge></TableCell><TableCell>{r.riskState}</TableCell><TableCell>{fmt(r.riskLastUpdatedDateTime)}</TableCell></TableRow>)}
+            </TableBody></Table>)}
+      </div>
+      <div>
+        <h3 className="mb-2 font-semibold">Unusual sign-ins (outside Uganda, failed or risky)</h3>
+        {e1 ? <p className="text-sm text-destructive">{e1} Needed Microsoft permission: AuditLog.Read.All (also needs Entra ID P1).</p> : (
+          <Table><TableHeader><TableRow><TableHead>When</TableHead><TableHead>Person</TableHead><TableHead>Where</TableHead><TableHead>Device</TableHead><TableHead>Result</TableHead></TableRow></TableHeader>
+            <TableBody>{flagged.length === 0 && !loading && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No unusual sign-ins in the latest 50</TableCell></TableRow>}
+              {flagged.map(s => <TableRow key={s.id}><TableCell>{new Date(s.createdDateTime).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</TableCell><TableCell>{s.userDisplayName}<div className="text-xs text-muted-foreground">{s.appDisplayName}</div></TableCell><TableCell>{[s.location?.city, s.location?.countryOrRegion].filter(Boolean).join(', ') || '—'}<div className="text-xs text-muted-foreground">{s.ipAddress}</div></TableCell><TableCell>{[s.deviceDetail?.operatingSystem, s.deviceDetail?.browser].filter(Boolean).join(' · ') || '—'}</TableCell><TableCell>{s.status?.errorCode ? <Badge variant="destructive">Failed</Badge> : <Badge>OK</Badge>}{s.riskLevelAggregated && !['none', 'hidden'].includes(s.riskLevelAggregated) ? <Badge variant="destructive" className="ml-1">{s.riskLevelAggregated} risk</Badge> : null}</TableCell></TableRow>)}
+            </TableBody></Table>)}
+      </div>
+    </div>
+  );
+}
+
 function TeamsMeetings() {
   const pad = (n: number) => String(n).padStart(2, '0');
   const soon = new Date(Date.now() + 10 * 60000);
@@ -192,6 +240,10 @@ function TeamsMeetings() {
   const [minutes, setMinutes] = useState(60);
   const [busy, setBusy] = useState(false);
   const [list, setList] = useState<any[]>([]);
+  const [staff, setStaff] = useState<any[]>([]);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [find, setFind] = useState('');
+  useEffect(() => { (supabase as any).from('employees').select('id,name,department,phone').eq('status', 'Active').not('disabled', 'is', true).order('name').then(({ data }: any) => setStaff(data ?? [])); }, []);
   const load = () => call({ meetings: 'list' }).then(d => setList(d.items)).catch(() => {});
   useEffect(() => { load(); }, []);
   const create = async (now: boolean) => {
@@ -199,10 +251,10 @@ function TeamsMeetings() {
     setBusy(true);
     try {
       const when = now ? new Date() : new Date(start);
-      const d = await call({ meeting: 'create', organizer: organizer.trim(), subject: subject.trim(), start: when.toISOString(), minutes });
-      toast.success('Teams meeting created');
+      const d = await call({ meeting: 'create', organizer: organizer.trim(), subject: subject.trim(), start: when.toISOString(), minutes, attendees: picked });
+      toast.success(d.sms ? `Teams meeting created. SMS sent to ${d.sms.sent}${d.sms.failed ? `, ${d.sms.failed} failed` : ''}${d.sms.skipped ? `, ${d.sms.skipped} without a registered phone` : ''}` : 'Teams meeting created');
       if (now) window.open(d.joinUrl, '_blank', 'noopener');
-      setSubject(''); load();
+      setSubject(''); setPicked([]); load();
     } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
   };
   const copy = (u: string) => navigator.clipboard.writeText(u).then(() => toast.success('Join link copied'));
@@ -213,6 +265,18 @@ function TeamsMeetings() {
         <div><label className="text-xs text-muted-foreground">Organizer (Microsoft email)</label><Input value={organizer} onChange={e => setOrganizer(e.target.value)} /></div>
         <div><label className="text-xs text-muted-foreground">Starts</label><Input type="datetime-local" value={start} onChange={e => setStart(e.target.value)} /></div>
         <div><label className="text-xs text-muted-foreground">Length (minutes)</label><Input type="number" min={15} max={480} value={minutes} onChange={e => setMinutes(Math.max(15, Math.min(480, Number(e.target.value) || 60)))} /></div>
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between"><label className="text-xs text-muted-foreground">Invite staff by SMS ({picked.length} chosen)</label><div className="space-x-2"><Button size="sm" variant="ghost" onClick={() => setPicked(staff.map(s => s.id))}>All staff</Button><Button size="sm" variant="ghost" onClick={() => setPicked([])}>Clear</Button></div></div>
+        <Input placeholder="Search staff" value={find} onChange={e => setFind(e.target.value)} />
+        <div className="max-h-48 overflow-y-auto rounded-md border p-2">
+          {staff.filter(s => !find || `${s.name} ${s.department ?? ''}`.toLowerCase().includes(find.toLowerCase())).map(s => (
+            <label key={s.id} className="flex items-center gap-2 py-1 text-sm">
+              <input type="checkbox" checked={picked.includes(s.id)} onChange={e => setPicked(p => e.target.checked ? [...p, s.id] : p.filter(x => x !== s.id))} />
+              <span>{s.name}</span><span className="text-xs text-muted-foreground">{s.department}{!s.phone ? ' · no phone' : ''}</span>
+            </label>
+          ))}
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button disabled={busy} onClick={() => create(true)}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Start meeting now</Button>
@@ -256,10 +320,11 @@ export default function EntraDirectory() {
         <CardHeader><CardTitle className="text-base">Directory</CardTitle></CardHeader>
         <CardContent>
           <Tabs defaultValue="users">
-            <TabsList><TabsTrigger value="users">Staff</TabsTrigger><TabsTrigger value="devices">Devices</TabsTrigger><TabsTrigger value="meetings">Meetings</TabsTrigger></TabsList>
+            <TabsList><TabsTrigger value="users">Staff</TabsTrigger><TabsTrigger value="devices">Devices</TabsTrigger><TabsTrigger value="meetings">Meetings</TabsTrigger><TabsTrigger value="security">Security</TabsTrigger></TabsList>
             <TabsContent value="users"><DirectoryList view="users" /></TabsContent>
             <TabsContent value="devices"><ManagedDevices /></TabsContent>
             <TabsContent value="meetings"><TeamsMeetings /></TabsContent>
+            <TabsContent value="security"><SecurityReports /></TabsContent>
           </Tabs>
         </CardContent>
       </Card>

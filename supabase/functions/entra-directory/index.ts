@@ -1,15 +1,17 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { z } from 'npm:zod@3';
+import { registeredPhone, deliveryAccepted } from '../_shared/message-policy.ts';
 
 // Read-only Microsoft 365 / Entra directory view for active Administrators. Every read is audited.
-const Input = z.object({ view: z.enum(['overview', 'users', 'devices', 'managed']), search: z.string().trim().max(80).optional(), next: z.string().max(2000).optional() });
+const Input = z.object({ view: z.enum(['overview', 'users', 'devices', 'managed', 'signins', 'risky']), search: z.string().trim().max(80).optional(), next: z.string().max(2000).optional() });
 const ACTIONS = ['lock', 'restart', 'sync', 'block', 'unblock', 'retire', 'wipe'] as const;
 const Action = z.object({ action: z.enum(ACTIONS), deviceId: z.string().uuid(), confirmName: z.string().max(200), acknowledge: z.literal(true) });
-const Meeting = z.object({ meeting: z.literal('create'), organizer: z.string().email().max(200), subject: z.string().trim().min(3).max(200), start: z.string().datetime({ offset: true }), minutes: z.number().int().min(15).max(480) });
-const MANAGED_FIELDS = 'id,deviceName,userPrincipalName,userDisplayName,operatingSystem,osVersion,model,manufacturer,complianceState,lastSyncDateTime,azureADDeviceId,managedDeviceOwnerType';
+const Meeting = z.object({ meeting: z.literal('create'), organizer: z.string().email().max(200), subject: z.string().trim().min(3).max(200), start: z.string().datetime({ offset: true }), minutes: z.number().int().min(15).max(480), attendees: z.array(z.string().uuid()).max(100).default([]) });
+const MANAGED_FIELDS = 'id,deviceName,userPrincipalName,userDisplayName,operatingSystem,osVersion,model,manufacturer,complianceState,lastSyncDateTime,azureADDeviceId,managedDeviceOwnerType,enrolledDateTime';
 const GATEWAY = 'https://connector-gateway.lovable.dev/azure_graph';
 const USER_FIELDS = 'id,displayName,userPrincipalName,mail,jobTitle,department,accountEnabled,createdDateTime';
+const USER_FIELDS_SIGNIN = USER_FIELDS + ',signInActivity';
 const DEVICE_FIELDS = 'id,displayName,operatingSystem,operatingSystemVersion,accountEnabled,approximateLastSignInDateTime,trustType,isManaged,isCompliant';
 
 Deno.serve(async req => {
@@ -31,7 +33,7 @@ Deno.serve(async req => {
       if (!m.success) return reply({ ok: false, error: 'Check the meeting details' });
       const gk = Deno.env.get('LOVABLE_API_KEY'); const ck = Deno.env.get('AZURE_GRAPH_API_KEY');
       if (!gk || !ck) return reply({ ok: false, error: 'Microsoft 365 connection is not configured' });
-      const { organizer, subject, start, minutes } = m.data;
+      const { organizer, subject, start, minutes, attendees } = m.data;
       const startAt = new Date(start); const endAt = new Date(startAt.getTime() + minutes * 60000);
       const auditId = crypto.randomUUID();
       const { error: aErr } = await client.from('audit_logs').insert({ id: auditId, action: 'teams_meeting_create_submitted', table_name: 'microsoft_teams_meetings', record_id: organizer, performed_by: auth.user.email, reason: `Administrator requested Teams meeting "${subject}"`, record_data: { organizer, subject, start: startAt.toISOString(), minutes } });
@@ -44,8 +46,28 @@ Deno.serve(async req => {
       const text = await r.text();
       let res: Record<string, unknown>;
       if (!r.ok) { let msg = text; try { msg = JSON.parse(text)?.error?.message ?? text; } catch { /* keep */ } res = { ok: false, error: `Microsoft returned ${r.status}: ${String(msg).slice(0, 300)}` }; }
-      else { const d = JSON.parse(text); res = { ok: true, joinUrl: d.joinWebUrl, subject, start: startAt.toISOString(), end: endAt.toISOString(), organizer }; }
-      await client.from('audit_logs').update({ action: `teams_meeting_create_${res.ok ? 'created' : 'refused'}`, record_data: { organizer, subject, start: startAt.toISOString(), minutes, joinUrl: res.ok ? res.joinUrl : null, result: res.ok ? 'created' : res.error } }).eq('id', auditId);
+      else {
+        const d = JSON.parse(text);
+        const meetingId = d.joinMeetingIdSettings?.joinMeetingId ?? null; const passcode = d.joinMeetingIdSettings?.passcode ?? null;
+        res = { ok: true, joinUrl: d.joinWebUrl, subject, start: startAt.toISOString(), end: endAt.toISOString(), organizer, meetingId, passcode };
+        if (attendees.length) {
+          const { data: people } = await client.from('employees').select('id,name,phone,status,disabled').in('id', attendees);
+          const when = startAt.toLocaleString('en-GB', { timeZone: 'Africa/Kampala', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+          const now = Math.abs(startAt.getTime() - Date.now()) < 10 * 60000;
+          const join = meetingId ? ` Join in Teams with Meeting ID ${String(meetingId).replace(/(\d{3})(?=\d)/g, '$1 ')}${passcode ? `, Passcode ${passcode}` : ''}.` : ' Open Microsoft Teams to join.';
+          const msg = `Great Agro Coffee: Teams meeting "${subject.slice(0, 60)}" ${now ? 'has started now' : `is scheduled for ${when}`} (${minutes} min).${join}`;
+          let sent = 0, failed = 0, skipped = 0;
+          for (const p of people ?? []) {
+            if (p.disabled === true || String(p.status).toLowerCase() !== 'active' || !p.phone || !await registeredPhone(client, p.phone)) { skipped++; continue; }
+            try {
+              const sr = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-sms`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` }, body: JSON.stringify({ phone: p.phone, message: msg, messageType: 'company_broadcast', userName: p.name, triggeredBy: auth.user.email, requestId: auditId }) });
+              if (deliveryAccepted(sr.ok, await sr.json().catch(() => null))) sent++; else failed++;
+            } catch { failed++; }
+          }
+          res.sms = { sent, failed, skipped };
+        }
+      }
+      await client.from('audit_logs').update({ action: `teams_meeting_create_${res.ok ? 'created' : 'refused'}`, record_data: { organizer, subject, start: startAt.toISOString(), minutes, joinUrl: res.ok ? res.joinUrl : null, attendees: attendees.length, sms: (res as any).sms ?? null, result: res.ok ? 'created' : res.error } }).eq('id', auditId);
       return reply(res);
     }
     if (raw && typeof raw === 'object' && 'meetings' in raw) {
@@ -108,7 +130,7 @@ Deno.serve(async req => {
       return `${u.pathname}${u.search}`;
     };
     const { view, search, next } = parsed.data;
-    if (next && !/^\/v1\.0\/(users|devices|deviceManagement\/managedDevices)\?/.test(next)) return reply({ ok: false, error: 'Invalid page link' });
+    if (next && !/^\/v1\.0\/(users|devices|deviceManagement\/managedDevices|auditLogs\/signIns)\?/.test(next)) return reply({ ok: false, error: 'Invalid page link' });
     const q = search ? encodeURIComponent(`"displayName:${search.replace(/"/g, '')}"`) : '';
 
     let result: Record<string, unknown>;
@@ -120,13 +142,22 @@ Deno.serve(async req => {
       ]);
       const o = org?.value?.[0] ?? {};
       result = { organization: { name: o.displayName ?? null, country: o.countryLetterCode ?? null, domains: (o.verifiedDomains ?? []).map((d: any) => d.name) }, userCount: typeof users === 'number' ? users : null, deviceCount: typeof devices === 'number' ? devices : null };
+    } else if (view === 'signins') {
+      const data = await graph(next ?? `/v1.0/auditLogs/signIns?$top=50&$select=id,createdDateTime,userDisplayName,userPrincipalName,appDisplayName,ipAddress,location,deviceDetail,status,riskLevelAggregated,riskState,conditionalAccessStatus`);
+      result = { items: data?.value ?? [], next: nextPath(data?.['@odata.nextLink']) ?? null };
+    } else if (view === 'risky') {
+      const data = await graph(`/v1.0/identityProtection/riskyUsers?$top=50`);
+      result = { items: data?.value ?? [], next: null };
     } else {
       const fields = view === 'users' ? USER_FIELDS : view === 'managed' ? MANAGED_FIELDS : DEVICE_FIELDS;
       const coll = view === 'managed' ? 'deviceManagement/managedDevices' : view;
       const mq = view === 'managed' && search ? `&$filter=${encodeURIComponent(`startswith(deviceName,'${search.replace(/'/g, "''")}')`)}` : '';
       const path = next ?? `/v1.0/${coll}?$select=${fields}&$top=50${view === 'managed' ? mq : q ? `&$search=${q}&$count=true` : ''}`;
-      const data = await graph(path, view !== 'managed' && (!!q || !!next?.includes('$search')));
-      result = { items: data?.value ?? [], next: nextPath(data?.['@odata.nextLink']) ?? null };
+      const adv = view !== 'managed' && (!!q || !!next?.includes('$search'));
+      let data; let signInHidden = false;
+      if (view === 'users' && !next) { try { data = await graph(path.replace(`$select=${USER_FIELDS}`, `$select=${USER_FIELDS_SIGNIN}`), adv); } catch { signInHidden = true; } }
+      if (!data) data = await graph(path, adv);
+      result = { items: data?.value ?? [], next: nextPath(data?.['@odata.nextLink']) ?? null, signInHidden };
     }
     await client.from('audit_logs').insert({ action: 'entra_directory_read', table_name: 'microsoft_entra', record_id: view, performed_by: auth.user.email, reason: 'Administrator viewed Microsoft 365 staff/devices', record_data: { view, search: search ?? null, paged: !!next } });
     return reply({ ok: true, ...result });
