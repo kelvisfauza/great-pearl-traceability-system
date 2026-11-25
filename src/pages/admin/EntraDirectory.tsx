@@ -6,7 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Building2, Laptop, Loader2, Search, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
+import { Building2, MoreHorizontal, Laptop, Loader2, Search, Users } from 'lucide-react';
 
 type View = 'users' | 'devices';
 const call = async (body: Record<string, unknown>) => {
@@ -76,6 +79,109 @@ function DirectoryList({ view }: { view: View }) {
   );
 }
 
+const ACTIONS: Record<string, { label: string; impact: string; danger?: boolean }> = {
+  lock: { label: 'Lock now', impact: 'The screen locks immediately. The user must sign in again with their PIN or password.' },
+  restart: { label: 'Restart', impact: 'The device restarts within a few minutes. Unsaved work on it may be lost.' },
+  sync: { label: 'Check for updates', impact: 'The device checks in with Microsoft for new policies and updates.' },
+  block: { label: 'Block sign-in', impact: 'Company accounts can no longer sign in on this device until it is unblocked.' },
+  unblock: { label: 'Unblock sign-in', impact: 'Company accounts can sign in on this device again.' },
+  retire: { label: 'Remove company data', impact: 'Company email, apps and data are removed and the device leaves management. Personal files stay. Cannot be undone.', danger: true },
+  wipe: { label: 'Erase whole device', impact: 'Everything on the device is erased back to factory settings, including personal files. Cannot be undone.', danger: true },
+};
+
+function ManagedDevices() {
+  const [items, setItems] = useState<any[]>([]);
+  const [next, setNext] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ device: any; action: string } | null>(null);
+  const [typed, setTyped] = useState('');
+  const [understood, setUnderstood] = useState(false);
+  const [sending, setSending] = useState(false);
+  const load = async (append = false) => {
+    setLoading(true); setError(null);
+    try {
+      const d = await call({ view: 'managed', search: search || undefined, next: append ? next : undefined });
+      setItems(p => (append ? [...p, ...d.items] : d.items)); setNext(d.next);
+    } catch (e: any) { setError(e.message); if (!append) setItems([]); }
+    setLoading(false);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  const open = (device: any, action: string) => { setPending({ device, action }); setTyped(''); setUnderstood(false); };
+  const meta = pending ? ACTIONS[pending.action] : null;
+  const ready = pending && typed.trim().toLowerCase() === String(pending.device.deviceName).toLowerCase() && (!meta?.danger || understood);
+  const send = async () => {
+    if (!pending || !ready) return;
+    setSending(true);
+    try {
+      const d = await call({ action: pending.action, deviceId: pending.device.id, confirmName: typed, acknowledge: true });
+      toast.success(d.message); setPending(null);
+    } catch (e: any) { toast.error(e.message); }
+    setSending(false);
+  };
+  return (
+    <div className="space-y-3">
+      <form className="flex gap-2" onSubmit={e => { e.preventDefault(); load(); }}>
+        <Input placeholder="Search devices by name" value={search} onChange={e => setSearch(e.target.value)} />
+        <Button type="submit" disabled={loading}><Search className="h-4 w-4" /></Button>
+      </form>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <div className="overflow-x-auto rounded-md border">
+        <Table>
+          <TableHeader><TableRow><TableHead>Device</TableHead><TableHead>User</TableHead><TableHead>System</TableHead><TableHead>Compliance</TableHead><TableHead>Last check-in</TableHead><TableHead /></TableRow></TableHeader>
+          <TableBody>
+            {items.map(i => (
+              <TableRow key={i.id}>
+                <TableCell className="font-medium">{i.deviceName}<div className="text-xs text-muted-foreground">{[i.manufacturer, i.model].filter(Boolean).join(' ')}</div></TableCell>
+                <TableCell>{i.userDisplayName || '—'}<div className="text-xs text-muted-foreground">{i.userPrincipalName}</div></TableCell>
+                <TableCell>{[i.operatingSystem, i.osVersion].filter(Boolean).join(' ')}</TableCell>
+                <TableCell><Badge variant={i.complianceState === 'compliant' ? 'default' : 'secondary'}>{i.complianceState || 'unknown'}</Badge></TableCell>
+                <TableCell>{fmt(i.lastSyncDateTime)}</TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="Device actions"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {['lock', 'restart', 'sync', 'block', 'unblock'].map(k => <DropdownMenuItem key={k} onClick={() => open(i, k)}>{ACTIONS[k].label}</DropdownMenuItem>)}
+                      <DropdownMenuSeparator />
+                      {['retire', 'wipe'].map(k => <DropdownMenuItem key={k} className="text-destructive" onClick={() => open(i, k)}>{ACTIONS[k].label}</DropdownMenuItem>)}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+            {!loading && !error && items.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Nothing found</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </div>
+      {loading && <Loader2 className="mx-auto h-5 w-5 animate-spin" />}
+      {next && !loading && <Button variant="outline" onClick={() => load(true)}>Load more</Button>}
+      <Dialog open={!!pending} onOpenChange={o => !o && setPending(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{meta?.label}: {pending?.device.deviceName}</DialogTitle>
+            <DialogDescription>Used by {pending?.device.userDisplayName || pending?.device.userPrincipalName || 'unknown user'}. {meta?.impact}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm">Type the device name <span className="font-semibold">{pending?.device.deviceName}</span> to confirm.</p>
+            <Input value={typed} onChange={e => setTyped(e.target.value)} />
+            {meta?.danger && (
+              <label className="flex items-start gap-2 text-sm text-destructive">
+                <input type="checkbox" checked={understood} onChange={e => setUnderstood(e.target.checked)} className="mt-1" />
+                I understand this cannot be undone and the data cannot be recovered.
+              </label>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPending(null)}>Cancel</Button>
+            <Button variant={meta?.danger ? 'destructive' : 'default'} disabled={!ready || sending} onClick={send}>{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : meta?.label}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export default function EntraDirectory() {
   const [ov, setOv] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -85,7 +191,7 @@ export default function EntraDirectory() {
   );
   return (
     <div className="container mx-auto space-y-4 p-4">
-      <div><h1 className="text-2xl font-bold">Microsoft 365 Staff & Devices</h1><p className="text-sm text-muted-foreground">Read-only view from Microsoft Entra. Administrators only; every view is logged.</p></div>
+      <div><h1 className="text-2xl font-bold">Microsoft 365 Staff & Devices</h1><p className="text-sm text-muted-foreground">Staff and company devices from Microsoft 365. Administrators only; every view and device action is logged.</p></div>
       {err && <p className="text-sm text-destructive">{err}</p>}
       <div className="grid gap-3 sm:grid-cols-3">
         {stat(<Building2 className="h-6 w-6 text-primary" />, 'Organization', ov?.organization?.name)}
@@ -98,7 +204,7 @@ export default function EntraDirectory() {
           <Tabs defaultValue="users">
             <TabsList><TabsTrigger value="users">Staff</TabsTrigger><TabsTrigger value="devices">Devices</TabsTrigger></TabsList>
             <TabsContent value="users"><DirectoryList view="users" /></TabsContent>
-            <TabsContent value="devices"><DirectoryList view="devices" /></TabsContent>
+            <TabsContent value="devices"><ManagedDevices /></TabsContent>
           </Tabs>
         </CardContent>
       </Card>
