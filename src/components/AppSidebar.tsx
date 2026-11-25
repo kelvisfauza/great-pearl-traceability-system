@@ -65,6 +65,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
       title: "Operations", 
       items: [
         { name: "Dashboard", icon: BarChart3, path: "/", permission: "Dashboard" },
+        { name: "My Vault", icon: Wallet, path: "/vault", permission: null },
         { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permission: "Quality Control" },
         { name: "Store Management", icon: Shield, path: "/store", permission: "Store Management" },
         { name: "Sampling Orders", icon: ClipboardList, path: "/quality-control?tab=sampling-orders", permission: "Store Management" },

@@ -1,3 +1,4 @@
+import { isTraineeRole } from '@/lib/trainee';
 import React, { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +23,7 @@ import DailyComparisonChart from '@/components/dashboard/DailyComparisonChart';
 import RevenueExpenseChart from '@/components/dashboard/RevenueExpenseChart';
 import DepartmentActivityChart from '@/components/dashboard/DepartmentActivityChart';
 import EmployeeOfTheMonthWidget from '@/components/dashboard/EmployeeOfTheMonthWidget';
+import WalletSnapshotCard from '@/components/dashboard/WalletSnapshotCard';
 import PrintQueueWidget from '@/components/print/PrintQueueWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -98,6 +100,8 @@ const Index = () => {
             </div>
           </div>
         </div>
+
+        {!isTraineeRole(employee?.role) && <WalletSnapshotCard />}
 
         {/* Employee of the Month - Pinned for all staff */}
         <EmployeeOfTheMonthWidget />
