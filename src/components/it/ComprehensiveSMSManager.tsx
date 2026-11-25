@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -58,6 +59,7 @@ interface SMSFailure {
 
 export const ComprehensiveSMSManager = () => {
   const [smsLogs, setSmsLogs] = useState<SMSLog[]>([]);
+  const [openLog, setOpenLog] = useState<SMSLog | null>(null);
   const [smsFailures, setSmsFailures] = useState<SMSFailure[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -395,7 +397,7 @@ export const ComprehensiveSMSManager = () => {
               ) : (
                 <div className="space-y-3">
                   {filteredLogs.map((log) => (
-                    <Card key={log.id} className="border-l-4 border-l-blue-400">
+                    <Card key={log.id} className="border-l-4 border-l-blue-400 cursor-pointer hover:bg-muted/40 transition-colors" role="button" tabIndex={0} onClick={() => setOpenLog(log)} onKeyDown={(e) => { if (e.key === 'Enter') setOpenLog(log); }}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="space-y-2 flex-1">
@@ -426,7 +428,7 @@ export const ComprehensiveSMSManager = () => {
                             </div>
                           </div>
                           
-                          <div className="flex gap-1 ml-4">
+                          <div className="flex gap-1 ml-4" onClick={(e) => e.stopPropagation()}>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -546,6 +548,34 @@ export const ComprehensiveSMSManager = () => {
           </Tabs>
         </CardContent>
       </Card>
+      <Dialog open={!!openLog} onOpenChange={(o) => !o && setOpenLog(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Message details</DialogTitle></DialogHeader>
+          {openLog && (
+            <div className="space-y-3 text-sm">
+              <div className="flex flex-wrap gap-2">{getStatusBadge(openLog.status)}{getMessageTypeBadge(openLog.message_type)}{openLog.department && <Badge variant="outline">{openLog.department}</Badge>}</div>
+              <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1">
+                <span className="text-muted-foreground">To</span><span>{openLog.recipient_name || 'Unknown User'}</span>
+                <span className="text-muted-foreground">Phone</span><span>{openLog.recipient_phone}</span>
+                {openLog.recipient_email && <><span className="text-muted-foreground">Email</span><span className="break-all">{openLog.recipient_email}</span></>}
+                <span className="text-muted-foreground">Sent</span><span>{format(new Date(openLog.created_at), 'MMM d, yyyy HH:mm:ss')}</span>
+                {openLog.triggered_by && <><span className="text-muted-foreground">Triggered by</span><span className="break-all">{openLog.triggered_by}</span></>}
+                {openLog.provider && <><span className="text-muted-foreground">Provider</span><span>{openLog.provider}</span></>}
+                {openLog.credits_used != null && <><span className="text-muted-foreground">Credits</span><span>{openLog.credits_used}</span></>}
+              </div>
+              <div>
+                <div className="text-muted-foreground mb-1">Full message ({openLog.message_content.length} characters)</div>
+                <div className="bg-muted p-3 rounded font-mono text-xs whitespace-pre-wrap break-words">{openLog.message_content}</div>
+              </div>
+              {openLog.failure_reason && <div className="text-destructive">Error: {openLog.failure_reason}</div>}
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(openLog.message_content)}><Copy className="h-3 w-3 mr-1" />Copy message</Button>
+                <Button size="sm" variant="outline" onClick={() => callUser(openLog.recipient_phone)}><Phone className="h-3 w-3 mr-1" />Call</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

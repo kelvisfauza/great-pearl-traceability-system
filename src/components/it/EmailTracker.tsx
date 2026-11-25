@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Mail, CheckCircle2, XCircle, Search, RefreshCw, Clock, Filter } from 'lucide-react';
 import { format, subDays, subHours } from 'date-fns';
@@ -16,6 +17,7 @@ const EmailTracker = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
+  const [openEmail, setOpenEmail] = useState<any>(null);
   const pageSize = 20;
 
   const getStartDate = () => {
@@ -250,7 +252,7 @@ const EmailTracker = () => {
                   </TableHeader>
                   <TableBody>
                     {emails.emails.map((email: any) => (
-                      <TableRow key={email.id}>
+                      <TableRow key={email.id} className="cursor-pointer" onClick={() => setOpenEmail(email)}>
                         <TableCell>
                           <Badge variant="outline" className="text-xs font-mono">
                             {formatTemplateName(email.template_name)}
@@ -301,6 +303,33 @@ const EmailTracker = () => {
           )}
         </CardContent>
       </Card>
+      <Dialog open={!!openEmail} onOpenChange={(o) => !o && setOpenEmail(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Email details</DialogTitle></DialogHeader>
+          {openEmail && (
+            <div className="space-y-3 text-sm">
+              <div className="flex flex-wrap gap-2">{getStatusBadge(openEmail.status)}<Badge variant="outline" className="font-mono text-xs">{formatTemplateName(openEmail.template_name)}</Badge></div>
+              <div className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-1">
+                <span className="text-muted-foreground">To</span><span className="break-all">{openEmail.recipient_email}</span>
+                <span className="text-muted-foreground">Subject</span><span>{openEmail.subject || '-'}</span>
+                <span className="text-muted-foreground">Sent</span><span>{openEmail.created_at ? format(new Date(openEmail.created_at), 'MMM d, yyyy HH:mm:ss') : '-'}</span>
+              </div>
+              {openEmail.error_message && <div className="text-destructive whitespace-pre-wrap break-words">Error: {openEmail.error_message}</div>}
+              {openEmail.metadata && Object.keys(openEmail.metadata).length > 0 && (
+                <div>
+                  <div className="text-muted-foreground mb-1">Saved details</div>
+                  <div className="bg-muted p-3 rounded space-y-1 text-xs">
+                    {Object.entries(openEmail.metadata).map(([k, v]) => (
+                      <div key={k} className="break-words"><span className="font-medium">{k.replace(/_/g, ' ')}:</span> {typeof v === 'object' ? JSON.stringify(v) : String(v)}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">The full email body is not stored; only the subject and saved details are shown.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
