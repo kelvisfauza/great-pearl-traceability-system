@@ -20,7 +20,7 @@ Deno.serve(async req => {
     if (authError || !auth.user?.email) return reply({ ok: false, error: 'Please sign in again', denied: true });
     const { data: person } = await client.from('employees').select('name,disabled,status').ilike('email', auth.user.email).maybeSingle();
     const { data: roles } = await client.from('user_roles').select('role').eq('user_id', auth.user.id).in('role', ['Administrator', 'Super Admin']);
-    if (!person || person.disabled === true || person.status !== 'active' || !roles?.length) return reply({ ok: false, error: 'Active administrator access required', denied: true });
+    if (!person || person.disabled === true || String(person.status).toLowerCase() !== 'active' || !roles?.length) return reply({ ok: false, error: 'Active administrator access required', denied: true });
     const parsed = Input.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return reply({ ok: false, error: 'Invalid request' });
     const gatewayKey = Deno.env.get('LOVABLE_API_KEY');
