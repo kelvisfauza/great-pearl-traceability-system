@@ -470,6 +470,7 @@ serve(async (req) => {
     // All other notifications should use email instead to save SMS credits
     const ALLOWED_SMS_TYPES = [
       'treasury_alert',
+      'maintenance_recovery',
       'verification',
       'admin_approval_code',
       'otp',

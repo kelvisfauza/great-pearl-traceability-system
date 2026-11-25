@@ -107,6 +107,7 @@ export const useMaintenanceMode = () => {
           const { data: smsResult, error: smsError } = await supabase.functions.invoke('send-sms', {
             body: {
               phone: fauza.phone,
+              messageType: 'maintenance_recovery',
               message: smsMessage,
             },
           });

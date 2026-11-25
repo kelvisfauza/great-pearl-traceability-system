@@ -2,6 +2,7 @@ import { buildPriceSms } from './station-prices.ts';
 import { phoneKey, registeredPhone, ownTestDestination, SETTINGS_TEST_MESSAGE } from './message-policy.ts';
 
 const PRICE_TYPES = new Set(['price_update', 'price_correction', 'price_update_intern', 'price_correction_intern', 'supplier_price_broadcast', 'price_update_test']);
+export const MAINTENANCE_RECOVERY_EMAIL = 'fauzakusa@greatpearlcoffee.com';
 const CODE_TYPES = new Set(['verification', 'verification_code', 'otp', 'login_code', 'twofa']);
 
 export async function prepareBrowserSms(db: any, body: Record<string, any>, sender: any, privileged: boolean, priceAllowed: boolean, itAllowed: boolean): Promise<{ phone: string; userName: string; recipientEmail?: string; triggeredBy: string; message: string; messageType: string; requestId?: string }> {
@@ -50,6 +51,16 @@ export async function prepareBrowserSms(db: any, body: Record<string, any>, send
     const { data: loan, error } = await query.order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (error || !loan || !['pending', 'pending_guarantor'].includes(String(loan.status).toLowerCase()) || phoneKey(loan.guarantor_phone) !== recipient.phone || !/^\d{6}$/.test(String(loan.guarantor_approval_code))) throw new Error('No saved pending guarantor request matches this recipient.');
     return { ...identity, message: `Great Agro Coffee: ${loan.employee_name} requests your guarantee for UGX ${Number(loan.loan_amount).toLocaleString('en-UG')} over ${loan.duration_months} months. Code: ${loan.guarantor_approval_code}. Sign in to approve or decline.`, messageType: type, requestId: loan.id };
+  }
+  if (type === 'maintenance_recovery') {
+    // Recovery code and PIN come only from the saved active maintenance record,
+    // and only go to the primary administrator's registered phone.
+    if (!privileged) throw new Error('Only administrators can send the maintenance recovery code.');
+    if (String(recipient.email || '').toLowerCase() !== MAINTENANCE_RECOVERY_EMAIL) throw new Error('The recovery code goes only to the primary administrator.');
+    const { data: m, error } = await db.from('system_maintenance').select('id,is_active,recovery_key,recovery_pin')
+      .eq('is_active', true).order('updated_at', { ascending: false }).limit(1).maybeSingle();
+    if (error || !m || !m.recovery_key || !m.recovery_pin) throw new Error('No active maintenance recovery code is saved.');
+    return { ...identity, message: `MAINTENANCE MODE ACTIVATED. Recovery Code: ${m.recovery_key}. PIN: ${m.recovery_pin}. Use these at the recovery page to restore the system.`, messageType: 'maintenance_recovery', requestId: m.id };
   }
   if (type === 'test') {
     if (!privileged && !itAllowed) throw new Error('Only authorized staff can run a connection test.');
