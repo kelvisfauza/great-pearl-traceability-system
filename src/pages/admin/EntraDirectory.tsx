@@ -72,7 +72,7 @@ function DirectoryList({ view }: { view: View }) {
                 <TableCell>{fmt(i.approximateLastSignInDateTime)}</TableCell>
               </TableRow>
             ))}
-            {!loading && !error && shown.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Nothing found</TableCell></TableRow>}
+            {!loading && !error && items.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Nothing found</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>
@@ -164,7 +164,7 @@ function ManagedDevices() {
                 </TableCell>
               </TableRow>
             ))}
-            {!loading && !error && items.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Nothing found</TableCell></TableRow>}
+            {!loading && !error && shown.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Nothing found</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>
