@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -52,6 +53,7 @@ const LeaveRequests = () => {
   const [editing, setEditing] = useState<LeaveRow | null>(null);
   const [acting, setActing] = useState<{ row: LeaveRow; action: "approved" | "rejected" } | null>(null);
   const [form, setForm] = useState({ start: "", end: "", days: 0, type: "", note: "" });
+  const [oof, setOof] = useState({ on: false, message: "" });
   const [busy, setBusy] = useState(false);
 
   const ANNUAL_ENTITLEMENT = 21; // days per year
@@ -219,6 +221,11 @@ const LeaveRequests = () => {
     } catch (e: any) {
       toast({ title: "Saved, but email failed", description: "Use Resend email to try again.", variant: "destructive" });
     }
+    if (action === "approved" && oof.on && oof.message.trim()) {
+      const { data: r, error: fe } = await supabase.functions.invoke("entra-directory", { body: { outOfOffice: "set", requestId: row.id, message: oof.message.trim() } });
+      if (fe || !r?.ok) toast({ title: "Leave approved, but Outlook reply not set", description: r?.error || fe?.message || "Microsoft refused the request", variant: "destructive" });
+      else toast({ title: "Outlook out-of-office set", description: r.message });
+    }
     setBusy(false);
     setActing(null);
     qc.invalidateQueries({ queryKey: ["admin-leave-requests"] });
@@ -312,7 +319,7 @@ const LeaveRequests = () => {
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => openEdit(row)}><Pencil className="h-4 w-4 mr-1" />Edit</Button>
                     {s !== "approved" && (
-                      <Button size="sm" onClick={() => { setForm((f) => ({ ...f, note: d.approval_note || "" })); setActing({ row, action: "approved" }); }}><Check className="h-4 w-4 mr-1" />Approve</Button>
+                      <Button size="sm" onClick={() => { setForm((f) => ({ ...f, note: d.approval_note || "" })); setOof({ on: false, message: `Thank you for your email. I am on leave from ${fmt(d.start_date)} to ${fmt(d.end_date)} with limited access to email. I will reply when I return.` }); setActing({ row, action: "approved" }); }}><Check className="h-4 w-4 mr-1" />Approve</Button>
                     )}
                     {s !== "rejected" && (
                       <Button size="sm" variant="destructive" onClick={() => { setForm((f) => ({ ...f, note: "" })); setActing({ row, action: "rejected" }); }}><X className="h-4 w-4 mr-1" />Reject</Button>
@@ -354,9 +361,18 @@ const LeaveRequests = () => {
             {acting && `${names[acting.row.requestedby]?.name || acting.row.requestedby}: ${fmt(acting.row.details.start_date)} → ${fmt(acting.row.details.end_date)} (${acting.row.details.days} days). A confirmation email will be sent.`}
           </p>
           <div><Label>{acting?.action === "approved" ? "Note (optional)" : "Reason"}</Label><Textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
+          {acting?.action === "approved" && (
+            <div className="space-y-2 rounded-md border p-3">
+              <label className="flex items-center gap-2 text-sm font-medium"><Checkbox checked={oof.on} onCheckedChange={(v) => setOof({ ...oof, on: v === true })} />Set Outlook out-of-office reply</label>
+              {oof.on && <>
+                <Textarea value={oof.message} onChange={(e) => setOof({ ...oof, message: e.target.value })} rows={4} maxLength={2000} />
+                <p className="text-xs text-muted-foreground">Starts automatically on the first leave day and stops after the last day (Uganda time).</p>
+              </>}
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setActing(null)}>Cancel</Button>
-            <Button variant={acting?.action === "approved" ? "default" : "destructive"} onClick={decide} disabled={busy || (acting?.action === "rejected" && !form.note.trim())}>
+            <Button variant={acting?.action === "approved" ? "default" : "destructive"} onClick={decide} disabled={busy || (acting?.action === "rejected" && !form.note.trim()) || (acting?.action === "approved" && oof.on && oof.message.trim().length < 5)}>
               {busy ? "Working…" : acting?.action === "approved" ? "Approve & email" : "Reject & email"}
             </Button>
           </DialogFooter>

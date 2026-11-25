@@ -14,6 +14,7 @@ const Account = z.discriminatedUnion('account', [
   z.object({ account: z.literal('disable'), userId: z.string().uuid(), confirmName: z.string().max(200), acknowledge: z.literal(true) }),
 ]);
 const Notice = z.object({ notice: z.literal('send'), subject: z.string().trim().min(3).max(150), body: z.string().trim().min(5).max(5000), recipients: z.array(z.string().uuid()).min(1).max(200) });
+const OutOfOffice = z.object({ outOfOffice: z.literal('set'), requestId: z.string().uuid(), message: z.string().trim().min(5).max(2000) });
 const BACKUP_BUCKETS = ['contracts', 'loan-documents', 'dispatch-attachments'];
 const NOTICE_SENDER = 'fauzakusa@greatpearlcoffee.com';
 const esc = (t: string) => t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -77,6 +78,21 @@ Deno.serve(async req => {
         else { failed++; const t = await r.text(); try { lastError = `Microsoft returned ${r.status}: ${JSON.parse(t)?.error?.message ?? t}`.slice(0, 300); } catch { lastError = `Microsoft returned ${r.status}`; } if (r.status === 403 || r.status === 401) break; }
       }
       return reply({ ok: failed === 0 || ok > 0, copiedNow: ok, failed, tooBig, remaining: pending.length - ok, error: lastError, siteUrl: site.data.webUrl });
+    }
+    if (raw && typeof raw === 'object' && 'outOfOffice' in raw) {
+      const o = OutOfOffice.safeParse(raw);
+      if (!o.success) return reply({ ok: false, error: 'Write an out-of-office message (5 to 2000 characters)' });
+      const { data: reqRow } = await client.from('approval_requests').select('id,requestedby,status,details').eq('id', o.data.requestId).maybeSingle();
+      const d: any = reqRow?.details ?? {};
+      if (!reqRow || String(reqRow.status).toLowerCase() !== 'approved' || !/^\d{4}-\d{2}-\d{2}$/.test(d.start_date ?? '') || !/^\d{4}-\d{2}-\d{2}$/.test(d.end_date ?? '')) return reply({ ok: false, error: 'Only approved leave with start and end dates can set an out-of-office reply' });
+      const { data: staff } = await client.from('employees').select('name,email').ilike('email', String(reqRow.requestedby)).maybeSingle();
+      const mailbox = String(staff?.email ?? reqRow.requestedby).toLowerCase();
+      if (!mailbox.endsWith('@greatpearlcoffee.com')) return reply({ ok: false, error: 'This staff member has no company Microsoft mailbox' });
+      const tz = 'E. Africa Standard Time';
+      const html = esc(o.data.message).replace(/\n/g, '<br>');
+      const res = await gx(`/v1.0/users/${encodeURIComponent(mailbox)}/mailboxSettings`, 'PATCH', { automaticRepliesSetting: { status: 'scheduled', externalAudience: 'all', scheduledStartDateTime: { dateTime: `${d.start_date}T00:00:00`, timeZone: tz }, scheduledEndDateTime: { dateTime: `${d.end_date}T23:59:00`, timeZone: tz }, internalReplyMessage: html, externalReplyMessage: html } });
+      await client.from('audit_logs').insert({ action: `m365_out_of_office_${res.ok ? 'set' : 'refused'}`, table_name: 'microsoft_mail', record_id: reqRow.id, performed_by: auth.user.email, reason: `Leave out-of-office for ${mailbox}`, record_data: { mailbox, start: d.start_date, end: d.end_date, result: res.ok ? 'set' : res.error } });
+      return reply(res.ok ? { ok: true, message: `Out-of-office set for ${mailbox} from ${d.start_date} to ${d.end_date}` } : res);
     }
     if (raw && typeof raw === 'object' && 'notice' in raw) {
       const n = Notice.safeParse(raw);
