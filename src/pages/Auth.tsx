@@ -58,6 +58,11 @@ const Auth = () => {
   const { signIn, user, employee, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [microsoftEnabled, setMicrosoftEnabled] = useState(false);
+  useEffect(() => {
+    const url = import.meta.env.VITE_SUPABASE_URL; const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } }).then(r => r.json()).then(d => setMicrosoftEnabled(d?.external?.azure === true)).catch(() => {});
+  }, []);
   const { data: holiday } = useHolidayTheme();
   const isHoliday = !!holiday;
   const splashTimeoutRef = useRef<number | null>(null);
@@ -976,6 +981,21 @@ const Auth = () => {
               </span>
               <div className="flex-1 h-px" style={{ background: 'rgba(6,78,59,0.15)' }} />
             </div>
+
+            {/* Microsoft company account sign-in (in addition to passwords); shown only once the provider is enabled */}
+            {microsoftEnabled && <button
+              type="button"
+              disabled={loading}
+              onClick={async () => {
+                const { error } = await supabase.auth.signInWithOAuth({ provider: 'azure', options: { scopes: 'email openid profile', redirectTo: `${window.location.origin}/` } });
+                if (error) toast({ title: 'Microsoft sign-in unavailable', description: 'Please use your email and password for now.', variant: 'destructive' });
+              }}
+              className="w-full h-12 rounded-xl font-medium transition-all hover:-translate-y-0.5 hover:shadow-md disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{ background: '#ffffff', color: '#03361b', border: '1px solid rgba(6,78,59,0.2)', fontFamily: "'Work Sans', sans-serif" }}
+            >
+              <svg viewBox="0 0 21 21" className="h-4 w-4" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+              Sign in with Microsoft
+            </button>}
 
             {/* Face ID sign-in */}
             <button

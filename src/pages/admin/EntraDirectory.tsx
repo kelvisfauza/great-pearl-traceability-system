@@ -196,6 +196,87 @@ function ManagedDevices() {
   );
 }
 
+const suggestUpn = (name: string, email?: string) => {
+  if (email && email.toLowerCase().endsWith('@greatpearlcoffee.com')) return email.toLowerCase();
+  const p = name.toLowerCase().replace(/[^a-z\s]/g, '').trim().split(/\s+/);
+  return `${p[0] ?? 'staff'}${p.length > 1 ? '.' + p[p.length - 1] : ''}@greatpearlcoffee.com`;
+};
+
+function AccountSync() {
+  const [d, setD] = useState<any>(null); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
+  const [create, setCreate] = useState<any>(null); const [upn, setUpn] = useState(''); const [ack, setAck] = useState(false);
+  const [disable, setDisable] = useState<any>(null); const [typed, setTyped] = useState('');
+  const [made, setMade] = useState<{ upn: string; tempPassword: string } | null>(null);
+  const load = () => { setErr(null); call({ account: 'sync' }).then(setD).catch(e => setErr(e.message)); };
+  useEffect(load, []);
+  const doCreate = async () => { setBusy(true); try { const r = await call({ account: 'create', employeeId: create.id, upn, acknowledge: true }); setMade({ upn: r.upn, tempPassword: r.tempPassword }); toast.success(r.message); setCreate(null); load(); } catch (e: any) { toast.error(e.message); } setBusy(false); };
+  const doDisable = async () => { setBusy(true); try { const r = await call({ account: 'disable', userId: disable.userId, confirmName: typed, acknowledge: true }); toast.success(r.message); setDisable(null); load(); } catch (e: any) { toast.error(e.message); } setBusy(false); };
+  return (
+    <div className="space-y-5">
+      {err && <p className="text-sm text-destructive">{err}</p>}
+      {!d && !err && <Loader2 className="mx-auto h-5 w-5 animate-spin" />}
+      {d && <>
+        <div><h3 className="mb-2 font-semibold">Active staff without a Microsoft account ({d.missing.length})</h3>
+          <Table><TableBody>{d.missing.map((m: any) => <TableRow key={m.id}><TableCell className="font-medium">{m.name}<div className="text-xs text-muted-foreground">{m.department} {m.email ? `· ${m.email}` : ''}</div></TableCell><TableCell className="text-right"><Button size="sm" onClick={() => { setCreate(m); setUpn(suggestUpn(m.name, m.email)); setAck(false); }}>Create</Button></TableCell></TableRow>)}
+            {!d.missing.length && <TableRow><TableCell className="text-center text-muted-foreground">Everyone active has an account</TableCell></TableRow>}</TableBody></Table></div>
+        <div><h3 className="mb-2 font-semibold">People who left but can still sign in to Microsoft ({d.leavers.length})</h3>
+          <Table><TableBody>{d.leavers.map((l: any) => <TableRow key={l.userId}><TableCell className="font-medium">{l.name}<div className="text-xs text-muted-foreground">{l.upn} · staff record: {l.status}</div></TableCell><TableCell className="text-right"><Button size="sm" variant="destructive" onClick={() => { setDisable(l); setTyped(''); }}>Disable</Button></TableCell></TableRow>)}
+            {!d.leavers.length && <TableRow><TableCell className="text-center text-muted-foreground">No leavers with active accounts</TableCell></TableRow>}</TableBody></Table></div>
+      </>}
+      <Dialog open={!!create} onOpenChange={o => !o && setCreate(null)}>
+        <DialogContent><DialogHeader><DialogTitle>Create Microsoft account for {create?.name}</DialogTitle><DialogDescription>A new company sign-in is made. They must change the temporary password the first time. Email needs a Microsoft 365 licence assigned in the admin centre.</DialogDescription></DialogHeader>
+          <label className="text-xs text-muted-foreground">Company email address</label><Input value={upn} onChange={e => setUpn(e.target.value.trim())} />
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={ack} onChange={e => setAck(e.target.checked)} />I confirm this person should get a company Microsoft account.</label>
+          <DialogFooter><Button variant="outline" onClick={() => setCreate(null)}>Cancel</Button><Button disabled={!ack || busy || !upn.endsWith('@greatpearlcoffee.com')} onClick={doCreate}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create account</Button></DialogFooter></DialogContent>
+      </Dialog>
+      <Dialog open={!!disable} onOpenChange={o => !o && setDisable(null)}>
+        <DialogContent><DialogHeader><DialogTitle>Disable {disable?.name}</DialogTitle><DialogDescription>They are signed out everywhere and can no longer sign in to Microsoft. Their mailbox and files are kept, and you can turn the account back on in Microsoft.</DialogDescription></DialogHeader>
+          <p className="text-sm">Type <span className="font-semibold">{disable?.name}</span> to confirm.</p><Input value={typed} onChange={e => setTyped(e.target.value)} />
+          <DialogFooter><Button variant="outline" onClick={() => setDisable(null)}>Cancel</Button><Button variant="destructive" disabled={busy || typed.trim().toLowerCase() !== String(disable?.name).toLowerCase()} onClick={doDisable}>Disable account</Button></DialogFooter></DialogContent>
+      </Dialog>
+      <Dialog open={!!made} onOpenChange={o => !o && setMade(null)}>
+        <DialogContent><DialogHeader><DialogTitle>Account created</DialogTitle><DialogDescription>Give these details to the staff member in person. The temporary password is shown only once and is not saved anywhere.</DialogDescription></DialogHeader>
+          <p className="text-sm">Sign-in: <span className="font-semibold">{made?.upn}</span></p><p className="text-sm">Temporary password: <span className="font-mono font-semibold">{made?.tempPassword}</span></p>
+          <DialogFooter><Button onClick={() => setMade(null)}>Done</Button></DialogFooter></DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function OfficialNotices() {
+  const [staff, setStaff] = useState<any[]>([]); const [picked, setPicked] = useState<string[]>([]); const [find, setFind] = useState('');
+  const [subject, setSubject] = useState(''); const [body, setBody] = useState(''); const [busy, setBusy] = useState(false);
+  useEffect(() => { (supabase as any).from('employees').select('id,name,department,email').eq('status', 'Active').not('disabled', 'is', true).order('name').then(({ data }: any) => setStaff(data ?? [])); }, []);
+  const send = async () => { setBusy(true); try { const r = await call({ notice: 'send', subject, body, recipients: picked }); toast.success(r.message); setSubject(''); setBody(''); setPicked([]); } catch (e: any) { toast.error(e.message); } setBusy(false); };
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">Sent by email from Fauzakusa@greatpearlcoffee.com. Staff are blind-copied so they don't see each other's addresses.</p>
+      <Input placeholder="Notice title" maxLength={150} value={subject} onChange={e => setSubject(e.target.value)} />
+      <textarea className="min-h-32 w-full rounded-md border bg-background p-2 text-sm" maxLength={5000} placeholder="Message" value={body} onChange={e => setBody(e.target.value)} />
+      <div className="flex items-center justify-between"><span className="text-xs text-muted-foreground">{picked.length} staff chosen</span><div className="space-x-2"><Button size="sm" variant="ghost" onClick={() => setPicked(staff.filter(s => s.email).map(s => s.id))}>All staff</Button><Button size="sm" variant="ghost" onClick={() => setPicked([])}>Clear</Button></div></div>
+      <Input placeholder="Search staff" value={find} onChange={e => setFind(e.target.value)} />
+      <div className="max-h-48 overflow-y-auto rounded-md border p-2">{staff.filter(s => !find || `${s.name} ${s.department ?? ''}`.toLowerCase().includes(find.toLowerCase())).map(s => (
+        <label key={s.id} className="flex items-center gap-2 py-1 text-sm"><input type="checkbox" disabled={!s.email} checked={picked.includes(s.id)} onChange={e => setPicked(p => e.target.checked ? [...p, s.id] : p.filter(x => x !== s.id))} /><span>{s.name}</span><span className="text-xs text-muted-foreground">{s.email || 'no email'}</span></label>))}</div>
+      <Button disabled={busy || subject.trim().length < 3 || body.trim().length < 5 || !picked.length} onClick={send}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Send notice</Button>
+    </div>
+  );
+}
+
+function DocumentBackup() {
+  const [d, setD] = useState<any>(null); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
+  const load = () => call({ backup: 'status' }).then(setD).catch(e => setErr(e.message));
+  useEffect(() => { load(); }, []);
+  const run = async () => { setBusy(true); setErr(null); try { const r = await call({ backup: 'run' }); if (r.error) setErr(r.error); toast.success(`Copied ${r.copiedNow} document(s) to SharePoint${r.tooBig ? `, ${r.tooBig} too large` : ''}`); load(); } catch (e: any) { setErr(e.message); } setBusy(false); };
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">Signed contracts, loan documents and clearance scans are copied to the company SharePoint site, in the folder "Great Agro Coffee Documents". Each click copies up to 15 files that aren't there yet.</p>
+      {d && <p className="text-sm">{d.copied} of {d.total} documents copied · {d.pending} waiting</p>}
+      {err && <p className="text-sm text-destructive">{err}{/40[13]/.test(err) ? ' Needed Microsoft permission: Sites.ReadWrite.All.' : ''}</p>}
+      <Button disabled={busy || d?.pending === 0} onClick={run}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Copy next documents</Button>
+    </div>
+  );
+}
+
 function SecurityReports() {
   const [signins, setSignins] = useState<any[]>([]); const [risky, setRisky] = useState<any[]>([]);
   const [e1, setE1] = useState<string | null>(null); const [e2, setE2] = useState<string | null>(null);
@@ -320,11 +401,14 @@ export default function EntraDirectory() {
         <CardHeader><CardTitle className="text-base">Directory</CardTitle></CardHeader>
         <CardContent>
           <Tabs defaultValue="users">
-            <TabsList><TabsTrigger value="users">Staff</TabsTrigger><TabsTrigger value="devices">Devices</TabsTrigger><TabsTrigger value="meetings">Meetings</TabsTrigger><TabsTrigger value="security">Security</TabsTrigger></TabsList>
+            <TabsList className="flex h-auto flex-wrap"><TabsTrigger value="users">Staff</TabsTrigger><TabsTrigger value="devices">Devices</TabsTrigger><TabsTrigger value="meetings">Meetings</TabsTrigger><TabsTrigger value="security">Security</TabsTrigger><TabsTrigger value="accounts">Accounts</TabsTrigger><TabsTrigger value="notices">Notices</TabsTrigger><TabsTrigger value="documents">Documents</TabsTrigger></TabsList>
             <TabsContent value="users"><DirectoryList view="users" /></TabsContent>
             <TabsContent value="devices"><ManagedDevices /></TabsContent>
             <TabsContent value="meetings"><TeamsMeetings /></TabsContent>
             <TabsContent value="security"><SecurityReports /></TabsContent>
+            <TabsContent value="accounts"><AccountSync /></TabsContent>
+            <TabsContent value="notices"><OfficialNotices /></TabsContent>
+            <TabsContent value="documents"><DocumentBackup /></TabsContent>
           </Tabs>
         </CardContent>
       </Card>

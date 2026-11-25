@@ -8,6 +8,15 @@ const Input = z.object({ view: z.enum(['overview', 'users', 'devices', 'managed'
 const ACTIONS = ['lock', 'restart', 'sync', 'block', 'unblock', 'retire', 'wipe'] as const;
 const Action = z.object({ action: z.enum(ACTIONS), deviceId: z.string().uuid(), confirmName: z.string().max(200), acknowledge: z.literal(true) });
 const Meeting = z.object({ meeting: z.literal('create'), organizer: z.string().email().max(200), subject: z.string().trim().min(3).max(200), start: z.string().datetime({ offset: true }), minutes: z.number().int().min(15).max(480), attendees: z.array(z.string().uuid()).max(100).default([]) });
+const Account = z.discriminatedUnion('account', [
+  z.object({ account: z.literal('sync') }),
+  z.object({ account: z.literal('create'), employeeId: z.string().uuid(), upn: z.string().email().max(120).refine(v => v.toLowerCase().endsWith('@greatpearlcoffee.com'), 'Company address required'), acknowledge: z.literal(true) }),
+  z.object({ account: z.literal('disable'), userId: z.string().uuid(), confirmName: z.string().max(200), acknowledge: z.literal(true) }),
+]);
+const Notice = z.object({ notice: z.literal('send'), subject: z.string().trim().min(3).max(150), body: z.string().trim().min(5).max(5000), recipients: z.array(z.string().uuid()).min(1).max(200) });
+const BACKUP_BUCKETS = ['contracts', 'loan-documents', 'dispatch-attachments'];
+const NOTICE_SENDER = 'fauzakusa@greatpearlcoffee.com';
+const esc = (t: string) => t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const MANAGED_FIELDS = 'id,deviceName,userPrincipalName,userDisplayName,operatingSystem,osVersion,model,manufacturer,complianceState,lastSyncDateTime,azureADDeviceId,managedDeviceOwnerType,enrolledDateTime';
 const GATEWAY = 'https://connector-gateway.lovable.dev/azure_graph';
 const USER_FIELDS = 'id,displayName,userPrincipalName,mail,jobTitle,department,accountEnabled,createdDateTime';
@@ -28,6 +37,109 @@ Deno.serve(async req => {
     const { data: roles } = await client.from('user_roles').select('role').eq('user_id', auth.user.id).in('role', ['Administrator', 'Super Admin']);
     if (!person || person.disabled === true || String(person.status).toLowerCase() !== 'active' || !roles?.length) return reply({ ok: false, error: 'Active administrator access required', denied: true });
     const raw = await req.json().catch(() => ({}));
+    const gx = async (path: string, method = 'GET', body?: unknown) => {
+      const gk = Deno.env.get('LOVABLE_API_KEY'); const ck = Deno.env.get('AZURE_GRAPH_API_KEY');
+      if (!gk || !ck) return { ok: false as const, status: 0, error: 'Microsoft 365 connection is not configured' };
+      const headers: Record<string, string> = { Authorization: `Bearer ${gk}`, 'X-Connection-Api-Key': ck };
+      if (body) headers['Content-Type'] = 'application/json';
+      const r = await fetch(`${GATEWAY}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(25000) });
+      const text = await r.text();
+      if (!r.ok) { let msg = text; try { msg = JSON.parse(text)?.error?.message ?? text; } catch { /* keep */ } return { ok: false as const, status: r.status, error: `Microsoft returned ${r.status}: ${String(msg).slice(0, 300)}` }; }
+      return { ok: true as const, data: text ? JSON.parse(text) : null };
+    };
+    if (raw && typeof raw === 'object' && 'backup' in raw) {
+      const run = (raw as any).backup === 'run';
+      const { data: done } = await client.from('audit_logs').select('record_id').eq('action', 'm365_doc_backup_copied').limit(10000);
+      const copied = new Set((done ?? []).map((d: any) => d.record_id));
+      const files: { key: string; bucket: string; path: string; size: number }[] = [];
+      const walk = async (bucket: string, prefix: string, depth: number) => {
+        const { data } = await client.storage.from(bucket).list(prefix, { limit: 1000 });
+        for (const o of data ?? []) {
+          const path = prefix ? `${prefix}/${o.name}` : o.name;
+          if (!o.id) { if (depth < 3) await walk(bucket, path, depth + 1); continue; }
+          files.push({ key: `${bucket}/${path}`, bucket, path, size: Number((o.metadata as any)?.size ?? 0) });
+        }
+      };
+      for (const b of BACKUP_BUCKETS) await walk(b, '', 0);
+      const pending = files.filter(f => !copied.has(f.key));
+      if (!run) return reply({ ok: true, total: files.length, copied: files.length - pending.length, pending: pending.length });
+      let ok = 0, failed = 0, tooBig = 0; let lastError: string | null = null;
+      const site = await gx('/v1.0/sites/root?$select=id,webUrl');
+      if (!site.ok) return reply(site);
+      for (const f of pending.slice(0, 15)) {
+        if (f.size > 4 * 1024 * 1024) { tooBig++; continue; }
+        const { data: blob } = await client.storage.from(f.bucket).download(f.path);
+        if (!blob) { failed++; continue; }
+        const dest = ['Great Agro Coffee Documents', f.bucket, ...f.path.split('/')].map(encodeURIComponent).join('/');
+        const gk = Deno.env.get('LOVABLE_API_KEY')!; const ck = Deno.env.get('AZURE_GRAPH_API_KEY')!;
+        const r = await fetch(`${GATEWAY}/v1.0/sites/${site.data.id}/drive/root:/${dest}:/content`, { method: 'PUT', headers: { Authorization: `Bearer ${gk}`, 'X-Connection-Api-Key': ck, 'Content-Type': 'application/octet-stream' }, body: await blob.arrayBuffer(), signal: AbortSignal.timeout(30000) });
+        if (r.ok) { ok++; await client.from('audit_logs').insert({ action: 'm365_doc_backup_copied', table_name: 'microsoft_sharepoint', record_id: f.key, performed_by: auth.user.email, reason: 'Signed document copied to SharePoint', record_data: { bucket: f.bucket } }); }
+        else { failed++; const t = await r.text(); try { lastError = `Microsoft returned ${r.status}: ${JSON.parse(t)?.error?.message ?? t}`.slice(0, 300); } catch { lastError = `Microsoft returned ${r.status}`; } if (r.status === 403 || r.status === 401) break; }
+      }
+      return reply({ ok: failed === 0 || ok > 0, copiedNow: ok, failed, tooBig, remaining: pending.length - ok, error: lastError, siteUrl: site.data.webUrl });
+    }
+    if (raw && typeof raw === 'object' && 'notice' in raw) {
+      const n = Notice.safeParse(raw);
+      if (!n.success) return reply({ ok: false, error: 'Check the notice title, message and recipients' });
+      const { data: people } = await client.from('employees').select('id,name,email,status,disabled').in('id', n.data.recipients);
+      const to = (people ?? []).filter((p: any) => p.disabled !== true && String(p.status).toLowerCase() === 'active' && /@/.test(p.email ?? '')).map((p: any) => ({ emailAddress: { address: p.email, name: p.name } }));
+      if (!to.length) return reply({ ok: false, error: 'None of the chosen staff have an email address' });
+      const auditId = crypto.randomUUID();
+      const { error: aErr } = await client.from('audit_logs').insert({ id: auditId, action: 'm365_notice_submitted', table_name: 'microsoft_mail', record_id: NOTICE_SENDER, performed_by: auth.user.email, reason: `Official notice "${n.data.subject}"`, record_data: { subject: n.data.subject, recipients: to.length } });
+      if (aErr) return reply({ ok: false, error: 'Could not record the notice; nothing was sent' });
+      const html = `<div style="font-family:Arial,sans-serif"><p>${esc(n.data.body).replace(/\n/g, '<br>')}</p><hr><p style="font-size:12px;color:#666">Great Agro Coffee &mdash; Member of YEDA COFFEE COMPANY LIMITED, P.O Box 431420, Kasese, Uganda</p></div>`;
+      const res = await gx(`/v1.0/users/${NOTICE_SENDER}/sendMail`, 'POST', { message: { subject: n.data.subject, body: { contentType: 'HTML', content: html }, toRecipients: [{ emailAddress: { address: NOTICE_SENDER } }], bccRecipients: to }, saveToSentItems: true });
+      await client.from('audit_logs').update({ action: `m365_notice_${res.ok ? 'sent' : 'refused'}`, record_data: { subject: n.data.subject, recipients: to.length, result: res.ok ? 'sent' : res.error } }).eq('id', auditId);
+      return reply(res.ok ? { ok: true, message: `Notice sent from ${NOTICE_SENDER} to ${to.length} staff` } : res);
+    }
+    if (raw && typeof raw === 'object' && 'account' in raw) {
+      const a = Account.safeParse(raw);
+      if (!a.success) return reply({ ok: false, error: a.error.issues[0]?.message ?? 'Invalid account request' });
+      if (a.data.account === 'sync') {
+        const msUsers: any[] = []; let path: string | undefined = '/v1.0/users?$select=id,displayName,userPrincipalName,mail,accountEnabled&$top=999';
+        while (path && msUsers.length < 3000) { const r = await gx(path); if (!r.ok) return reply(r); msUsers.push(...(r.data?.value ?? [])); const nl = r.data?.['@odata.nextLink']; path = nl ? `${new URL(nl).pathname}${new URL(nl).search}` : undefined; }
+        const { data: emps } = await client.from('employees').select('id,name,email,status,disabled,department,position');
+        const byMail = new Map<string, any>(); for (const u of msUsers) for (const m of [u.userPrincipalName, u.mail]) if (m) byMail.set(String(m).toLowerCase(), u);
+        const missing = [], leavers = [];
+        const empMails = new Map<string, any>();
+        for (const e of emps ?? []) {
+          const mail = String(e.email ?? '').toLowerCase(); if (mail) empMails.set(mail, e);
+          const active = e.disabled !== true && String(e.status).toLowerCase() === 'active';
+          const u = mail ? byMail.get(mail) : undefined;
+          if (active && !u) missing.push({ id: e.id, name: e.name, email: e.email, department: e.department, position: e.position });
+          if (!active && u && u.accountEnabled) leavers.push({ userId: u.id, name: u.displayName, upn: u.userPrincipalName, employee: e.name, status: e.disabled ? 'disabled' : e.status });
+        }
+        await client.from('audit_logs').insert({ action: 'm365_account_sync_viewed', table_name: 'microsoft_entra', record_id: 'sync', performed_by: auth.user.email, reason: 'Administrator compared staff with Microsoft accounts', record_data: { missing: missing.length, leavers: leavers.length } });
+        return reply({ ok: true, missing, leavers });
+      }
+      if (a.data.account === 'create') {
+        const { data: e } = await client.from('employees').select('id,name,email,status,disabled,department,position').eq('id', a.data.employeeId).maybeSingle();
+        if (!e || e.disabled === true || String(e.status).toLowerCase() !== 'active') return reply({ ok: false, error: 'Only active employees can get a Microsoft account' });
+        const upn = a.data.upn.toLowerCase();
+        const exists = await gx(`/v1.0/users/${encodeURIComponent(upn)}?$select=id`);
+        if (exists.ok) return reply({ ok: false, error: 'That Microsoft address already exists' });
+        const bytes = crypto.getRandomValues(new Uint8Array(12)); const pw = 'Ga' + Array.from(bytes, b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('') + '#7';
+        const auditId = crypto.randomUUID();
+        const { error: aErr } = await client.from('audit_logs').insert({ id: auditId, action: 'm365_account_create_submitted', table_name: 'microsoft_entra_users', record_id: e.id, performed_by: auth.user.email, reason: `Create Microsoft account ${upn} for ${e.name}`, record_data: { upn, employee: e.name } });
+        if (aErr) return reply({ ok: false, error: 'Could not record the request; nothing was sent to Microsoft' });
+        const parts = String(e.name).trim().split(/\s+/);
+        const res = await gx('/v1.0/users', 'POST', { accountEnabled: true, displayName: e.name, givenName: parts[0], surname: parts.slice(1).join(' ') || undefined, mailNickname: upn.split('@')[0].replace(/[^a-z0-9._-]/g, ''), userPrincipalName: upn, usageLocation: 'UG', jobTitle: e.position ?? undefined, department: e.department ?? undefined, passwordProfile: { forceChangePasswordNextSignIn: true, password: pw } });
+        await client.from('audit_logs').update({ action: `m365_account_create_${res.ok ? 'created' : 'refused'}`, record_data: { upn, employee: e.name, result: res.ok ? 'created' : res.error } }).eq('id', auditId);
+        // The one-time password is returned only to this administrator's screen and never logged.
+        return reply(res.ok ? { ok: true, upn, tempPassword: pw, message: `Microsoft account ${upn} created. Assign a Microsoft 365 licence in the admin centre for email.` } : res);
+      }
+      const u = await gx(`/v1.0/users/${a.data.userId}?$select=id,displayName,userPrincipalName`);
+      if (!u.ok) return reply(u);
+      if (String(u.data.displayName).trim().toLowerCase() !== a.data.confirmName.trim().toLowerCase()) return reply({ ok: false, error: 'Type the exact name to confirm' });
+      if (String(u.data.userPrincipalName).toLowerCase() === auth.user.email.toLowerCase()) return reply({ ok: false, error: 'You cannot disable your own account' });
+      const auditId = crypto.randomUUID();
+      const { error: aErr } = await client.from('audit_logs').insert({ id: auditId, action: 'm365_account_disable_submitted', table_name: 'microsoft_entra_users', record_id: a.data.userId, performed_by: auth.user.email, reason: `Disable Microsoft account ${u.data.userPrincipalName}`, record_data: { upn: u.data.userPrincipalName } });
+      if (aErr) return reply({ ok: false, error: 'Could not record the request; nothing was sent to Microsoft' });
+      const res = await gx(`/v1.0/users/${a.data.userId}`, 'PATCH', { accountEnabled: false });
+      if (res.ok) await gx(`/v1.0/users/${a.data.userId}/revokeSignInSessions`, 'POST');
+      await client.from('audit_logs').update({ action: `m365_account_disable_${res.ok ? 'done' : 'refused'}`, record_data: { upn: u.data.userPrincipalName, result: res.ok ? 'disabled' : res.error } }).eq('id', auditId);
+      return reply(res.ok ? { ok: true, message: `${u.data.displayName} can no longer sign in to Microsoft. Their mailbox and files are kept.` } : res);
+    }
     if (raw && typeof raw === 'object' && 'meeting' in raw) {
       const m = Meeting.safeParse(raw);
       if (!m.success) return reply({ ok: false, error: 'Check the meeting details' });
