@@ -1,3 +1,4 @@
+import { csvCell } from '@/lib/safeCsv';
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -183,16 +184,16 @@ const WalletAudit = () => {
             const header = ["Name","Email","Balance","Entries","Backfill","YoPending","DupClusters","BonusWriteoffs","Risk","Reasons"];
             const csv = [header.join(",")].concat(
               rows.map((u) => [
-                JSON.stringify(u.name),
-                JSON.stringify(u.email),
+                csvCell(u.name),
+                csvCell(u.email),
                 u.balance,
                 u.entries,
                 u.backfillCount,
                 u.pendingYoCount,
                 u.duplicateClusters,
                 u.bonusWriteoffs,
-                u.risk,
-                JSON.stringify(u.reasons.join(" | ")),
+                csvCell(u.risk),
+                csvCell(u.reasons.join(" | ")),
               ].join(","))
             ).join("\n");
             const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

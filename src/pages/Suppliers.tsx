@@ -1,3 +1,4 @@
+import { csvCell } from '@/lib/safeCsv';
 import { useRef } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -156,7 +157,7 @@ const Suppliers = () => {
     const header = 'Code,Supplier Name,Phone,Location,Date Registered,Days Since Registration';
     const lines = neverDelivered.map(s =>
       [s.code, s.name, s.phone, s.origin, s.date_registered, s.daysSinceRegistration ?? '']
-        .map(v => `"${String(v ?? '').replace(/"/g, '""')}"`)
+        .map((v: any) => (typeof v === 'number' ? String(v) : csvCell(v)))
         .join(',')
     );
     const blob = new Blob([[header, ...lines].join('\n')], { type: 'text/csv;charset=utf-8' });

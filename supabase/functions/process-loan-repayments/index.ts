@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
           for (const g of guarantorList) {
             const { data: guarantorUserId } = await supabase.rpc('get_unified_user_id', { input_email: g.email })
             if (!guarantorUserId) {
-              console.warn(`  ⚠️ Guarantor ${g.slot} has no system account: ${g.email}`)
+              console.warn(`  ⚠️ Guarantor ${g.slot} has no system account`)
               continue
             }
             const { data: gBalRaw } = await supabase

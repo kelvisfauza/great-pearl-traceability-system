@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
       }
 
       processed++;
-      console.log(`✅ Auto-invested UGX ${investAmount.toLocaleString()} for ${cfg.user_email}`);
+      console.log('✅ Auto-invest posted');
     }
 
     return new Response(JSON.stringify({ ok: true, processed, skipped, total: configs?.length || 0 }), {

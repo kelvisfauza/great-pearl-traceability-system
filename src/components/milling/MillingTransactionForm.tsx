@@ -146,7 +146,7 @@ const MillingTransactionForm = ({ open, onClose }: MillingTransactionFormProps) 
     
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      printWindow.document.write(`<pre>${printContent}</pre>`);
+      printWindow.document.write(`<pre>${printContent.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" } as Record<string, string>)[ch])}</pre>`);
       printWindow.document.close();
       printWindow.print();
     }

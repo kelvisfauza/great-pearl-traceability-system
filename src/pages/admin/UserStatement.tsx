@@ -1,3 +1,4 @@
+import { csvCell } from '@/lib/safeCsv';
 import { escapeHtml } from "@/lib/escapeHtml";
 import { useMemo, useState } from "react";
 import { getSpecificWithdrawalLabel } from "@/lib/transactionLabel";
@@ -477,16 +478,16 @@ const UserStatement = () => {
     const header = ["Wallet account", "Account holder", "Date", "Type", "Source", "Description", "Reference", "Amount", "Running"];
     const rows = totals.enriched.map((e) => [
       selectedEmployee.wallet_account_number,
-      selectedEmployee.name?.replace(/"/g, '""'),
+      selectedEmployee.name,
       new Date(e.created_at).toISOString(),
       e.entry_type,
       e.source_category || "",
-      (e.metadata?.description || "").replace(/"/g, '""'),
+      e.metadata?.description || "",
       e.reference,
       e.amount,
       e.running,
     ]);
-    const csv = [header, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const csv = [header, ...rows].map((r) => r.map((c: any) => (typeof c === 'number' ? String(c) : csvCell(c))).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

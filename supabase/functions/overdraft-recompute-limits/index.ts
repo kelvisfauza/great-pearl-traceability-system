@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
             .eq("employee_email", row.employee_email)
             .eq("period", period);
         } catch (e) {
-          console.error("Failed to queue overdraft-qualification email", row.employee_email, e);
+          console.error("Failed to queue overdraft-qualification email", (e as Error)?.message);
         }
       }
     } catch (e) {

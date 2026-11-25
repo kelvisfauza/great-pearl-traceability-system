@@ -1,3 +1,4 @@
+import { csvCell } from '@/lib/safeCsv';
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,9 +112,9 @@ const PointInTimeBalances = () => {
     filtered.forEach((r) => {
       lines.push(
         [
-          JSON.stringify(r.name),
-          JSON.stringify(r.email),
-          r.user_id,
+          csvCell(r.name),
+          csvCell(r.email),
+          csvCell(r.user_id),
           r.balance,
           r.entries,
           r.lastEntryAt || "",

@@ -521,7 +521,7 @@ Deno.serve(async (req) => {
               },
             });
             payslipUrl = payslipResult?.url || '';
-            console.log(`📄 Payslip generated for ${emp.name}: ${payslipUrl}`);
+            console.log('📄 Payslip generated');
           } catch (payslipErr) {
             console.warn(`⚠️ Payslip generation failed for ${emp.name} (non-blocking):`, payslipErr);
           }

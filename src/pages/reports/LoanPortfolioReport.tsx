@@ -1,3 +1,4 @@
+import { csvCell } from '@/lib/safeCsv';
 import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,7 +85,7 @@ const LoanPortfolioReport = () => {
   const exportCsv = () => {
     const head = ["Borrower", "Email", "Type", "Status", "Applied", "Principal", "Total repayable", "Paid", "Outstanding", "Overdue installments", "Overdue amount", "Next due", "Issues"];
     const lines = filtered.map((r: any) => [r.employee_name, r.employee_email, r.loan_type, r.status, day(r.created_at), r.loan_amount, r.total_repayable, r.paid, r.remaining_balance, r.overdue, r.overdueAmt, r.next ? `${r.next.due_date} (${Number(r.next.amount_due) - (Number(r.next.amount_paid) || 0)})` : "", r.issues.join("; ")]);
-    const csv = [head, ...lines].map((l) => l.map((c: any) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = [head, ...lines].map((l) => l.map((c: any) => (typeof c === 'number' ? String(c) : csvCell(c))).join(",")).join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     a.download = `loan-report-${new Date().toISOString().slice(0, 10)}.csv`;

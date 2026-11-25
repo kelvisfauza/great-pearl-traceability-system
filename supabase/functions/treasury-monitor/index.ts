@@ -176,7 +176,7 @@ serve(async (req) => {
               },
             },
           });
-        } catch (e) { console.error("email failed", r.email, e); }
+        } catch (e) { console.error("email failed", (e as Error)?.message ?? "unknown"); }
         if (r.phone) {
           try {
             await supabase.functions.invoke("send-sms", {

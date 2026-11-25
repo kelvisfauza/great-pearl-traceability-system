@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
         )
         results.push({ email, status: 'sent' })
       } catch (err: any) {
-        console.error(`Reminder failed for ${email}:`, err?.message || err)
+        console.error('Reminder failed:', err?.message || 'unknown')
         results.push({ email, status: `failed: ${err?.message || 'unknown'}` })
       }
     }

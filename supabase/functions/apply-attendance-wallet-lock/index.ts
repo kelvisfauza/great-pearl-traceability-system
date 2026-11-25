@@ -109,7 +109,7 @@ serve(async (req) => {
           },
         });
       } catch (e) {
-        console.warn("email failed for", emp.email, (e as Error).message);
+        console.warn("email failed", (e as Error).message);
       }
     }
 

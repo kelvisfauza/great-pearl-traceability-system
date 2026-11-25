@@ -27,7 +27,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('SMS login link accessed with params:', { code, email, phone });
+    console.log('SMS login link accessed');
 
     // Create Supabase client
     const supabase = createClient(

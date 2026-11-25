@@ -5,6 +5,7 @@ import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { escapeHtml } from "../_shared/escape-html.ts";
 
 const SITE_NAME = "Great Agro Coffee"
 const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site"
@@ -48,8 +49,8 @@ async function sendTemplateEmail(
       const opsIdempotencyKey = `ops-cc-${templateName}-${baseKey}`
       const ccNote = `<div style="background:#f0f4f8;padding:12px 16px;border-radius:6px;margin-bottom:20px;font-family:Arial,sans-serif;font-size:13px;color:#334155;">
         <strong>📋 Operations Copy</strong><br/>
-        Original recipient: <strong>${recipientEmail}</strong> (${recipientName})<br/>
-        Template: ${templateName} | Sent: ${new Date().toLocaleString('en-UG', { timeZone: 'Africa/Kampala' })}
+        Original recipient: <strong>${escapeHtml(recipientEmail)}</strong> (${escapeHtml(recipientName)})<br/>
+        Template: ${escapeHtml(templateName)} | Sent: ${new Date().toLocaleString('en-UG', { timeZone: 'Africa/Kampala' })}
       </div>`
       const opsHtml = html.replace(/<body[^>]*>/, (match: string) => `${match}${ccNote}`)
       await sendLovableEmail(
@@ -75,7 +76,7 @@ async function sendToRecipients(
     try {
       await sendTemplateEmail(lovableApiKey, templateName, r.email, r.name, templateData, today)
       results.push({ email: r.email, status: 'sent' })
-      console.log(`✅ ${templateName} sent to ${r.email}`)
+      console.log(`✅ ${templateName} sent`)
     } catch (err) {
       results.push({ email: r.email, status: `failed: ${err.message}` })
       console.error(`❌ ${templateName} failed for ${r.email}:`, err.message)

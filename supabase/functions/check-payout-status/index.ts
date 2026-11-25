@@ -298,6 +298,6 @@ async function sendReceiverSms(
 
     console.log('Operation recorded; private details omitted');
   } catch (err) {
-    console.error(`[Payout Poller] Failed to send SMS to ${opts.phone}:`, err);
+    console.error('[Payout Poller] Failed to send SMS:', (err as Error)?.message ?? 'unknown');
   }
 }

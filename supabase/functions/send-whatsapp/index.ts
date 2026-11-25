@@ -15,6 +15,16 @@ serve(async (req) => {
 
   { const __deny = await requireInternalOrAdmin(req, corsHeaders); if (__deny) return __deny; }
 
+  // Only the central sender (which already validated recipient and content) may mirror to WhatsApp.
+  {
+    const bearer = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '')
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    if (!serviceKey || bearer !== serviceKey) {
+      return new Response(JSON.stringify({ ok: false, error: 'WhatsApp messages are sent only by the central notification sender.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+  }
+
   // --- Required Authentication ---
   const authHeader = req.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
@@ -48,7 +58,7 @@ serve(async (req) => {
   try {
     const { phone, message, userName, messageType, templateName, placeholders, department, recipientEmail, requestId, triggeredBy } = await req.json()
 
-    console.log('WhatsApp request:', { phone, userName, messageType, templateName })
+    console.log('WhatsApp request:', { messageType, templateName })
 
     if (!phone) {
       return new Response(

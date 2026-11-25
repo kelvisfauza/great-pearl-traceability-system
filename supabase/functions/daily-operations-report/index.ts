@@ -7,6 +7,7 @@ import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { jsPDF } from 'npm:jspdf@2.5.2'
 import autoTableMod from 'npm:jspdf-autotable@3.8.4'
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { escapeHtml } from "../_shared/escape-html.ts";
 import { operationsReportRecipients } from '../_shared/operations-report-recipients.ts';
 
 const autoTable: any = (autoTableMod as any).default ?? autoTableMod
@@ -335,7 +336,7 @@ Deno.serve(async (req) => {
             ${row('Fees &amp; charges collected', money(wallet.fees))}
             ${row('Overdraft draws / interest', `${money(wallet.overdraftDraws)} / ${money(wallet.overdraftInterest)}`)}
             ${row('Loan disbursed / recovered', `${money(wallet.loanDisbursed)} / ${money(wallet.loanRecovery)}`)}
-            ${row('Most active user', activeUsers[0] ? `${activeUsers[0].name} (${activeUsers[0].actions} actions)` : 'n/a')}
+            ${row('Most active user', activeUsers[0] ? `${escapeHtml(activeUsers[0].name)} (${activeUsers[0].actions} actions)` : 'n/a')}
           </table>
           <p style="text-align:center;margin:26px 0;">
             <a href="${downloadUrl}" style="background:#14532d;color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:6px;font-weight:bold;font-size:14px;display:inline-block;">Download the full PDF report</a>
@@ -373,7 +374,7 @@ Download the PDF: ${downloadUrl}`
         }, { apiKey: lovableApiKey, idempotencyKey: idem })
         emailResults.push({ email: r.email, status: 'sent' })
       } catch (e) {
-        console.error('Email failed', r.email, (e as Error).message)
+        console.error('Email failed', (e as Error).message)
         emailResults.push({ email: r.email, status: `failed: ${(e as Error).message}` })
       }
     }

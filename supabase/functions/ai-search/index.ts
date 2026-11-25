@@ -450,7 +450,7 @@ async function runSendMessage(
     results.push(entry);
   }
 
-  console.log(`📨 AI message by ${sender.email} → ${emails.length} recipient(s) via ${channel}${truncated ? ` (${truncated} truncated)` : ""}`);
+  console.log(`📨 AI message → ${emails.length} recipient(s) via ${channel}`);
   return {
     channel,
     subject,

@@ -296,7 +296,7 @@ Deno.serve(async (req) => {
         emailError = 'skipped_by_pref'
         console.log(`⏭️ Email skipped by admin pref for ${templateName}`)
       } else {
-        console.log('✅ Transactional email sent', { templateName, effectiveRecipient })
+        console.log('✅ Transactional email sent', { templateName })
       }
     } else {
       emailStatus = 'failed'

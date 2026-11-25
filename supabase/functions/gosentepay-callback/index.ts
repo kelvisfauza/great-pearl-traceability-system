@@ -28,7 +28,7 @@ serve(async (req) => {
     // Handle both XML (Yo Payments) and JSON (legacy) callbacks
     if (contentType.includes("xml") || contentType.includes("text/xml")) {
       const xmlText = await req.text();
-      console.log("Yo Payments callback received (XML):", xmlText);
+      console.log("Yo Payments callback received (XML), length:", xmlText.length);
       rawBody = { raw_xml: xmlText };
 
       // Parse Yo Payments XML notification
@@ -52,11 +52,11 @@ serve(async (req) => {
         status = "failed";
       }
 
-      console.log(`Yo Payments parsed: ref=${ref}, status=${status}, phone=${phone}`);
+      console.log(`Yo Payments parsed: ref=${ref}, status=${status}`);
     } else if (contentType.includes("application/x-www-form-urlencoded")) {
       // Yo Payments sometimes sends form-urlencoded IPN callbacks
       const formText = await req.text();
-      console.log("Yo Payments callback received (form-urlencoded):", formText);
+      console.log("Yo Payments callback received (form-urlencoded)");
       const params = new URLSearchParams(formText);
       rawBody = Object.fromEntries(params.entries());
 
@@ -79,11 +79,11 @@ serve(async (req) => {
         status = "failed";
       }
 
-      console.log(`Yo Payments form parsed: ref=${ref}, status=${status}, phone=${phone}, raw keys: ${Array.from(params.keys()).join(', ')}`);
+      console.log(`Yo Payments form parsed: ref=${ref}, status=${status}, raw keys: ${Array.from(params.keys()).join(', ')}`);
     } else {
       // Try JSON first, fall back to form-urlencoded
       const bodyText = await req.text();
-      console.log("Callback received (raw):", bodyText);
+      console.log("Callback received (raw), length:", bodyText.length);
       
       try {
         const body = JSON.parse(bodyText);
@@ -110,7 +110,7 @@ serve(async (req) => {
           status = "failed";
         }
         
-        console.log(`Fallback form parsed: ref=${ref}, status=${status}, phone=${phone}`);
+        console.log(`Fallback form parsed: ref=${ref}, status=${status}`);
       }
     }
 

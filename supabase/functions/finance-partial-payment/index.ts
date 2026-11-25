@@ -280,7 +280,7 @@ Deno.serve(async (req) => {
               message: `Payee: ${payeeName}\n${msg}${reference ? `\nReference: ${reference}` : ""}\nRecorded by: ${financeName}` },
           },
         });
-      } catch (e) { console.warn("email failed", to, (e as Error).message); }
+      } catch (e) { console.warn("email failed", (e as Error).message); }
     }
     // Payee always gets a text confirmation
     if (payeePhone) {

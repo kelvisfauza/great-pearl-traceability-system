@@ -214,7 +214,7 @@ serve(async (req) => {
             },
           });
         } catch (emailErr) {
-          console.error(`Email to ${admin.email} failed:`, emailErr);
+          console.error('Admin email failed:', (emailErr as Error)?.message ?? 'unknown');
         }
       }
     }

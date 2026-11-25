@@ -311,7 +311,7 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to create signed URL: ${signedError.message}`);
     }
 
-    console.log(`\u2705 Payslip PDF generated for ${body.employeeName}: ${signedData.signedUrl}`);
+    console.log('Payslip PDF generated');
 
     return new Response(JSON.stringify({
       success: true,

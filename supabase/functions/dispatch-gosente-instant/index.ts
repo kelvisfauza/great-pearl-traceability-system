@@ -187,7 +187,7 @@ serve(async (req) => {
     const ref = iw.payout_ref || `INSTANT-WD-${iw.id}`;
     const amount = Number(iw.amount);
 
-    console.log(`[dispatch-gosente-instant] admin=${adminEmail} amount=${amount} phone=${iw.phone_number} ref=${ref}`);
+    console.log(`[dispatch-gosente-instant] ref=${ref}`);
 
     const { status, body } = await gosenteWithdraw({
       phone: iw.phone_number,

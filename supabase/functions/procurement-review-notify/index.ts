@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
         body: { phone, message, userName: name, messageType },
       })
     } catch (e) {
-      console.error('SMS failed for', phone, (e as Error)?.message)
+      console.error('SMS failed', (e as Error)?.message)
     }
   }
 

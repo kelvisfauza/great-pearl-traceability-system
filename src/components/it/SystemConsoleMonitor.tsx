@@ -1,3 +1,4 @@
+import { csvCell } from '@/lib/safeCsv';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,9 +82,9 @@ const SystemConsoleMonitor = () => {
         log.level,
         log.user_name || 'Unknown',
         log.user_department || 'Unknown',
-        `"${(log.message || '').replace(/"/g, '""').substring(0, 500)}"`,
+        (log.message || '').substring(0, 500),
         log.url || ''
-      ].join(','))
+      ].map((c) => csvCell(c)).join(','))
     ].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv' });

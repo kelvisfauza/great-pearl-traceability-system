@@ -118,7 +118,7 @@ serve(async (req) => {
               },
               source_category: "system",
             });
-            console.log(`[expire-requests] Refunded UGX ${amount} to ${email} (${ledgerRef})`);
+            console.log(`[expire-requests] Refund posted (${ledgerRef})`);
             refunded = true;
           }
         } else {

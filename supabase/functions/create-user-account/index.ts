@@ -75,7 +75,7 @@ serve(async (req) => {
     const phone = savedEmployee.phone;
     let passwordSentViaSms = false;
 
-    console.log('Creating auth account for:', email)
+    console.log('Creating auth account')
 
     // Generate a random temporary password
     const tempPassword = temporaryPassword()

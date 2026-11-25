@@ -129,7 +129,7 @@ serve(async (req) => {
       }
 
       if (!existingEmployees || existingEmployees.length === 0) {
-        console.error('❌ No employee found with email:', employeeData.email)
+        console.error('❌ No employee found for the supplied email')
         // Clean up auth user
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
         throw new Error(`No employee record found for email: ${employeeData.email}`)

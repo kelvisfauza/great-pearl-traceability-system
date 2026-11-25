@@ -77,7 +77,7 @@ serve(async (req) => {
 
     const { email, password, name, department, position, phone } = await req.json() as CreateAdminRequest
 
-    console.log(`Creating Super Admin account for: ${email}`)
+    console.log('Creating Super Admin account')
 
     const { data: authData, error: authError2 } = await supabaseAdmin.auth.admin.createUser({
       email,

@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
         )
         results.push({ email, status: 'sent' })
       } catch (err: any) {
-        console.error(`Failed to email ${email}:`, err?.message || err)
+        console.error('Failed to email recipient:', err?.message || 'unknown')
         results.push({ email, status: `failed: ${err?.message || 'unknown'}` })
       }
     }

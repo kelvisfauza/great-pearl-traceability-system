@@ -107,7 +107,7 @@ export const useApprovalSystem = () => {
           for (const approver of approvers) {
             if (approver.phone) {
               try {
-                console.log(`📱 Sending SMS to ${approver.name} (${approver.email}) at ${approver.phone}`);
+                console.log(`📱 Sending SMS to an approver`);
                 const smsSuccess = await sendApprovalRequestSMS(
                   approver.name,
                   approver.phone,

@@ -914,7 +914,7 @@ serve(async (req) => {
               ? `Per-diem ${submission.provider_name || ""}`
               : `Provider payment ${submission.provider_name || ""}`
           ).replace(/\s+/g, " ").trim().slice(0, 120);
-        console.log(`[GosentePay] payout admin=${reviewerName} amount=${totalAmount} phone=${cleanPhone} ref=${gRef} email=${payoutEmail}`);
+        console.log(`[GosentePay] payout ref=${gRef}`);
         const gResp = await gosenteWithdraw({
           phone: cleanPhone,
           amount: totalAmount,
