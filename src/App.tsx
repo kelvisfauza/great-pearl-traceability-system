@@ -183,6 +183,7 @@ import Overdraft from "./pages/Overdraft";
 import OverdraftAdmin from "./pages/admin/OverdraftAdmin";
 import OverdraftAnalytics from "./pages/admin/OverdraftAnalytics";
 import LoanAppeals from "./pages/admin/LoanAppeals";
+import EntraDirectory from "./pages/admin/EntraDirectory";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import BankDetailsPrompt from "./components/BankDetailsPrompt";
 import BirthdayNotification from "./components/BirthdayNotification";
@@ -517,6 +518,11 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/overdraft-analytics" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <OverdraftAnalytics />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/microsoft-365" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <EntraDirectory />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/loan-appeals" element={

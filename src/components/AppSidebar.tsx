@@ -109,6 +109,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
           { name: "Excel Reports", icon: FileSpreadsheet, path: "/admin/excel-reports", requiresAdmin: true },
         ] },
         { name: "Document Manager", icon: HardDrive, path: "/admin/documents", permission: null, requiresAdmin: true },
+        { name: "Microsoft 365", icon: Users, path: "/admin/microsoft-365", permission: null, requiresAdmin: true },
         { name: "Settings", icon: Settings, path: "/settings", permission: null },
         { name: "Logistics", icon: Truck, path: "/logistics", permission: "Logistics" },
       ]

@@ -77,3 +77,5 @@
 - Coffee integrity flags join the existing scanner via a private view; admins fix them only through audited resolve_coffee_flag, which never deletes paid entries.
 - Internal edge functions use requireInternalOrAdmin; cron/triggers send private_edge.header(), so the public key cannot run them.
 - treasury_account_post funds lending from Invest & Earn then User Wallets (50% cap), blocks business-account funding and returns repaid principal to Invest & Earn, so lending uses only staff money.
+
+- Microsoft 365 directory reads go through the admin-only, audited entra-directory edge function (read-only); browser code never calls Graph or holds connector keys.
