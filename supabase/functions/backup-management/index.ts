@@ -22,7 +22,7 @@ Deno.serve(async req => {
     const people = client.from('employees').select('name,disabled,status');
     const { data: person, error: personError } = await (/^[0-9a-f-]{36}$/i.test(personId || '') ? people.eq('auth_user_id', personId) : people.ilike('email', auth.user.email)).maybeSingle();
     const { data: roles, error: roleError } = await client.from('user_roles').select('role').eq('user_id', auth.user.id).in('role', ['Administrator', 'Super Admin']);
-    if (identityError || personError || roleError || !person || person.disabled === true || person.status !== 'active' || !roles?.length) return reply({ ok: false, error: 'Active administrator access required' }, 403);
+    if (identityError || personError || roleError || !person || person.disabled === true || String(person.status).toLowerCase() !== 'active' || !roles?.length) return reply({ ok: false, error: 'Active administrator access required' }, 403);
     const parsed = Input.safeParse(await req.json());
     if (!parsed.success) return reply({ ok: false, error: 'Invalid backup request' }, 400);
     const gatewayKey = Deno.env.get('LOVABLE_API_KEY');

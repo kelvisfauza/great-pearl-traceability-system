@@ -13,7 +13,7 @@ const HRWorkSummary = () => {
         supabase.from("attendance").select("*", { count: "exact", head: true }).eq("date", today).eq("status", "present"),
         supabase.from("attendance").select("*", { count: "exact", head: true }).eq("date", today).eq("status", "absent"),
         supabase.from("approval_requests").select("*", { count: "exact", head: true }).eq("type", "leave").eq("status", "pending"),
-        supabase.from("employees").select("*", { count: "exact", head: true }).eq("status", "active"),
+        supabase.from("employees").select("*", { count: "exact", head: true }).ilike("status", "active"),
       ]);
 
       return {
