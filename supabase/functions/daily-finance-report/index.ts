@@ -46,7 +46,7 @@ Deno.serve(async(req)=>{
       const path=`finance/${date}/${run.id}.pdf`;
       const upload=await db.storage.from('daily-reports').upload(path,pdf,{contentType:'application/pdf',upsert:true});
       if(upload.error)throw upload.error;
-      const saved=await db.from('daily_finance_report_runs').update({storage_path:path,status:'prepared'}).eq('id',run.id).select('*').single();
+      const saved=await db.from('daily_finance_report_runs').update({storage_path:path,status:'prepared'}).eq('id',run.id).eq('status','preparing').select('*').single();
       if(saved.error)throw saved.error;run=saved.data;
     }
     const signed=await db.storage.from('daily-reports').createSignedUrl(run.storage_path,604800);

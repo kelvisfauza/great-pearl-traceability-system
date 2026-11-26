@@ -1,7 +1,7 @@
 import { jsPDF } from 'npm:jspdf@2.5.2';
 import tableModule from 'npm:jspdf-autotable@3.8.4';
 const autoTable: any = (tableModule as any).default ?? tableModule;
-import {accountTotals} from './rules.ts';
+import {accountTotals,openPartialPayments} from './rules.ts';
 const money = (v: unknown) => v == null ? 'Not recorded' : Number(v).toLocaleString('en-GB',{maximumFractionDigits:0});
 const eat = (v: string) => new Date(v).toLocaleString('en-GB',{timeZone:'Africa/Kampala',hour12:false});
 export function buildFinancePdf(s: any, date: string, code: string, qr: string, generatedBy: string): Uint8Array {
@@ -42,7 +42,7 @@ export function buildFinancePdf(s: any, date: string, code: string, qr: string, 
   table('5. Issued payment receipts - not settlement confirmation',['Reference / source','Recipient','Principal','Charges','Total','Method / transaction'],s.receipts.map((r:any)=>[`${r.reference}\n${r.source}`,r.recipient_name||'-',money(r.amount),money(r.charges),money(r.total),`${r.payment_method||'-'}\n${r.transaction_id||'-'}`]));
   table('6. Finance cash actions',['Reference','Action','Amount','Status','By'],s.cash_entries.map((r:any)=>[r.reference||'-',`${r.transaction_type}\n${r.notes||''}`,money(r.amount),r.status,r.confirmed_by||r.created_by||'-']));
   table('7. Expenses recorded for report date',['Description','Category / department','Amount','Status'],s.expenses.map((r:any)=>[r.description,`${r.category||'-'} / ${r.department||'-'}`,money(r.amount),r.status]));
-  table('8. Unpaid partial requests - CURRENT at snapshot capture',['Request / payee','Total','Paid','Remaining','Status'],s.partial_payments_current.map((r:any)=>[`${r.title}\n${r.payee_name}`,money(r.total_amount),money(r.paid_amount),money(r.balance),r.status]));
+  table('8. Unpaid partial requests - CURRENT at snapshot capture',['Request / payee','Total','Paid','Remaining','Status'],openPartialPayments(s.partial_payments_current).map((r:any)=>[`${r.title}\n${r.payee_name}`,money(r.total_amount),money(r.paid_amount),money(r.balance),r.status]));
   const coffee=s.coffee_payments_current;
   table('9. Supplier coffee backlog - CURRENT at snapshot capture',['Metric','Value'],[
     ['All unpaid lots',String(coffee.length)],
