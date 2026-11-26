@@ -1,7 +1,7 @@
 import { jsPDF } from 'npm:jspdf@2.5.2';
 import tableModule from 'npm:jspdf-autotable@3.8.4';
 const autoTable: any = (tableModule as any).default ?? tableModule;
-import {accountTotals,openPartialPayments} from './rules.ts';
+import {accountTotals,openPartialPayments,financeSummary} from './rules.ts';
 const money = (v: unknown) => v == null ? 'Not recorded' : Number(v).toLocaleString('en-GB',{maximumFractionDigits:0});
 const eat = (v: string) => new Date(v).toLocaleString('en-GB',{timeZone:'Africa/Kampala',hour12:false});
 export function buildFinancePdf(s: any, date: string, code: string, qr: string, generatedBy: string): Uint8Array {
@@ -21,6 +21,34 @@ export function buildFinancePdf(s: any, date: string, code: string, qr: string, 
     autoTable(doc,{startY:y+4,head:[head],body:body.length?body:[head.map((_,i)=>i===0?'No recorded entries':'')],theme:'striped',styles:{fontSize:7,cellPadding:2,overflow:'linebreak'},headStyles:{fillColor:[20,83,45]},alternateRowStyles:{fillColor:[244,247,245]},margin:{left:14,right:14,top:18,bottom:35},rowPageBreak:'avoid'});
     y=(doc as any).lastAutoTable.finalY+10;
   };
+  const summary=financeSummary(s);
+  const counted=(metric: {amount:number;count:number})=>`${money(metric.amount)} (${metric.count} references)`;
+  table('Daily summary - recorded transactions',['Metric','UGX / count'],[
+    ['Withdrawal releases (gross journal debits)',counted(summary.withdrawals)],
+    ['Other external payments - total',counted(summary.payments)],
+    ['   Meal plans (included above)',counted(summary.mealPlans)],
+    ['   Service providers (included above)',counted(summary.serviceProviders)],
+    ['   Other / unclassified payments (included above)',counted(summary.otherPayments)],
+    ['Provider charges paid',money(summary.providerCharges)],
+    ['Total external money debited',money(summary.externalDebits)],
+    ['Returned / refunded external money',money(summary.refunds)],
+    ['NET MONEY LEAVING THE SYSTEM',money(summary.netExternalOutflow)],
+    ['Reconciliation / corrections (separate signed movement)',money(summary.reconciliationNet)],
+    ['Invest & Earn - total credited during period',money(summary.investmentCredits)],
+    ['Invest & Earn - closing funds',money(summary.investmentClosing)],
+    ['Profit / fee accounts - total credited',money(summary.profitAccountCredits)],
+    ['Sales / income - accounting journals',money(summary.revenue)],
+    ['Cost of sales - accounting journals',money(summary.costOfSales)],
+    ['GROSS PROFIT - accounting journals',money(summary.grossProfit)],
+    ['Operating costs - accounting journals',money(summary.operatingExpenses)],
+    ['NET PROFIT - accounting journals',money(summary.netProfit)],
+  ]);
+  table('Summary basis',['Item','Meaning'],[
+    ['Cash totals','Account journals only; transfers, reconciliation/corrections, pool duplicates and receipt reprints are excluded from payouts. Returns are shown in the period recorded. Journaled releases are not provider settlement confirmation.'],
+    ['Investments','Credits include funding, locked investments and repayments. Investment funds are not expenses or profit.'],
+    ['Profit','Gross profit = journal income minus cost of sales. Net profit = gross profit minus other journal expenses. Profit/fee account credits may include accrued debt or transfers, not realised business profit.'],
+    ['Accounting coverage',summary.netProfit==null?'Profit is not recorded: no complete, balanced, classified profit-and-loss journals for this period. It is not assumed zero.':'Recorded balanced journal figures only; completeness of all business income, costs and tax has not been independently verified.'],
+  ]);
   const total=accountTotals(s.accounts);
   table('1. Treasury accounts - reconstructed daily balances',['Account','Opening','Credits','Debits','Closing'],[
     ...s.accounts.map((a:any)=>[a.name,money(a.opening),money(a.credits),money(a.debits),money(a.closing)]),
