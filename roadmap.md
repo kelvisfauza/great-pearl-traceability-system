@@ -13,6 +13,13 @@
 
 # Security fixes
 
+# Daily finance PDF
+- [ ] Generate a saved finance snapshot with treasury account actions and payment status.
+- [ ] Schedule one report daily at 8 PM Uganda time to Fauza's admin email.
+- [ ] Visually verify yesterday's PDF and send its test email; confirm delivery outcome.
+
+# Security fixes (selected findings)
+
 - [x] Review only the 52 selected findings and group them by affected code.
 - [x] Preserve custom supplier/support replies for assigned staff and administrators.
 - [x] Preserve external meal/support recipients with saved details and independent approval.

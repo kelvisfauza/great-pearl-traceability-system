@@ -2534,6 +2534,48 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_finance_report_runs: {
+        Row: {
+          created_at: string
+          cutoff_at: string
+          email_result: Json | null
+          id: string
+          is_test: boolean
+          report_date: string
+          snapshot: Json
+          status: string
+          storage_path: string | null
+          updated_at: string
+          verification_code: string
+        }
+        Insert: {
+          created_at?: string
+          cutoff_at: string
+          email_result?: Json | null
+          id?: string
+          is_test?: boolean
+          report_date: string
+          snapshot: Json
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+          verification_code: string
+        }
+        Update: {
+          created_at?: string
+          cutoff_at?: string
+          email_result?: Json | null
+          id?: string
+          is_test?: boolean
+          report_date?: string
+          snapshot?: Json
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+          verification_code?: string
+        }
+        Relationships: []
+      }
       daily_reports: {
         Row: {
           actions_needed: string | null
@@ -18929,6 +18971,10 @@ export type Database = {
         }[]
       }
       current_user_email: { Args: never; Returns: string }
+      daily_finance_snapshot: {
+        Args: { p_end: string; p_start: string }
+        Returns: Json
+      }
       decline_loan_counter_offer: { Args: { p_loan_id: string }; Returns: Json }
       decline_my_admin_withdrawal: { Args: { _id: string }; Returns: Json }
       decline_pending_supplier: {
