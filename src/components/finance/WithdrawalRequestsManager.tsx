@@ -211,6 +211,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
           phone: payoutPhone,
           amount: request.amount,
           ref: request.request_ref || `WD-${request.id.slice(0, 8)}`,
+          ...(request.request_ref ? {} : { requestId: request.id }),
           employeeName: request.employee_name
         }
       });

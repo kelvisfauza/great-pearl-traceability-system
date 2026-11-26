@@ -90,17 +90,27 @@ serve(async (req) => {
       throw new Error("Yo Payments API credentials not configured");
     }
 
-    const { ref } = await req.json();
-    if (typeof ref !== 'string' || !ref.trim()) throw new Error('Saved approved withdrawal reference required');
-    const [withdrawalResult, approvalResult] = await Promise.all([
-      adminClient.from('withdrawal_requests').select('*').eq('request_ref',ref).eq('status','approved').limit(2),
-      adminClient.from('approval_requests').select('*').eq('request_ref',ref).eq('status','approved').limit(2),
-    ]);
-    if (withdrawalResult.error || approvalResult.error) throw new Error('Saved withdrawal could not be verified');
-    const matches = [...(withdrawalResult.data || []),...(approvalResult.data || [])];
+    const body = await req.json().catch(() => ({}));
+    const ref = typeof body.ref === 'string' ? body.ref.trim() : '';
+    const requestId = typeof body.requestId === 'string' ? body.requestId.trim() : '';
+    if (!ref && !requestId) throw new Error('Saved approved withdrawal reference required');
+    const approvedStatuses = ['approved', 'Approved'];
+    let matches: any[] = [];
+    if (requestId) {
+      const r = await adminClient.from('approval_requests').select('*').eq('id', requestId).in('status', approvedStatuses).limit(2);
+      if (r.error) throw new Error('Saved withdrawal could not be verified');
+      matches = r.data || [];
+    } else {
+      const [w, a] = await Promise.all([
+        adminClient.from('withdrawal_requests').select('*').eq('request_ref', ref).eq('status', 'approved').limit(2),
+        adminClient.from('approval_requests').select('*').eq('details->>ref', ref).in('status', approvedStatuses).limit(2),
+      ]);
+      if (w.error || a.error) throw new Error('Saved withdrawal could not be verified');
+      matches = [...(w.data || []), ...(a.data || [])];
+    }
     if (matches.length !== 1) throw new Error('A unique approved withdrawal is required');
     const saved = matches[0];
-    const phone = saved.disbursement_phone || saved.phone_number;
+    const phone = saved.payout_phone || saved.disbursement_phone || saved.phone_number || saved.details?.phoneNumber || saved.details?.phone;
     const amount = saved.amount;
     const employeeName = saved.employee_name || saved.requester_name || saved.requestedby_name || 'Employee';
 

@@ -641,6 +641,7 @@ export const useUnifiedApprovalRequests = () => {
                 phone: payoutPhone,
                 amount: currentWithdrawal.amount,
                 ref: currentWithdrawal.request_ref || `WD-${currentWithdrawal.id.slice(0, 8)}`,
+                requestId: currentWithdrawal.id,
                 employeeName: currentWithdrawal.requester_name || request.requestedBy || 'Employee'
               }
             });
@@ -839,6 +840,7 @@ export const useUnifiedApprovalRequests = () => {
                   phone: payoutPhone,
                   amount: currentWithdrawal.amount,
                   ref: currentWithdrawal.request_ref || `WD-${currentWithdrawal.id.slice(0, 8)}`,
+                requestId: currentWithdrawal.id,
                   employeeName: request.details?.requester_name || request.requestedBy || 'Employee'
                 }
               });
