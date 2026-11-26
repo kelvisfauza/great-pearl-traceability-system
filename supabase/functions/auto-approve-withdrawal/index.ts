@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     const [{ data: fee }, { data: bal }, { data: credits }, { data: today }, { data: gp }, { data: emp }] = await Promise.all([
       db.rpc("withdrawal_service_charge", { p_amount: amount }),
       db.rpc("get_user_balance_safe", { user_email: email }),
-      db.from("ledger_entries").select("amount, source_category, entry_type").eq("user_id", userId).gt("amount", 0).gte("created_at", since),
+      db.from("ledger_entries").select("amount, source_category, entry_type, created_at").eq("user_id", userId).gte("created_at", since).order("created_at", { ascending: true }).limit(2000),
       db.from("approval_requests").select("id, status").eq("type", "Withdrawal Request").ilike("requestedby", email).gte("created_at", dayStart).neq("id", requestId),
       db.from("gosentepay_balance").select("balance").limit(1).maybeSingle(),
       db.from("employees").select("name, phone, wallet_frozen, status, disabled").ilike("email", email).maybeSingle(),
@@ -62,7 +62,16 @@ Deno.serve(async (req) => {
     const daysSinceLastWork = lastWork.length ? (Date.now() - Math.max(...lastWork)) / 86400_000 : null;
     const onLeave = (leaves || []).some((l: any) => l.details?.start_date <= todayStr && todayStr <= (l.details?.end_date || ""));
     const suspended = (susp || []).some((x: any) => !/lift|ended|cancel/i.test(String(x.status || "")) && (!x.end_date || x.end_date >= todayStr));
-    const credit = (pred: (c: any) => boolean) => (credits || []).filter(pred).reduce((s: number, c: any) => s + Number(c.amount || 0), 0);
+    // Money received that can still be in the wallet: any later withdrawal or charge counts as using it up first.
+    const stillHeld = (pred: (c: any) => boolean) => {
+      let left = 0;
+      for (const c of credits || []) {
+        const a = Number(c.amount || 0);
+        if (a > 0 && pred(c)) left += a; else if (a < 0) left = Math.max(0, left + a);
+      }
+      return left;
+    };
+    const credit = stillHeld;
     const otherToday = (today || []).filter((t: any) => !/reject|cancel/i.test(String(t.status))).length;
     const chg = Number(fee || 0);
     const d = evaluateWithdrawalAutoApproval({
