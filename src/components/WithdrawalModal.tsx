@@ -546,7 +546,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       const ref = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
       
       // Create withdrawal request in money_requests table (withdrawal_requests is a view)
-      const { error: insertError } = await supabase
+      const { data: inserted, error: insertError } = await supabase
         .from('approval_requests')
         .insert({
           department: employee?.department || 'General',
@@ -577,9 +577,31 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
             employee_email: employee?.email || user?.email || null,
             ref: ref
           }
-        });
+        })
+        .select('id')
+        .single();
 
       if (insertError) throw insertError;
+
+      const autoEligible = channel === 'MOBILE_MONEY' && withdrawalAmount < 30000 && inserted?.id;
+      if (autoEligible) {
+        setCompletedRef(ref);
+        setCompletedAmount(withdrawalAmount);
+        setStep('done');
+        toast({
+          title: 'Withdrawal Request Received',
+          description: `Reference: ${ref}. Your request for UGX ${withdrawalAmount.toLocaleString()} will be processed as soon as possible.`,
+          duration: 8000,
+        });
+        supabase.functions.invoke('auto-approve-withdrawal', { body: { requestId: inserted.id } })
+          .then(({ data }) => {
+            if ((data as any)?.decision === 'reject') {
+              toast({ title: 'Withdrawal declined', description: (data as any)?.message || 'This withdrawal could not be approved.', variant: 'destructive', duration: 10000 });
+            }
+          })
+          .catch((e) => console.error('Auto review failed:', e));
+        return;
+      }
       
       setCompletedRef(ref);
       setCompletedAmount(withdrawalAmount);

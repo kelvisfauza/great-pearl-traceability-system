@@ -7,3 +7,4 @@
 - Microsoft 365 reads, device/account actions, Teams meetings, notices and SharePoint copies go through the admin-only, audited entra-directory edge function; browser code never calls Graph or holds connector keys, and temporary passwords are never logged.
 
 - Meal plan automatic Finance approval runs inside process-provider-submission send_to_finance through the shared evaluateMealAutoApproval rules, with a unique per-day marker, so only one auto-approval per Uganda day can ever claim a payout.
+- Small mobile-money wallet withdrawals are auto-reviewed by auto-approve-withdrawal using shared withdrawal-auto-approval rules, then paid through disburse-approval-request with the service key, so wallet debit, charge and failure restoration stay in one payout path.

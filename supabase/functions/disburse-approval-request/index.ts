@@ -32,7 +32,9 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     let actorEmail = "";
-    if (token) {
+    if (token && token === svcKey) {
+      actorEmail = "AUTO System approval";
+    } else if (token) {
       const { data: userData } = await svc.auth.getUser(token);
       actorEmail = userData?.user?.email || "";
     }
