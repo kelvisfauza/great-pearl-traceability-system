@@ -4,7 +4,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
 import { requireStaff } from "../_shared/internal-auth.ts";
 import { gosenteWithdrawFee } from "../_shared/gosentepay-fees.ts";
-import { evaluateWithdrawalAutoApproval, TRANSFER_CATEGORIES, POINTS_ENTRY_TYPES } from "../_shared/withdrawal-auto-approval.ts";
+import { availableForCurrentRequest, evaluateWithdrawalAutoApproval, TRANSFER_CATEGORIES, POINTS_ENTRY_TYPES } from "../_shared/withdrawal-auto-approval.ts";
 
 const reply = (body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -74,10 +74,14 @@ Deno.serve(async (req) => {
     const credit = stillHeld;
     const otherToday = (today || []).filter((t: any) => !/reject|cancel/i.test(String(t.status))).length;
     const chg = Number(fee || 0);
+    const reportedAvailable = (bal as any)?.[0]?.available_balance;
+    const availableBalance = reportedAvailable === null || reportedAvailable === undefined
+      ? Number((bal as any)?.[0]?.wallet_balance ?? 0)
+      : availableForCurrentRequest(Number(reportedAvailable), amount);
     const d = evaluateWithdrawalAutoApproval({
       amount, fee: chg, channel: String(details.payment_channel || ""),
       walletBalance: Number((bal as any)?.[0]?.wallet_balance || 0),
-      availableBalance: Number((bal as any)?.[0]?.available_balance ?? (bal as any)?.[0]?.wallet_balance ?? 0),
+      availableBalance,
       recentTransferIn: credit(c => TRANSFER_CATEGORIES.includes(c.source_category)),
       recentUnconfirmedPoints: credit(c => POINTS_ENTRY_TYPES.includes(c.entry_type)),
       otherWithdrawalsToday: otherToday,

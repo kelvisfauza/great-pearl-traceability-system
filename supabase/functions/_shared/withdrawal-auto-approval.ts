@@ -28,6 +28,12 @@ export interface WithdrawalAutoInput {
 
 export type Decision = { decision: 'approve' | 'manual' | 'reject'; reasons: string[]; watch: boolean };
 
+// get_user_balance_safe includes the newly inserted request in pending holds.
+// Put that request back before checking whether its own amount and fee are affordable.
+export function availableForCurrentRequest(availableBalance: number, currentRequestAmount: number): number {
+  return availableBalance + currentRequestAmount;
+}
+
 export function evaluateWithdrawalAutoApproval(i: WithdrawalAutoInput): Decision {
   const need = i.amount + i.fee;
   const usable = Math.min(i.walletBalance, i.availableBalance);

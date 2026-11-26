@@ -1,7 +1,12 @@
 import { assertEquals } from 'jsr:@std/assert';
-import { evaluateWithdrawalAutoApproval as ev } from './withdrawal-auto-approval.ts';
+import { availableForCurrentRequest, evaluateWithdrawalAutoApproval as ev } from './withdrawal-auto-approval.ts';
 const base = { amount: 20000, fee: 1600, channel: 'MOBILE_MONEY', walletBalance: 50000, availableBalance: 50000, recentTransferIn: 0, recentUnconfirmedPoints: 0, otherWithdrawalsToday: 0, payoutBalance: 100000, payoutFee: 1600, walletFrozen: false };
 Deno.test('clean small withdrawal is approved', () => assertEquals(ev(base).decision, 'approve'));
+Deno.test('current request is not counted twice against its own balance', () => {
+  const available = availableForCurrentRequest(4980, 15000);
+  assertEquals(available, 19980);
+  assertEquals(ev({ ...base, amount: 15000, walletBalance: 19980, availableBalance: available }).decision, 'approve');
+});
 Deno.test('29,999 approved, 30,000 goes to normal approval', () => {
   assertEquals(ev({ ...base, amount: 29999 }).decision, 'approve');
   assertEquals(ev({ ...base, amount: 30000 }).decision, 'manual');
