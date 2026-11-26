@@ -13,22 +13,14 @@ Deno.serve(async (req) => {
   const json = (b: unknown) => new Response(JSON.stringify(b), { headers: { ...cors, 'Content-Type': 'application/json' } });
   const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-  const { data: done } = await db.from('audit_logs').select('id').eq('action', MARKER).limit(1);
-  if (done?.length) return json({ ok: false, error: 'already_sent' });
-  await db.from('audit_logs').insert({ action: MARKER, table_name: 'employees', record_id: MARKER, performed_by: 'System broadcast', reason: 'Instant withdrawal announcement' });
-
-  const { data: emps, error } = await db.from('employees').select('name,email,phone,disabled').eq('status', 'Active');
+  // Resume: emails only, skipping staff already emailed (texts paused: no SMS credit).
+  const { data: sent } = await db.from('sent_emails_log').select('recipient_email').eq('template_name', 'general-notification').gte('created_at', '2026-11-26T06:55:00Z');
+  const already = new Set((sent || []).map((r: any) => String(r.recipient_email).toLowerCase()));
+  const { data: emps, error } = await db.from('employees').select('name,email,disabled').eq('status', 'Active');
   if (error) return json({ ok: false, error: error.message });
-  let sms = 0, mail = 0; const failed: string[] = [];
-  for (const e of (emps || []).filter((x: any) => !x.disabled)) {
-    if (e.phone) {
-      const { data, error } = await db.functions.invoke('send-sms', { body: { phone: e.phone, message: SMS, userName: e.name, messageType: 'hr_notification' } });
-      if (!error && (data as any)?.success !== false) sms++; else failed.push(`sms:${e.name}`);
-    }
-    if (e.email) {
-      const { error } = await db.functions.invoke('send-transactional-email', { body: { templateName: 'general-notification', recipientEmail: e.email, idempotencyKey: `${MARKER}-${e.email}`, skipSms: true, templateData: { title: 'Faster Mobile Money Withdrawals', message: EMAIL, recipientName: e.name } } });
-      if (!error) mail++; else failed.push(`email:${e.name}`);
-    }
-  }
+  const todo = (emps || []).filter((e: any) => !e.disabled && e.email && !already.has(e.email.toLowerCase()));
+  const res = await Promise.allSettled(todo.map((e: any) => db.functions.invoke('send-transactional-email', { body: { templateName: 'general-notification', recipientEmail: e.email, idempotencyKey: `${MARKER}-${e.email}`, skipSms: true, templateData: { title: 'Faster Mobile Money Withdrawals', message: EMAIL, recipientName: e.name } } })));
+  const mail = res.filter((r) => r.status === 'fulfilled' && !(r as any).value.error).length;
+  const sms = 0; const failed = todo.length - mail;
   return json({ ok: true, sms, mail, failed });
 });
