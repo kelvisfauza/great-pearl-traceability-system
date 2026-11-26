@@ -26,6 +26,7 @@ export interface MealAutoInput {
   payoutBalance: number;
   payoutFee: number;
   recentPaidAmounts: number[];
+  recentDescriptions?: string[]; // past paid meal plans, for item-by-item checks
   limit?: number;        // Settings override of MEAL_AUTO_APPROVAL_LIMIT
   usualMultiplier?: number; // Settings override of 1.5
 }
@@ -46,10 +47,26 @@ export function evaluateMealAutoApproval(i: MealAutoInput): { ok: boolean; reaso
     if (sum !== i.amount) reasons.push(`Listed items add up to UGX ${sum.toLocaleString()}, not UGX ${i.amount.toLocaleString()}`);
   }
   if (i.payoutBalance < i.amount + i.payoutFee) reasons.push('Not enough money on GosentePay');
-  const recent = i.recentPaidAmounts.filter(n => n > 0).sort((a, b) => a - b);
-  if (recent.length >= 3) {
-    const median = recent[Math.floor(recent.length / 2)];
-    if (i.amount > median * mult) reasons.push(`Amount is much higher than usual meal plans (usual about UGX ${median.toLocaleString()})`);
+  // Item-by-item check (owner choice, Nov 2026): each item is compared with
+  // that same item's past prices; fees/charges are skipped; new items wait.
+  const history = new Map<string, number[]>();
+  for (const d of i.recentDescriptions || []) for (const it of parseMealItems(d)) {
+    const k = itemKey(it.name); if (it.amount > 0) history.set(k, [...(history.get(k) || []), it.amount]);
+  }
+  if (history.size > 0 && items.length > 0) {
+    for (const it of items) {
+      const k = itemKey(it.name);
+      if (CHARGE_KEYS.has(k)) continue;
+      const past = (history.get(k) || []).sort((a, b) => a - b);
+      if (past.length === 0) { reasons.push(`${it.name} has not been bought in recent meal plans`); continue; }
+      const median = past[Math.floor(past.length / 2)];
+      if (it.amount > median * mult) reasons.push(`${it.name} costs UGX ${it.amount.toLocaleString()}, usually about UGX ${median.toLocaleString()}`);
+    }
   }
   return { ok: reasons.length === 0, reasons };
+}
+
+const CHARGE_KEYS = new Set(['charges', 'charge', 'fee', 'fees', 'transport', 'withdraw charges']);
+export function itemKey(name: string): string {
+  return name.toLowerCase().replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim().replace(/(?<=\w{3})s$/, '');
 }

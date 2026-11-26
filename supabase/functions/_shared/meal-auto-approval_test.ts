@@ -15,3 +15,11 @@ Deno.test('admin meal limit of 30,000 leaves 40,000 for Finance', () => {
   const d = evaluateMealAutoApproval({ requestType: 'meal_plan', amount: 40000, description: 'Rice - 40000', requestedPaymentMethod: null, autoApprovedToday: false, payoutBalance: 999999, payoutFee: 0, recentPaidAmounts: [], limit: 30000 });
   assertEquals(d.ok, false);
 });
+
+const hist = ['Beans - 11000\ncharges - 1000', 'Meat - 35000\ncharges - 1000', 'Meat - 34000\nonions - 1000'];
+Deno.test('meat at its usual price is approved even if total is higher than usual', () =>
+  assertEquals(evaluateMealAutoApproval({ ...base, amount: 47500, description: 'Meat - 36000\nonions - 1000\ncharges - 10500', recentPaidAmounts: [20000, 20000, 20000], recentDescriptions: hist }).ok, true));
+Deno.test('item far above its usual price waits', () =>
+  assertEquals(evaluateMealAutoApproval({ ...base, amount: 30000, description: 'Beans - 30000', recentDescriptions: hist }).ok, false));
+Deno.test('new item waits for Finance', () =>
+  assertEquals(evaluateMealAutoApproval({ ...base, amount: 5000, description: 'Fish - 5000', recentDescriptions: hist }).ok, false));

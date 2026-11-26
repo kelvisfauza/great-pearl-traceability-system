@@ -644,8 +644,8 @@ serve(async (req) => {
           const [{ data: todayRow }, { data: bal }, { data: recent }] = await Promise.all([
             supabase.from("provider_submission_requests").select("id").eq("auto_approval_day", today).maybeSingle(),
             supabase.from("gosentepay_balance").select("balance").limit(1).maybeSingle(),
-            supabase.from("provider_submission_requests").select("admin_approved_amount, amount")
-              .eq("request_type", "meal_plan").eq("status", "paid").order("created_at", { ascending: false }).limit(10),
+            supabase.from("provider_submission_requests").select("admin_approved_amount, amount, description")
+              .eq("request_type", "meal_plan").eq("status", "paid").order("created_at", { ascending: false }).limit(20),
           ]);
           const total = amt + chg;
           const controls = await readAutomationControls(supabase);
@@ -658,6 +658,7 @@ serve(async (req) => {
             payoutBalance: Number((bal as any)?.balance || 0),
             payoutFee: gosenteWithdrawFee(total),
             recentPaidAmounts: (recent || []).map((r: any) => Number(r.admin_approved_amount || r.amount || 0)),
+            recentDescriptions: (recent || []).map((r: any) => String(r.description || "")),
             limit: controls.mealLimit, usualMultiplier: controls.mealUsualMultiplier,
           });
           if (decision.ok) {
