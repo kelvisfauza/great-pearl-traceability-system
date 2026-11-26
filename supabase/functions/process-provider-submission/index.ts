@@ -5,6 +5,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 import { mealPaymentAllowed } from "../_shared/meal-payment-rules.ts";
+import { evaluateMealAutoApproval, kampalaDay } from "../_shared/meal-auto-approval.ts";
+import { gosenteWithdrawFee } from "../_shared/gosentepay-fees.ts";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 import {
@@ -341,7 +343,7 @@ serve(async (req) => {
 
     const body = await req.json();
     const { submissionId, action, rejectionReason, withdrawCharge, amountOverride, paymentMode: rawMode } = body;
-    const paymentMode: 'cash' | 'momo' | 'gosente' =
+    let paymentMode: 'cash' | 'momo' | 'gosente' =
       rawMode === 'cash' ? 'cash' : rawMode === 'gosente' ? 'gosente' : 'momo';
 
     const resendKey = Deno.env.get("RECEIPT_RESEND_KEY") || "";
@@ -482,7 +484,8 @@ serve(async (req) => {
       });
     }
 
-    const isFinanceRelease = action === "finance_release";
+    let isFinanceRelease = action === "finance_release";
+    let autoApproved = false;
 
 
     const { data: submission, error: subErr } = await supabase
@@ -556,7 +559,7 @@ serve(async (req) => {
       .select("name, role, permissions")
       .eq("email", reviewer.email)
       .maybeSingle();
-    const reviewerName = emp?.name || reviewer.email || "Admin";
+    let reviewerName = emp?.name || reviewer.email || "Admin";
 
     // 🏦 ADMIN APPROVE → SEND TO FINANCE (no money moves here)
     if (action === "send_to_finance") {
@@ -632,14 +635,65 @@ serve(async (req) => {
           console.error("send_to_finance email error:", e);
         }
       }
-      return new Response(
-        JSON.stringify({ ok: true, status: "awaiting_finance", message: "Approved — sent to Finance to release the funds" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // 🤖 AUTOMATIC FINANCE APPROVAL — meal plans only, once per company per day.
+      let autoNote: string | null = null;
+      if (submission.request_type === "meal_plan") {
+        try {
+          const today = kampalaDay(new Date());
+          const [{ data: todayRow }, { data: bal }, { data: recent }] = await Promise.all([
+            supabase.from("provider_submission_requests").select("id").eq("auto_approval_day", today).maybeSingle(),
+            supabase.from("gosentepay_balance").select("balance").limit(1).maybeSingle(),
+            supabase.from("provider_submission_requests").select("admin_approved_amount, amount")
+              .eq("request_type", "meal_plan").eq("status", "paid").order("created_at", { ascending: false }).limit(10),
+          ]);
+          const total = amt + chg;
+          const decision = evaluateMealAutoApproval({
+            requestType: submission.request_type,
+            amount: total,
+            description: submission.description || "",
+            requestedPaymentMethod: submission.requested_payment_method,
+            autoApprovedToday: !!todayRow,
+            payoutBalance: Number((bal as any)?.balance || 0),
+            payoutFee: gosenteWithdrawFee(total),
+            recentPaidAmounts: (recent || []).map((r: any) => Number(r.admin_approved_amount || r.amount || 0)),
+          });
+          if (decision.ok) {
+            const { data: autoClaim, error: autoErr } = await supabase.from("provider_submission_requests")
+              .update({ status: "processing", auto_approval_day: today, auto_approval_note: "Approved automatically by the system" })
+              .eq("id", submissionId).eq("status", "awaiting_finance").is("auto_approval_day", null)
+              .select("id").maybeSingle();
+            if (autoClaim && !autoErr) {
+              autoApproved = true;
+              isFinanceRelease = true;
+              paymentMode = "gosente";
+              (submission as any).admin_approved_amount = amt;
+              (submission as any).admin_approved_charge = chg;
+              (submission as any).status = "processing";
+              reviewerName = `System auto-approval (Admin: ${reviewerName})`;
+            } else {
+              autoNote = "Left for Finance: a meal plan was already approved automatically today";
+            }
+          } else {
+            autoNote = `Left for Finance: ${decision.reasons.join("; ")}`;
+          }
+        } catch (e) {
+          console.error("auto-approval check error:", e);
+          autoNote = "Left for Finance: automatic checks could not run";
+        }
+        if (autoNote) {
+          await supabase.from("provider_submission_requests").update({ auto_approval_note: autoNote }).eq("id", submissionId);
+        }
+      }
+      if (!autoApproved) {
+        return new Response(
+          JSON.stringify({ ok: true, status: "awaiting_finance", message: autoNote ? `Approved — sent to Finance. ${autoNote}` : "Approved — sent to Finance to release the funds" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // 🏦 FINANCE RELEASE — only Finance role may release the money
-    if (isFinanceRelease) {
+    if (isFinanceRelease && !autoApproved) {
       const perms = JSON.stringify((emp as any)?.permissions || "");
       const isFinance =
         ((emp as any)?.role || "").toLowerCase() === "finance" ||
@@ -1147,9 +1201,32 @@ serve(async (req) => {
       console.error("Email notify error:", e);
     }
 
+    if (autoApproved) {
+      const paid = yoStatus !== "failed";
+      await supabase.from("provider_submission_requests").update({
+        auto_approval_note: paid ? "Approved and paid automatically by the system; receipt queued" : `Approved automatically but payout failed — waiting for Finance: ${displayMessage}`,
+      }).eq("id", submissionId);
+      try {
+        const { data: admins } = await supabase.from("employees").select("phone, name, email").ilike("email", "fauzakusa@greatpearlcoffee.com");
+        for (const a of admins || []) {
+          if (!(a as any).phone) continue;
+          await supabase.functions.invoke("send-sms", { body: {
+            phone: normalizePhone((a as any).phone),
+            message: paid
+              ? `Auto-approval: meal plan for ${submission.provider_name}, UGX ${totalAmount.toLocaleString()}, paid via GosentePay. Receipt queued.`
+              : `Auto-approval: meal plan for ${submission.provider_name}, UGX ${totalAmount.toLocaleString()} could not be paid and is waiting for Finance.`,
+            userName: (a as any).name, messageType: "payout_confirmation", recipientEmail: (a as any).email, department: "Finance", triggeredBy: reviewer.id,
+          } });
+        }
+      } catch (e) {
+        console.error("auto-approval admin notify error:", e);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         ok: true,
+        autoApproved,
         status: yoStatus,
         message: displayMessage,
         recordId: record.id,

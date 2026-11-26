@@ -160,6 +160,7 @@ const FinanceProviderReleases: React.FC = () => {
                   </div>
                   <p className="text-sm bg-muted/50 p-2 rounded">{s.description}</p>
                   {s.requested_payment_method && <p className="text-sm font-medium">Payment on document: {s.requested_payment_method === 'cash' ? 'Cash' : `Mobile money to ${s.phone}`}</p>}
+                  {s.auto_approval_note && <p className="text-xs rounded bg-muted px-2 py-1.5"><strong>Automatic approval:</strong> {s.auto_approval_note}</p>}
                   {s.payout_status === 'failed' && (
                     <div className="text-xs bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded px-2 py-1.5">
                       <strong>Previous payout failed.</strong> {s.payout_message || 'The payment provider rejected it.'} Fund the account, then tap Try again.

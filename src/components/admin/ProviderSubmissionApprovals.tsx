@@ -106,8 +106,10 @@ const ProviderSubmissionApprovals: React.FC = () => {
       if (!(data as any)?.ok) throw new Error((data as any)?.error || 'Action failed');
 
       toast({
-        title: action === 'approve' ? 'Approved' : 'Rejected',
-        description: (data as any)?.message || `Request ${action}d successfully`,
+        title: (data as any)?.autoApproved ? 'Approved automatically by the system' : action === 'reject' ? 'Rejected' : 'Approved',
+        description: (data as any)?.autoApproved
+          ? `Finance approval done automatically. ${(data as any)?.message || ''}`
+          : (data as any)?.message || `Request ${action}d successfully`,
       });
 
       // On successful approval, open printable acknowledgement form

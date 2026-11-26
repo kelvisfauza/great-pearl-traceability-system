@@ -10264,6 +10264,8 @@ export type Database = {
           admin_approved_charge: number | null
           amount: number
           attachment_url: string | null
+          auto_approval_day: string | null
+          auto_approval_note: string | null
           created_at: string
           description: string
           email: string | null
@@ -10295,6 +10297,8 @@ export type Database = {
           admin_approved_charge?: number | null
           amount: number
           attachment_url?: string | null
+          auto_approval_day?: string | null
+          auto_approval_note?: string | null
           created_at?: string
           description: string
           email?: string | null
@@ -10326,6 +10330,8 @@ export type Database = {
           admin_approved_charge?: number | null
           amount?: number
           attachment_url?: string | null
+          auto_approval_day?: string | null
+          auto_approval_note?: string | null
           created_at?: string
           description?: string
           email?: string | null
