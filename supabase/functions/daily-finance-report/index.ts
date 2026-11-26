@@ -1,4 +1,4 @@
-import {createClient} from 'npm:@supabase/supabase-js@2.49.1';
+import {createClient} from 'npm:@supabase/supabase-js@2';
 import {corsHeaders} from 'npm:@supabase/supabase-js@2/cors';
 import {sendLovableEmail} from 'npm:@lovable.dev/email-js@0.0.4';
 import QRCode from 'npm:qrcode@1.5.4';
