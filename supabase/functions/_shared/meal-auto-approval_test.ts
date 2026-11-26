@@ -11,3 +11,7 @@ Deno.test('needs items', () => assertEquals(evaluateMealAutoApproval({ ...base, 
 Deno.test('other request types never auto approve', () => assertEquals(evaluateMealAutoApproval({ ...base, requestType: 'service_provider' }).ok, false));
 Deno.test('not enough money blocks', () => assertEquals(evaluateMealAutoApproval({ ...base, payoutBalance: 21000 }).ok, false));
 Deno.test('Uganda day rolls at 21:00 UTC', () => assertEquals(kampalaDay(new Date('2026-11-26T21:30:00Z')), '2026-11-27'));
+Deno.test('admin meal limit of 30,000 leaves 40,000 for Finance', () => {
+  const d = evaluateMealAutoApproval({ requestType: 'meal_plan', amount: 40000, description: 'Rice - 40000', requestedPaymentMethod: null, autoApprovedToday: false, payoutBalance: 999999, payoutFee: 0, recentPaidAmounts: [], limit: 30000 });
+  assertEquals(d.ok, false);
+});

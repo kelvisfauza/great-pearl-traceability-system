@@ -26,13 +26,17 @@ export interface MealAutoInput {
   payoutBalance: number;
   payoutFee: number;
   recentPaidAmounts: number[];
+  limit?: number;        // Settings override of MEAL_AUTO_APPROVAL_LIMIT
+  usualMultiplier?: number; // Settings override of 1.5
 }
 
 export function evaluateMealAutoApproval(i: MealAutoInput): { ok: boolean; reasons: string[] } {
   const reasons: string[] = [];
+  const limit = i.limit ?? MEAL_AUTO_APPROVAL_LIMIT;
+  const mult = i.usualMultiplier ?? 1.5;
   if (i.requestType !== 'meal_plan') return { ok: false, reasons: ['Only meal plans are approved automatically'] };
   if (!(i.amount > 0)) reasons.push('Amount is missing');
-  if (i.amount > MEAL_AUTO_APPROVAL_LIMIT) reasons.push(`Amount is above UGX ${MEAL_AUTO_APPROVAL_LIMIT.toLocaleString()}`);
+  if (i.amount > limit) reasons.push(`Amount is above UGX ${limit.toLocaleString()}`);
   if (i.requestedPaymentMethod === 'cash') reasons.push('Cash payments need Finance to hand over the money');
   if (i.autoApprovedToday) reasons.push('A meal plan was already approved automatically today');
   const items = parseMealItems(i.description);
@@ -45,7 +49,7 @@ export function evaluateMealAutoApproval(i: MealAutoInput): { ok: boolean; reaso
   const recent = i.recentPaidAmounts.filter(n => n > 0).sort((a, b) => a - b);
   if (recent.length >= 3) {
     const median = recent[Math.floor(recent.length / 2)];
-    if (i.amount > median * 1.5) reasons.push(`Amount is much higher than usual meal plans (usual about UGX ${median.toLocaleString()})`);
+    if (i.amount > median * mult) reasons.push(`Amount is much higher than usual meal plans (usual about UGX ${median.toLocaleString()})`);
   }
   return { ok: reasons.length === 0, reasons };
 }

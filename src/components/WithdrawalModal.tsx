@@ -584,7 +584,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
       if (insertError) throw insertError;
 
-      const autoEligible = channel === 'MOBILE_MONEY' && withdrawalAmount < 30000 && inserted?.id;
+      const autoEligible = channel === 'MOBILE_MONEY' && withdrawalAmount <= 500000 && inserted?.id;
       if (autoEligible) {
         setAutoReview('checking');
         setCompletedRef(ref);

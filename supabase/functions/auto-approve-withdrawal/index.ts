@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     const amount = Number(r.amount || 0);
     const email = String(r.requestedby || "").toLowerCase();
     const userId = String(details.user_id || "");
-    const since = new Date(Date.now() - 7 * 86400_000).toISOString();
+    const since = new Date(Date.now() - controls.sourceDays * 86400_000).toISOString();
     const dayStart = new Date(new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10) + "T00:00:00+03:00").toISOString();
 
     const [{ data: fee }, { data: bal }, { data: credits }, { data: today }, { data: gp }, { data: emp }] = await Promise.all([
@@ -76,6 +76,7 @@ Deno.serve(async (req) => {
       walletFrozen: !!(emp as any)?.wallet_frozen,
       employeeActive: !!emp && (emp as any).status === "Active" && !(emp as any).disabled,
       onLeave, suspended, daysSinceLastWork,
+      limit: controls.withdrawalLimit, workDays: controls.workDays, maxPerDay: controls.maxPerDay,
     });
     const review = { decision: d.decision, reasons: d.reasons, checked_at: new Date().toISOString(), fee: chg, other_withdrawals_today: otherToday };
     const name = (emp as any)?.name || r.requestedby_name || "Staff";

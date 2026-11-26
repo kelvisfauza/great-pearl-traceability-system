@@ -21,3 +21,6 @@ Deno.test('suspended or inactive goes to normal approval', () => {
   assertEquals(ev({ ...base, suspended: true }).decision, 'manual');
   assertEquals(ev({ ...base, employeeActive: false }).decision, 'manual');
 });
+Deno.test('admin limit of 50,000 approves 40,000', () => assertEquals(ev({ ...base, amount: 40000, walletBalance: 60000, availableBalance: 60000, limit: 50000 }).decision, 'approve'));
+Deno.test('admin limit of 10,000 sends 20,000 to normal approval', () => assertEquals(ev({ ...base, limit: 10000 }).decision, 'manual'));
+Deno.test('two per day allowed: second withdrawal approved', () => assertEquals(ev({ ...base, otherWithdrawalsToday: 1, maxPerDay: 2 }).decision, 'approve'));

@@ -658,6 +658,7 @@ serve(async (req) => {
             payoutBalance: Number((bal as any)?.balance || 0),
             payoutFee: gosenteWithdrawFee(total),
             recentPaidAmounts: (recent || []).map((r: any) => Number(r.admin_approved_amount || r.amount || 0)),
+            limit: controls.mealLimit, usualMultiplier: controls.mealUsualMultiplier,
           });
           if (decision.ok) {
             const { data: autoClaim, error: autoErr } = await supabase.from("provider_submission_requests")

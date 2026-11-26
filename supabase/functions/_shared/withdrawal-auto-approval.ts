@@ -21,6 +21,9 @@ export interface WithdrawalAutoInput {
   onLeave?: boolean;          // approved leave covers today
   suspended?: boolean;        // active suspension
   daysSinceLastWork?: number | null; // days since last sign-in or attendance; null = never
+  limit?: number;          // Settings override of WITHDRAWAL_AUTO_LIMIT
+  workDays?: number;       // Settings override of WORK_ACTIVITY_DAYS
+  maxPerDay?: number;      // automatic withdrawals allowed per person per day (default 1)
 }
 
 export type Decision = { decision: 'approve' | 'manual' | 'reject'; reasons: string[]; watch: boolean };
@@ -28,19 +31,22 @@ export type Decision = { decision: 'approve' | 'manual' | 'reject'; reasons: str
 export function evaluateWithdrawalAutoApproval(i: WithdrawalAutoInput): Decision {
   const need = i.amount + i.fee;
   const usable = Math.min(i.walletBalance, i.availableBalance);
-  const watch = i.otherWithdrawalsToday >= 1;
+  const limit = i.limit ?? WITHDRAWAL_AUTO_LIMIT;
+  const workDays = i.workDays ?? WORK_ACTIVITY_DAYS;
+  const maxPerDay = i.maxPerDay ?? 1;
+  const watch = i.otherWithdrawalsToday >= maxPerDay;
   if (i.recentTransferIn > 0 && usable - i.recentTransferIn < need) {
     return { decision: 'reject', reasons: ['This withdrawal uses money transferred from a fellow employee'], watch };
   }
   const reasons: string[] = [];
-  if (i.amount >= WITHDRAWAL_AUTO_LIMIT) reasons.push(`Amount is UGX ${WITHDRAWAL_AUTO_LIMIT.toLocaleString()} or more`);
+  if (i.amount >= limit) reasons.push(`Amount is UGX ${limit.toLocaleString()} or more`);
   if (i.channel !== 'MOBILE_MONEY') reasons.push('Only mobile money withdrawals are paid automatically');
   if (i.walletFrozen) reasons.push('Wallet is frozen');
   if (i.employeeActive === false) reasons.push('Employee is not active');
   if (i.suspended) reasons.push('Employee is suspended');
   if (i.onLeave) reasons.push('Employee is on leave');
-  if (i.daysSinceLastWork !== undefined && (i.daysSinceLastWork === null || i.daysSinceLastWork > WORK_ACTIVITY_DAYS))
-    reasons.push(i.daysSinceLastWork === null ? 'No record of the employee working' : `No work activity in the last ${WORK_ACTIVITY_DAYS} days`);
+  if (i.daysSinceLastWork !== undefined && (i.daysSinceLastWork === null || i.daysSinceLastWork > workDays))
+    reasons.push(i.daysSinceLastWork === null ? 'No record of the employee working' : `No work activity in the last ${workDays} days`);
   if (usable < need) reasons.push('Wallet cannot cover the amount and charge without overdraft');
   else if (i.recentUnconfirmedPoints > 0 && usable - i.recentUnconfirmedPoints < need) reasons.push('Depends on points or rewards that are not yet confirmed');
   if (watch) reasons.push(`Employee already made ${i.otherWithdrawalsToday} other withdrawal(s) today`);
