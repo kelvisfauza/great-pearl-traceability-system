@@ -5,7 +5,7 @@ import {accountTotals} from './rules.ts';
 const money = (v: unknown) => v == null ? 'Not recorded' : Number(v).toLocaleString('en-GB',{maximumFractionDigits:0});
 const eat = (v: string) => new Date(v).toLocaleString('en-GB',{timeZone:'Africa/Kampala',hour12:false});
 export function buildFinancePdf(s: any, date: string, code: string, qr: string, generatedBy: string): Uint8Array {
-  const doc = new jsPDF({unit:'mm',format:'a4'});
+  const doc = new jsPDF({unit:'mm',format:'a4',compress:true});
   doc.setFillColor(20,83,45); doc.rect(0,0,210,29,'F'); doc.setTextColor(255);
   doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('GREAT AGRO COFFEE',14,11);
   doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('a member of YEDA COFFEE COMPANY LIMITED',14,17);
@@ -43,7 +43,13 @@ export function buildFinancePdf(s: any, date: string, code: string, qr: string, 
   table('6. Finance cash actions',['Reference','Action','Amount','Status','By'],s.cash_entries.map((r:any)=>[r.reference||'-',`${r.transaction_type}\n${r.notes||''}`,money(r.amount),r.status,r.confirmed_by||r.created_by||'-']));
   table('7. Expenses recorded for report date',['Description','Category / department','Amount','Status'],s.expenses.map((r:any)=>[r.description,`${r.category||'-'} / ${r.department||'-'}`,money(r.amount),r.status]));
   table('8. Unpaid partial requests - CURRENT at snapshot capture',['Request / payee','Total','Paid','Remaining','Status'],s.partial_payments_current.map((r:any)=>[`${r.title}\n${r.payee_name}`,money(r.total_amount),money(r.paid_amount),money(r.balance),r.status]));
-  table('9. Supplier coffee balances - CURRENT at snapshot capture',['Batch / GRN','Total','Paid','Advance recovered','Remaining','Status'],s.coffee_payments_current.map((r:any)=>[`${r.batch_number||'-'} / ${r.grn_number||'-'}`,money(r.total_amount),money(r.paid),money(r.advance_recovered),money(r.balance),r.status||'-']));
+  const coffee=s.coffee_payments_current;
+  table('9. Supplier coffee backlog - CURRENT at snapshot capture',['Metric','Value'],[
+    ['All unpaid lots',String(coffee.length)],
+    ['Recorded outstanding balance (all unpaid lots)',money(coffee.reduce((sum:number,r:any)=>sum+Number(r.balance||0),0))],
+    ['Detail below','30 most recently updated unpaid lots; older lots remain included in the total above. These are saved balances, not newly approved payments.']
+  ]);
+  table('10. Most recently updated unpaid supplier lots',['Batch / GRN','Total','Paid','Advance recovered','Remaining','Status'],coffee.slice(0,30).map((r:any)=>[`${r.batch_number||'-'} / ${r.grn_number||'-'}`,money(r.total_amount),money(r.paid),money(r.advance_recovered),money(r.balance),r.status||'-']));
   const count=doc.getNumberOfPages();
   for(let i=1;i<=count;i++){
     doc.setPage(i);doc.setDrawColor(180);doc.line(14,266,196,266);doc.setTextColor(70);doc.setFontSize(7);doc.setFont('helvetica','normal');

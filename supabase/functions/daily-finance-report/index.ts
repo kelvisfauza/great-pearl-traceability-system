@@ -1,11 +1,9 @@
 import {createClient} from 'npm:@supabase/supabase-js@2';
 import {corsHeaders} from 'npm:@supabase/supabase-js@2/cors';
 import {sendLovableEmail} from 'npm:@lovable.dev/email-js@0.0.4';
-import QRCode from 'npm:qrcode@1.5.4';
 import {z} from 'npm:zod@3.24.1';
 import {encodeBase64} from 'https://deno.land/std@0.224.0/encoding/base64.ts';
 import {requireInternalOrAdmin} from '../_shared/internal-auth.ts';
-import {buildFinancePdf} from './report.ts';
 import {reportWindow} from './rules.ts';
 const RECIPIENT='Fauzakusa@greatpearlcoffee.com';
 const bodySchema=z.object({date:z.string().optional(),test:z.boolean().default(false),dryRun:z.boolean().default(false)}).strict();
@@ -39,6 +37,8 @@ Deno.serve(async(req)=>{
     }
     if(!run)throw new Error('Report record unavailable');
     if(!run.storage_path){
+      const {buildFinancePdf}=await import('./report.ts');
+      const {default:QRCode}=await import('npm:qrcode@1.5.4');
       const verification=await db.from('verifications').upsert({code:run.verification_code,type:'document',subtype:'system_print',status:'verified',issued_to_name:'Automated Finance Reporting',issued_at:run.created_at,reference_no:`Daily Finance Report ${date}`,meta:{title:`Daily Finance Report ${date}`,format:'pdf',generated_by:'Automated Finance Reporting',report_run_id:run.id,report_date:date,cutoff_at:window.end,verification_scope:'Document issuance only; not payment or approval confirmation.'}},{onConflict:'code'});
       if(verification.error)throw new Error(`Report verification failed: ${verification.error.message}`);
       const qr=await QRCode.toDataURL(`https://greatpearlcoffeesystem.site/verify/${run.verification_code}`,{width:192,margin:2});
