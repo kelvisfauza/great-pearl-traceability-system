@@ -5,8 +5,8 @@ BEGIN
  SELECT * INTO e FROM public.employees WHERE lower(status)='active' AND disabled IS NOT TRUE AND auth_user_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM salary_remittance_agreements a WHERE lower(a.employee_email)=lower(employees.email) AND a.status='active') LIMIT 1;
  IF e.id IS NULL THEN RAISE EXCEPTION 'No eligible employee for rollback test'; END IF;
  SELECT count(*) INTO before_count FROM public.ledger_entries WHERE reference='SAL-'||p::text;
- INSERT INTO public.employee_salary_payments(id,employee_id,employee_name,employee_email,gross_salary,salary_amount,net_salary,payment_month,payment_label,payment_method,status,processed_by)
- VALUES(p,e.id::text,e.name,e.email,100,100,100,'December 2099','FULL SALARY','wallet','processing','Rollback HR test');
+ INSERT INTO public.employee_salary_payments(id,employee_id,employee_name,employee_email,gross_salary,salary_amount,net_salary,payment_month,payment_label,payment_method,status,processed_by,processed_by_email)
+ VALUES(p,e.id::text,e.name,e.email,100,100,100,'December 2099','FULL SALARY','wallet','processing','Rollback HR test','rollback@example.invalid');
  IF NOT EXISTS(SELECT 1 FROM employee_salary_payments WHERE id=p AND status='pending_finance' AND completed_at IS NULL) THEN RAISE EXCEPTION 'HR did not queue salary'; END IF;
  IF (SELECT count(*) FROM ledger_entries WHERE reference='SAL-'||p::text)<>before_count THEN RAISE EXCEPTION 'HR approval credited the wallet early'; END IF;
  BEGIN UPDATE employee_salary_payments SET status='completed' WHERE id=p; EXCEPTION WHEN OTHERS THEN denied:=true; END;
