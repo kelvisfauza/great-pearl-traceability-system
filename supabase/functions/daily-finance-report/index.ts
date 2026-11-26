@@ -3,6 +3,7 @@ import {corsHeaders} from 'npm:@supabase/supabase-js@2/cors';
 import {sendLovableEmail} from 'npm:@lovable.dev/email-js@0.0.4';
 import QRCode from 'npm:qrcode@1.5.4';
 import {z} from 'npm:zod@3.24.1';
+import {encodeBase64} from 'https://deno.land/std@0.224.0/encoding/base64.ts';
 import {requireInternalOrAdmin} from '../_shared/internal-auth.ts';
 import {buildFinancePdf} from './report.ts';
 import {reportWindow} from './rules.ts';
@@ -50,7 +51,11 @@ Deno.serve(async(req)=>{
     }
     const signed=await db.storage.from('daily-reports').createSignedUrl(run.storage_path,604800);
     if(signed.error)throw signed.error;
-    if(dryRun)return json({ok:true,date,status:run.status,downloadUrl:signed.data.signedUrl,pagesPendingReview:true});
+    if(dryRun){
+      const stored=await db.storage.from('daily-reports').download(run.storage_path);
+      if(stored.error)throw stored.error;
+      return json({ok:true,date,status:run.status,downloadUrl:signed.data.signedUrl,pdf_base64:encodeBase64(await stored.data.arrayBuffer())});
+    }
     if(run.status==='email_accepted')return json({ok:true,date,status:run.status,email:run.email_result,alreadySent:true});
     // A concurrent run or uncertain send is never silently retried.
     const claim=await db.from('daily_finance_report_runs').update({status:'sending'}).eq('id',run.id).eq('status','prepared').select('id').maybeSingle();
