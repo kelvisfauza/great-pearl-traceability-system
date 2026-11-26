@@ -18,7 +18,7 @@
 - [ ] Verify signed-in HR approval and Finance release screens — blocked: external Supabase cannot mint a preview session; no live salaries or emails sent.
 
 # Daily finance PDF (completed)
-- [ ] Put recorded withdrawal/payment/meal/provider totals, external outflow, investment and profit figures first; test and inspect the summary PDF.
+- [x] Put recorded withdrawal/payment/meal/provider totals, external outflow, investment and profit figures first; ten tests passed, saved snapshot classifications checked and summary PDF inspected. Deployed; previously issued PDFs preserved. Profit journals are empty, so business gross/net profit is shown as not recorded.
 - [x] Generate a saved finance snapshot with treasury account actions and payment status.
 - [x] Schedule one report daily at 8 PM Uganda time to Fauza's admin email.
 - [x] Inspect all six PDF pages, correct rejected balances in pending lists, and pass six timing/accounting tests.
