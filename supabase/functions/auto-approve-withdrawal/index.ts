@@ -48,8 +48,20 @@ Deno.serve(async (req) => {
       db.from("ledger_entries").select("amount, source_category, entry_type").eq("user_id", userId).gt("amount", 0).gte("created_at", since),
       db.from("approval_requests").select("id, status").eq("type", "Withdrawal Request").ilike("requestedby", email).gte("created_at", dayStart).neq("id", requestId),
       db.from("gosentepay_balance").select("balance").limit(1).maybeSingle(),
-      db.from("employees").select("name, phone, wallet_frozen").ilike("email", email).maybeSingle(),
+      db.from("employees").select("name, phone, wallet_frozen, status, disabled").ilike("email", email).maybeSingle(),
     ]);
+    const todayStr = new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
+    const workSince = new Date(Date.now() - 30 * 86400_000).toISOString();
+    const [{ data: lastLogin }, { data: lastAtt }, { data: leaves }, { data: susp }] = await Promise.all([
+      db.from("employee_login_tracker").select("created_at").ilike("employee_email", email).gte("created_at", workSince).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      db.from("attendance_time_records").select("created_at").ilike("employee_email", email).not("arrival_time", "is", null).gte("created_at", workSince).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      db.from("approval_requests").select("details").eq("type", "leave").eq("status", "approved").ilike("requestedby", email).limit(50),
+      db.from("employee_suspensions").select("status, end_date, lifted_at").ilike("employee_email", email).is("lifted_at", null).limit(20),
+    ]);
+    const lastWork = [lastLogin?.created_at, lastAtt?.created_at].filter(Boolean).map((t: any) => new Date(t).getTime());
+    const daysSinceLastWork = lastWork.length ? (Date.now() - Math.max(...lastWork)) / 86400_000 : null;
+    const onLeave = (leaves || []).some((l: any) => l.details?.start_date <= todayStr && todayStr <= (l.details?.end_date || ""));
+    const suspended = (susp || []).some((x: any) => !/lift|ended|cancel/i.test(String(x.status || "")) && (!x.end_date || x.end_date >= todayStr));
     const credit = (pred: (c: any) => boolean) => (credits || []).filter(pred).reduce((s: number, c: any) => s + Number(c.amount || 0), 0);
     const otherToday = (today || []).filter((t: any) => !/reject|cancel/i.test(String(t.status))).length;
     const chg = Number(fee || 0);
@@ -62,6 +74,8 @@ Deno.serve(async (req) => {
       otherWithdrawalsToday: otherToday,
       payoutBalance: Number((gp as any)?.balance || 0), payoutFee: gosenteWithdrawFee(amount),
       walletFrozen: !!(emp as any)?.wallet_frozen,
+      employeeActive: !!emp && (emp as any).status === "Active" && !(emp as any).disabled,
+      onLeave, suspended, daysSinceLastWork,
     });
     const review = { decision: d.decision, reasons: d.reasons, checked_at: new Date().toISOString(), fee: chg, other_withdrawals_today: otherToday };
     const name = (emp as any)?.name || r.requestedby_name || "Staff";

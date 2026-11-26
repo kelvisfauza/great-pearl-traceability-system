@@ -13,3 +13,11 @@ Deno.test('second withdrawal in a day goes to normal approval and is watched', (
   const d = ev({ ...base, otherWithdrawalsToday: 1 }); assertEquals(d.decision, 'manual'); assertEquals(d.watch, true);
 });
 Deno.test('unconfirmed points needed goes to normal approval', () => assertEquals(ev({ ...base, walletBalance: 25000, availableBalance: 25000, recentUnconfirmedPoints: 10000 }).decision, 'manual'));
+Deno.test('signed in 2 days ago is approved', () => assertEquals(ev({ ...base, employeeActive: true, daysSinceLastWork: 2 }).decision, 'approve'));
+Deno.test('no work activity for over 3 days goes to normal approval', () => assertEquals(ev({ ...base, employeeActive: true, daysSinceLastWork: 4 }).decision, 'manual'));
+Deno.test('never worked goes to normal approval', () => assertEquals(ev({ ...base, daysSinceLastWork: null }).decision, 'manual'));
+Deno.test('on leave goes to normal approval', () => assertEquals(ev({ ...base, onLeave: true }).decision, 'manual'));
+Deno.test('suspended or inactive goes to normal approval', () => {
+  assertEquals(ev({ ...base, suspended: true }).decision, 'manual');
+  assertEquals(ev({ ...base, employeeActive: false }).decision, 'manual');
+});
