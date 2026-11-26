@@ -11,12 +11,11 @@
 - [x] Official notices from Fauzakusa@greatpearlcoffee.com — Notices tab (needs Mail.Send)
 - [x] Copy signed documents to SharePoint — Documents tab (needs Sites.ReadWrite.All)
 
-# Security fixes
-
 # Daily finance PDF
-- [ ] Generate a saved finance snapshot with treasury account actions and payment status.
-- [ ] Schedule one report daily at 8 PM Uganda time to Fauza's admin email.
-- [ ] Visually verify yesterday's PDF and send its test email; confirm delivery outcome.
+- [x] Generate a saved finance snapshot with treasury account actions and payment status.
+- [x] Schedule one report daily at 8 PM Uganda time to Fauza's admin email.
+- [x] Inspect all six PDF pages, correct rejected balances in pending lists, and pass six timing/accounting tests.
+- [x] Send the November 25 test email: noreply service accepted and queued it; inbox delivery is not confirmed. Private PDF link used because the existing sender has no attachment support.
 
 # Security fixes (selected findings)
 
