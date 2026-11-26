@@ -1,0 +1,3 @@
+ALTER TABLE public.salary_payslips DROP CONSTRAINT salary_payslips_employee_id_fkey;
+ALTER TABLE public.salary_payslips ADD CONSTRAINT salary_payslips_employee_id_fkey FOREIGN KEY(employee_id) REFERENCES public.employees(id) ON DELETE CASCADE NOT VALID;
+DO $$ DECLARE d text; BEGIN SELECT pg_get_functiondef('public.create_payslip_on_update()'::regprocedure) INTO d; d:=replace(d,'v_year := CAST(SPLIT_PART(NEW.payment_month, ''-'', 1) AS INTEGER);','v_year := EXTRACT(YEAR FROM to_date(NEW.payment_month,''FMMonth YYYY''))::integer;'); d:=replace(d,'v_month := CAST(SPLIT_PART(NEW.payment_month, ''-'', 2) AS INTEGER);','v_month := EXTRACT(MONTH FROM to_date(NEW.payment_month,''FMMonth YYYY''))::integer;'); d:=replace(d,'''Generated''','''generated'''); EXECUTE d; END; $$;

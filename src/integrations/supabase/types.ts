@@ -12786,7 +12786,29 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "salary_payslips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payslips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payslips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       salary_remittance_agreements: {
         Row: {
