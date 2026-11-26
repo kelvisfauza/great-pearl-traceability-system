@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.5";
 import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 import { yoPayout, normalizePhone as yoNormalize } from "../_shared/yo-payments.ts";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
+import { mayReply } from "../_shared/reply-access.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,7 +46,7 @@ serve(async (req) => {
 
     const { data: sender } = await admin
       .from('employees')
-      .select('name, email, role, department, permissions, status, disabled')
+      .select('id, name, email, role, department, permissions, status, disabled')
       .ilike('email', user.email)
       .maybeSingle();
 
@@ -64,6 +65,13 @@ serve(async (req) => {
     let subject: string = (body.subject || 'Regarding your quotation').toString().trim().slice(0, 150);
     let sendEmail: boolean = body.sendEmail === true;
     let sendSms: boolean = body.sendSms === true;
+
+    // Custom replies and resends are restricted to the record's protected assignment.
+    if (!body.stage || body.stage === 'resend_phone') {
+      const { data: assigned, error } = await admin.from('quotations').select('assigned_to').eq('id',quotationId).maybeSingle();
+      const { data: roles, error: roleError } = await admin.from('user_roles').select('role').eq('user_id',user.id).in('role',['Administrator','Super Admin']);
+      if (error || roleError || !assigned || !sender || !mayReply({ userId:user.id, employeeId:sender.id, isAdministrator:!!roles?.length },assigned.assigned_to)) return json({ ok:false,error:'Only the assigned employee or an administrator may reply' },403);
+    }
 
     // ── Phone number corrected: re-text every stage message the company has not yet received on its current number ──
     if (body.stage === 'resend_phone') {

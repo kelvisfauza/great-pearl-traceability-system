@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sendLovableEmail } from "npm:@lovable.dev/email-js@0.0.4";
+import { requireStaff } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,6 +59,16 @@ serve(async (req) => {
 
     let result: any = null;
 
+    // An already trusted device can read its own status/codes; enrolling or sending
+    // an OTP requires the employee's authenticated session, not a public lookup.
+    if (['request_otp', 'set_pin', 'enroll_device'].includes(action)) {
+      const caller = await requireStaff(req, corsHeaders);
+      if (caller instanceof Response) return caller;
+      if (!caller.userId || !caller.email) throw new Error('Sign in normally before setting up QR access on this device');
+      const { data: employee, error } = await supabase.from('employees').select('id,employee_id,disabled,status').ilike('email', caller.email).maybeSingle();
+      if (error || !employee || employee.disabled || String(employee.status).toLowerCase() !== 'active' || ![employee.id, employee.employee_id, caller.email].includes(lookup)) throw new Error('QR access is limited to your own account');
+    }
+
     if (action === "status") {
       const { data, error } = await supabase.rpc("qr_access_status", {
         _lookup: lookup, _device_token: body?.device_token ?? null,
@@ -104,7 +115,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
     });
   } catch (e: any) {
-    return new Response(JSON.stringify({ ok: false, error: e?.message || "server_error" }), {
+    return new Response(JSON.stringify({ ok: false, error: e instanceof Error && e.message.startsWith('Sign in normally') ? e.message : 'QR access could not be verified for this account' }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
     });
   }

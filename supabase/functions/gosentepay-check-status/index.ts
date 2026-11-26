@@ -47,6 +47,17 @@ serve(async (req) => {
       });
     }
 
+    let ownedByCaller = transaction.user_id === __caller.userId;
+    if (!__caller.internal && !ownedByCaller && __caller.email) {
+      const { data: unifiedId, error: identityError } = await supabaseClient.rpc('get_unified_user_id',{input_email:__caller.email});
+      ownedByCaller = !identityError && !!unifiedId && transaction.user_id === unifiedId;
+    }
+    if (!__caller.internal && !ownedByCaller) {
+      return new Response(JSON.stringify({ ok: false, error: "Transaction not found" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Already processed
     if (transaction.status === "completed" || transaction.status === "failed") {
       return new Response(JSON.stringify({ status: transaction.status }), {

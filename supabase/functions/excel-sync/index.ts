@@ -1,4 +1,5 @@
-import { requireStaff } from "../_shared/internal-auth.ts";
+import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { excelInput } from "./input.ts";
 // Generic Excel/OneDrive sync via Microsoft Graph (Lovable connector gateway).
 // Ensures /GAC-System-Reports/<workbook>.xlsx exists, ensures the named worksheet,
 // clears its used range, then writes header + rows.
@@ -113,7 +114,7 @@ async function clearUsedRange(itemId: string, sheet: string): Promise<void> {
   // ignore if sheet is empty
   if (!r.ok && r.status !== 400) {
     const t = await r.text();
-    console.warn(`clear range ${r.status}: ${t}`);
+    throw new Error(`clear range ${r.status}: ${t}`);
   }
 }
 
@@ -136,8 +137,8 @@ async function writeRange(itemId: string, sheet: string, values: any[][]): Promi
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const __caller = await requireStaff(req, corsHeaders);
-  if (__caller instanceof Response) return __caller;
+  const denied = await requireInternalOrAdmin(req, corsHeaders);
+  if (denied) return denied;
 
   try {
     if (!LOVABLE_API_KEY || !EXCEL_KEY) {
@@ -148,11 +149,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const workbook = String(body.workbook || "").replace(/[\\/:*?"<>|]/g, "_");
-    const sheet = String(body.sheet || "Data").slice(0, 31).replace(/[\\/:*?"<>|]/g, "_");
-    const folder = String(body.folder || DEFAULT_FOLDER).replace(/[\\/:*?"<>|]/g, "_");
-    const headers: string[] = Array.isArray(body.headers) ? body.headers : [];
-    const rows: any[][] = Array.isArray(body.rows) ? body.rows : [];
+    const { workbook, sheet, folder, headers, rows } = excelInput(body);
 
     if (!workbook) {
       return new Response(JSON.stringify({ ok: false, error: "workbook required" }), {

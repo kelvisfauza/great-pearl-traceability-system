@@ -4,6 +4,7 @@ import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { prepareExternalPayout, completeExternalPayout } from "../_shared/external-payout.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +25,8 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    const proposal = await prepareExternalPayout(req, supabase, "support", await req.json(), corsHeaders);
+    if (!proposal.ready) return proposal.response;
     const {
       phone,
       amount,
@@ -36,7 +39,7 @@ serve(async (req) => {
       initiatedBy,
       initiatedByName,
       notes,
-    } = await req.json();
+    } = proposal.body;
 
     if (!receiverName || !amount || !description) {
       return new Response(
@@ -87,6 +90,7 @@ serve(async (req) => {
     const { data: record, error: insertError } = await supabase
       .from("support_staff_per_diem")
       .insert({
+        external_request_id: proposal.sourceId,
         receiver_phone: cleanPhone || "N/A",
         receiver_name: receiverName,
         national_id: nationalId || null,
@@ -153,6 +157,7 @@ serve(async (req) => {
         }
       } catch (e) { console.error("[support-staff-perdiem] email (cash) error:", e); }
 
+      await completeExternalPayout(supabase, proposal.sourceId, record.id, "paid");
       return new Response(
         JSON.stringify({
           success: true,
@@ -297,6 +302,7 @@ serve(async (req) => {
       }
     } catch (e) { console.error("[support-staff-perdiem] email (momo) error:", e); }
 
+    await completeExternalPayout(supabase, proposal.sourceId, record.id, yoStatus);
     return new Response(
       JSON.stringify({
         success: yoStatus === "success" || yoStatus === "pending_approval",

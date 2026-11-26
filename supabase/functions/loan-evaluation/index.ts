@@ -18,6 +18,9 @@ serve(async (req) => {
 
   try {
     const { employee_email: requestedEmail, requested_amount, requested_loan_type, requested_duration, guarantor_emails } = await req.json();
+    if (!__caller.isAdmin && Array.isArray(guarantor_emails) && guarantor_emails.length) {
+      return new Response(JSON.stringify({ ok:false,error:'Guarantor financial evaluation requires an authorized Finance review; your own eligibility remains available without guarantor details' }), { status:200,headers:{...corsHeaders,'Content-Type':'application/json'} });
+    }
     // Staff may only evaluate their own loan; Admin/HR/Finance may evaluate anyone.
     const employee_email = __caller.isAdmin ? requestedEmail : __caller.email;
     if (!employee_email) {

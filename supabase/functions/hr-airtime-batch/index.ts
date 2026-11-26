@@ -152,7 +152,14 @@ Deno.serve(async (req) => {
 
       try {
       for (const item of items || []) {
-        const cleanPhone = normalizePhone(item.phone)
+        const { data: recipient, error: recipientError } = await supabase.from('employees').select('phone,name,email,status,disabled').ilike('email',item.employee_email).maybeSingle()
+        const authorizedAmount = ADMIN_EMAILS.has(String(recipient?.email || '').toLowerCase()) ? ADMIN_AMOUNT : STAFF_AMOUNT
+        if (recipientError || !recipient?.phone || recipient.disabled || String(recipient.status).toLowerCase() !== 'active' || normalizePhone(item.phone) !== normalizePhone(recipient.phone) || !Number.isFinite(Number(item.amount)) || Number(item.amount) <= 0 || Number(item.amount) > authorizedAmount) {
+          failed++
+          await supabase.from('airtime_batch_items').update({ payment_status:'failed',error_message:'Recipient or amount differs from the saved staff allowance' }).eq('id',item.id)
+          continue
+        }
+        const cleanPhone = normalizePhone(recipient.phone)
         if (sentPhones.has(cleanPhone)) {
           await supabase.from('airtime_batch_items')
             .update({ payment_status: 'skipped', error_message: 'Duplicate phone in batch' })

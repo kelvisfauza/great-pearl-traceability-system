@@ -190,6 +190,7 @@ import BirthdayNotification from "./components/BirthdayNotification";
 import BirthdaySplash from "./components/BirthdaySplash";
 import ContractRenewalGate from "./components/ContractRenewalGate";
 import MeetingRewardsTeaserPopup from "./components/MeetingRewardsTeaserPopup";
+import PayslipAccess from "./pages/PayslipAccess";
 
 import SeasonalAdvisoryModal from "./components/SeasonalAdvisoryModal";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
@@ -288,6 +289,7 @@ const App: React.ComponentType = () => {
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/careers" element={<Careers />} />
+                <Route path="/payslip/:id" element={<ProtectedRoute><PayslipAccess /></ProtectedRoute>} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 
                 {/* Public verification route - no auth required */}

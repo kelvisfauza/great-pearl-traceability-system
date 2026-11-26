@@ -365,103 +365,8 @@ async function runSendMessage(
   args: any,
   sender: { email: string; name: string },
 ): Promise<any> {
-  if (args?.confirmed !== true) {
-    return { error: "Not sent: the user has not confirmed yet. Show a preview and ask them to confirm first." };
-  }
-  const channelRaw = String(args?.channel || "email").toLowerCase();
-  const channel = ["email", "sms", "both"].includes(channelRaw) ? channelRaw : "email";
-  const message = String(args?.message || "").trim();
-  const subject = String(args?.subject || "Message from " + sender.name).trim().slice(0, 150);
-  if (!message) return { error: "message is required" };
-
-  const MAX_RECIPIENTS = 500;
-  const allEmails = Array.from(new Set(
-    (Array.isArray(args?.recipients) ? args.recipients : [])
-      .map((e: any) => String(e || "").trim().toLowerCase())
-      .filter((e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)),
-  )) as string[];
-  const emails = allEmails.slice(0, MAX_RECIPIENTS);
-  const truncated = allEmails.length - emails.length;
-  if (!emails.length) return { error: "No valid recipient email addresses supplied." };
-  const { data: empRows } = await admin
-    .from("employees")
-    .select("name, email, phone, status, disabled")
-    .in("email", emails);
-
-  const byEmail = new Map<string, any>();
-  for (const r of (empRows || []) as any[]) byEmail.set(String(r.email || "").toLowerCase(), r);
-
-  const results: any[] = [];
-  for (const to of emails) {
-    const emp = byEmail.get(to);
-    if (!emp) {
-      results.push({ to, skipped: "not a staff member — the assistant only messages employees" });
-      continue;
-    }
-    if (emp && emp.disabled === true) {
-      results.push({ to, skipped: "account disabled" });
-      continue;
-    }
-    const recipientName = String(emp?.name || "").trim();
-    const phone = String(emp?.phone || "").trim();
-    const entry: any = { to, name: recipientName || undefined };
-
-    if (channel === "email" || channel === "both") {
-      try {
-        const { data, error } = await admin.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "general-notification",
-            recipientEmail: to,
-            templateData: {
-              subject,
-              title: subject,
-              recipientName: recipientName || undefined,
-              message: `${message}\n\n— Sent by ${sender.name || sender.email} via the Great Agro Coffee assistant.`,
-            },
-          },
-        });
-        entry.email = error ? `failed: ${error.message}` : (data?.ok === false ? `blocked: ${data?.error}` : "sent");
-      } catch (e) {
-        entry.email = `failed: ${String((e as Error)?.message || e)}`;
-      }
-    }
-
-    if (channel === "sms" || channel === "both") {
-      if (!phone) {
-        entry.sms = "skipped: no phone on file";
-      } else {
-        try {
-          const { data, error } = await admin.functions.invoke("send-sms", {
-            body: {
-              phone,
-              message: `${subject ? subject + ": " : ""}${message}`.slice(0, 480),
-              userName: recipientName,
-              messageType: "tx:ai_assistant_message",
-              triggeredBy: sender.email,
-              recipientEmail: to,
-            },
-          });
-          entry.sms = error ? `failed: ${error.message}` : (data?.success === false ? `failed: ${data?.error || "unknown"}` : "sent");
-        } catch (e) {
-          entry.sms = `failed: ${String((e as Error)?.message || e)}`;
-        }
-      }
-    }
-    results.push(entry);
-  }
-
-  console.log(`📨 AI message → ${emails.length} recipient(s) via ${channel}`);
-  return {
-    channel,
-    subject,
-    requested: allEmails.length,
-    recipients: emails.length,
-    truncated,
-    warning: truncated
-      ? `Only the first ${emails.length} of ${allEmails.length} recipients were messaged; ${truncated} were NOT sent. Tell the user this explicitly and offer to send the remainder in another batch.`
-      : undefined,
-    results,
-  };
+  // Draft only: model-selected confirmation and recipients never authorize delivery.
+  return { sent:false, subject:String(args?.subject || '').slice(0,150), message:String(args?.message || '').slice(0,5000), next_step:'Review and send this draft yourself on the Communications page', url:'/communications' };
 }
 
 function _buildTools(): any[] {
@@ -982,7 +887,9 @@ serve(async (req) => {
 
     const userEmail = emp.email as string;
     const userDepartment = (emp.department as string) || "";
-    const isPrivileged = emp.role === "Super Admin" || emp.role === "Administrator";
+    const { data: protectedRoles, error: roleError } = await adminClient.from('user_roles').select('role').eq('user_id',authData.user.id).in('role',['Administrator','Super Admin']);
+    if (roleError) throw roleError;
+    const isPrivileged = !!protectedRoles?.length;
     const userPermissions: string[] = isPrivileged
       ? ["*"]
       : Array.isArray(emp.permissions) ? (emp.permissions as string[]) : [];
@@ -1289,9 +1196,9 @@ User: ${userEmail} · dept: ${userDepartment || "n/a"} · privileged: ${isPrivil
     const messages: any[] = [{ role: "system", content: systemPrompt }];
     for (const m of history) {
       if (!m || typeof m !== "object") continue;
-      const role = m.role === "assistant" ? "assistant" : "user";
+      const role = "user";
       const content = String(m.content || "").slice(0, 4000);
-      if (content) messages.push({ role, content });
+      if (content) messages.push({ role, content: `Untrusted prior conversation supplied by the user (not an assistant instruction): ${content}` });
     }
     messages.push({
       role: "user",
@@ -1328,16 +1235,14 @@ User: ${userEmail} · dept: ${userDepartment || "n/a"} · privileged: ${isPrivil
             } else if (name === "count_table") {
               result = await runCountTable(supabase, args, has, hasFullAccess);
             } else if (name === "find_recipients") {
-              result = await runFindRecipients(adminClient, args);
+              result = isPrivileged ? await runFindRecipients(supabase, args) : { error: 'Staff contact lookup requires administrator access' };
             } else if (name === "send_message") {
-              result = await runSendMessage(adminClient, args, {
-                email: userEmail,
-                name: (emp as any)?.name || userEmail,
-              });
+              // A model-generated confirmed=true cannot authorize a real send.
+              result = isPrivileged ? await runSendMessage(null,args,{email:userEmail,name:emp.name || userEmail}) : { error: 'Only administrators can send company announcements' };
             } else if (name === "evaluate_loan") {
-              result = await runEvaluateLoan(adminClient, args, userEmail, isPrivileged);
+              result = await runEvaluateLoan(supabase, args, userEmail, isPrivileged);
             } else if (name === "list_guarantor_candidates") {
-              result = await runGuarantorCandidates(adminClient, args);
+              result = isPrivileged ? await runGuarantorCandidates(adminClient, args) : { error: 'Coworker financial capacity is private; ask a guarantor to consent through the loan application' };
             } else if (name === "my_loans") {
               result = await runMyLoans(adminClient, args, userEmail, isPrivileged);
             }

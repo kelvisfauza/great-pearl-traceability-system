@@ -1,0 +1,1 @@
+SELECT net.http_post(url:='https://pudfybkyfedeggmokhco.supabase.co/functions/v1/payslip-access',headers:=private_edge.header(),body:='{"action":"rotate_legacy","confirmation":"REVOKE LEGACY PAYSLIP LINKS"}'::jsonb,timeout_milliseconds:=60000);

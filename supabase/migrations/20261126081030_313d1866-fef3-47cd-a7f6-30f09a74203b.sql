@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.selected_security_is_self(jsonb) FROM PUBLIC,anon,authenticated; GRANT EXECUTE ON FUNCTION public.selected_security_is_self(jsonb) TO service_role;

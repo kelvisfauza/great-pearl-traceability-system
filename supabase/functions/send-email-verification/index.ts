@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { fourDigitCode } from '../_shared/secure-random.ts';
+import { requireStaff } from '../_shared/internal-auth.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -138,9 +139,13 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    const caller = await requireStaff(req, corsHeaders);
+    if (caller instanceof Response) return caller;
     const { email, action, code }: VerificationRequest = await req.json();
     const normalizedEmail = email?.trim().toLowerCase();
     const normalizedCode = code?.trim();
+
+    if (!caller.email || caller.email.toLowerCase() !== normalizedEmail) return new Response(JSON.stringify({ ok:false,error:'Verification is limited to your signed-in account' }), { status:200,headers:{...corsHeaders,'Content-Type':'application/json'} });
 
     if (!normalizedEmail) {
       return new Response(

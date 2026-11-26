@@ -1,0 +1,1 @@
+ALTER FUNCTION public.assign_reply_owner(text,uuid,uuid) SECURITY INVOKER;

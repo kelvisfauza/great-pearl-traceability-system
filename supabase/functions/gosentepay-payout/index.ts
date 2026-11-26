@@ -78,7 +78,7 @@ serve(async (req) => {
       .eq("auth_user_id", userData.user.id)
       .maybeSingle();
     const isAdmin = callerEmp?.role === "Super Admin" || callerEmp?.role === "Administrator";
-    const isFinance = Array.isArray(callerEmp?.permissions) && callerEmp!.permissions.includes("Finance");
+    const isFinance = Array.isArray(callerEmp?.permissions) && callerEmp.permissions.includes("Finance");
     if (!callerEmp || callerEmp.status !== "Active" || (!isAdmin && !isFinance)) {
       return new Response(
         JSON.stringify({ error: "Forbidden — Finance or Admin role required" }),
@@ -90,7 +90,19 @@ serve(async (req) => {
       throw new Error("Yo Payments API credentials not configured");
     }
 
-    const { phone, amount, ref, employeeName } = await req.json();
+    const { ref } = await req.json();
+    if (typeof ref !== 'string' || !ref.trim()) throw new Error('Saved approved withdrawal reference required');
+    const [withdrawalResult, approvalResult] = await Promise.all([
+      adminClient.from('withdrawal_requests').select('*').eq('request_ref',ref).eq('status','approved').limit(2),
+      adminClient.from('approval_requests').select('*').eq('request_ref',ref).eq('status','approved').limit(2),
+    ]);
+    if (withdrawalResult.error || approvalResult.error) throw new Error('Saved withdrawal could not be verified');
+    const matches = [...(withdrawalResult.data || []),...(approvalResult.data || [])];
+    if (matches.length !== 1) throw new Error('A unique approved withdrawal is required');
+    const saved = matches[0];
+    const phone = saved.disbursement_phone || saved.phone_number;
+    const amount = saved.amount;
+    const employeeName = saved.employee_name || saved.requester_name || saved.requestedby_name || 'Employee';
 
     if (!phone || !amount) {
       return new Response(

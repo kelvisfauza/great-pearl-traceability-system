@@ -393,7 +393,7 @@ serve(async (req) => {
     if (action === "create") {
       const {
         operation_type, target_email, amount, reason,
-        destination_email, destination_phone, payout_provider, allow_overdraft,
+        destination_email, payout_provider, allow_overdraft,
         confirmation_method,
       } = body;
 
@@ -419,6 +419,7 @@ serve(async (req) => {
         .eq("email", target_email)
         .maybeSingle();
       if (!target) return respond(false, { error: "Target employee not found" });
+      const destination_phone = target.phone ? normalizePhone(target.phone) : null;
 
       // Always operate on the wallet identity that actually holds the ledger:
       // auth_user_id first, unified id next, employees.id only as a last resort.
@@ -938,6 +939,8 @@ serve(async (req) => {
         }
 
         else if (op.operation_type === "withdraw") {
+          const { data: recipient, error: recipientError } = await supabase.from('employees').select('phone,disabled,status').ilike('email',op.target_email).maybeSingle();
+          if (op.payout_provider !== 'cash' && (recipientError || !recipient?.phone || recipient.disabled || String(recipient.status).toLowerCase() !== 'active' || normalizePhone(recipient.phone) !== normalizePhone(op.destination_phone || ''))) throw new Error('Withdrawal destination must match the employee saved phone; create a new operation if it changed');
           const bal = await getLedgerBalance(supabase, op.target_user_id);
           const totalDebit = amount + Number(op.service_fee);
           const afterBal = bal - totalDebit;

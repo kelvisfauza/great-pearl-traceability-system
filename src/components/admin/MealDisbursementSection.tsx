@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { UtensilsCrossed, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, Printer, Receipt, Search, Smartphone, Banknote } from 'lucide-react';
 import { sendPaymentReceipt } from '@/utils/sendPaymentReceipt';
+import { ExternalPayoutQueue } from './ExternalPayoutQueue';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
@@ -71,30 +72,6 @@ const MealDisbursementSection = () => {
 
     setSubmitting(true);
     try {
-      if (paymentMethod === 'cash') {
-        const charge = parseFloat(form.withdrawCharge) || 0;
-        const { error: cashError } = await supabase.from('meal_disbursements').insert({
-          receiver_phone: form.receiverPhone.replace(/\D/g, ''),
-          receiver_name: form.receiverName || null,
-          description: form.description,
-          amount,
-          withdraw_charge: charge,
-          total_amount: amount + charge,
-          yo_status: 'cash',
-          initiated_by: employee?.email || '',
-          initiated_by_name: employee?.name || '',
-        } as any);
-        if (cashError) throw cashError;
-        toast({
-          title: 'Cash payment recorded',
-          description: `UGX ${(amount + charge).toLocaleString()} cash meal payment to ${form.receiverName || form.receiverPhone} logged.`,
-        });
-        setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '' });
-        setOpen(false);
-        queryClient.invalidateQueries({ queryKey: ['meal-disbursements'] });
-        return;
-      }
-
       const { data, error } = await supabase.functions.invoke('meal-disbursement', {
         body: {
           phone: form.receiverPhone,
@@ -105,6 +82,7 @@ const MealDisbursementSection = () => {
           initiatedBy: employee?.email || '',
           initiatedByName: employee?.name || '',
           gateway: paymentProvider,
+          paymentMethod,
         },
       });
 
@@ -112,12 +90,13 @@ const MealDisbursementSection = () => {
 
       if (data?.success) {
         toast({
-          title: 'Meal disbursement initiated',
+          title: 'Meal payment request saved',
           description: data.message || 'Payment sent successfully',
         });
         setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '' });
         setOpen(false);
         queryClient.invalidateQueries({ queryKey: ['meal-disbursements'] });
+        queryClient.invalidateQueries({ queryKey: ['external-payout-requests'] });
       } else {
         toast({
           title: 'Payment issue',
@@ -159,6 +138,7 @@ const MealDisbursementSection = () => {
     d.yo_status === 'pending' && (Date.now() - new Date(d.created_at).getTime()) / 60000 >= 5;
 
   const canRetry = (d: any) => {
+    if (d.external_request_id || d.yo_status === 'pending_approval') return false;
     const ageHours = (Date.now() - new Date(d.created_at).getTime()) / (1000 * 60 * 60);
     if (isStuckProcessing(d)) return true;
     return (d.yo_status === 'failed' || d.yo_status === 'pending_approval') && ageHours <= 2;
@@ -428,6 +408,7 @@ const MealDisbursementSection = () => {
 
   return (
     <Card className="card-modern">
+      <ExternalPayoutQueue kind="meal" />
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">

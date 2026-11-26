@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       .gte("created_at", since)
       .limit(1);
     if (dupe && dupe.length > 0) {
-      return json({ ok: false, error: `You already applied for this position (Ref: ${dupe[0].ref_code}). We will contact you.` });
+      return json({ ok: true, ref_code: "RECEIVED" });
     }
 
     // Reference code
@@ -209,7 +209,9 @@ Deno.serve(async (req) => {
       });
     } catch (e) { console.error("HR email failed:", e); }
 
-    return json({ ok: true, ref_code: refCode });
+    // Give the same response for new and duplicate applications; references go
+    // only to the contact supplied with the saved application.
+    return json({ ok: true, ref_code: "RECEIVED" });
   } catch (e) {
     return json({ ok: false, error: (e as Error).message || String(e) });
   }

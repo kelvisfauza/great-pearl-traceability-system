@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, RefreshCw, Send } from 'lucide-react';
+import { ReplyOwnerControl } from '@/components/admin/ReplyOwnerControl';
 
 type Ticket = {
   id: string; ticket_code: string; customer_name: string; customer_email: string;
@@ -214,6 +215,7 @@ export default function SupportTickets() {
                 ))}
               </CardContent>
               <div className="border-t p-4 space-y-2">
+                <ReplyOwnerControl kind="support" recordId={selected.id} />
                 <Textarea rows={4} placeholder="Type your reply to the customer…" value={reply} onChange={e => setReply(e.target.value)} />
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-4">

@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.5";
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { z } from 'npm:zod@3';
 import { needsStorePickup, canReceivePickup, PICKUP_RECIPIENT_EMAILS } from './pickup-rules.ts';
+import { decodeSamplingPdf } from './attachment.ts';
 
 const Input = z.object({
   order: z.object({ id: z.string().uuid() }),
@@ -44,7 +45,8 @@ Deno.serve(async (req) => {
     }
     const parsed = Input.safeParse(await req.json());
     if (!parsed.success) return json({ ok: false, error: 'A saved sampling order ID is required; PDF must be within size limits' });
-    const pdfBase64 = parsed.data.pdf_base64;
+    // Validate before pickup messages, storage, or email side effects.
+    const pdfBytes = decodeSamplingPdf(parsed.data.pdf_base64);
     const { data: order, error: orderError } = await supabase.from('quality_sampling_orders').select('*').eq('id', parsed.data.order.id).single();
     if (orderError || !order) return json({ ok: false, error: 'Sampling order not found' });
     if (callerEmail && callerEmail !== order.created_by_email?.toLowerCase()) return json({ ok: false, error: 'Only the creator can notify this sampling order' });
@@ -74,13 +76,11 @@ Deno.serve(async (req) => {
     }
 
     let pdfUrl = "";
-    if (pdfBase64) {
-      const cleaned = String(pdfBase64).replace(/^data:[^;]+;base64,/, "");
-      const bytes = Uint8Array.from(atob(cleaned), (c) => c.charCodeAt(0));
-      const path = `sampling-orders/${order.order_number}_${Date.now()}.pdf`;
+    if (pdfBytes) {
+      const path = `sampling-orders/${order.order_number}_${crypto.randomUUID()}.pdf`;
       const { error: upErr } = await supabase.storage
         .from("quality-analysis-files")
-        .upload(path, bytes, { contentType: "application/pdf", upsert: true });
+        .upload(path, pdfBytes, { contentType: "application/pdf", upsert: false });
       if (upErr) console.warn("PDF upload failed:", upErr.message);
       else {
         const { data: signed } = await supabase.storage

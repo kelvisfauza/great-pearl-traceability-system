@@ -36,7 +36,7 @@ async function release(options: { existing?: boolean; reserveOk?: boolean; delet
         }
         if (table === "partial_payments") return { data: null };
         if (operation === "update") return { data: [{ id: "request-1" }] };
-        return { data: { id: "request-1", status: "approved", amount: 72000, type: "Withdrawal request", title: "Wallet withdrawal", details: { request_type: "withdrawal", user_id: "employee-1" } } };
+        return { data: { id: "request-1", status: "approved", amount: 72000, disbursement_phone: "256700000001", type: "Withdrawal request", title: "Wallet withdrawal", details: { request_type: "withdrawal", user_id: "employee-1" } } };
       };
       const query: any = {
         select: () => query,

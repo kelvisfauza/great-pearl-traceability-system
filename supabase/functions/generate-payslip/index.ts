@@ -286,7 +286,7 @@ Deno.serve(async (req) => {
 
     const sanitizedName = body.employeeName.replace(/[^a-zA-Z0-9]/g, '_');
     const monthSlug = body.month.replace(/\s+/g, '_');
-    const fileName = `payslips/${monthSlug}/payslip_${sanitizedName}_${monthSlug}.pdf`;
+    const fileName = `secured-payslips/${crypto.randomUUID()}/payslip_${sanitizedName}_${monthSlug}.pdf`;
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
@@ -301,21 +301,16 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to upload payslip: ${uploadError.message}`);
     }
 
-    // 'statements' bucket is private — use a long-lived signed URL so recipients can view their payslip
-    const { data: signedData, error: signedError } = await supabase.storage
-      .from('statements')
-      .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year
-
-    if (signedError) {
-      console.error('Signed URL error:', signedError);
-      throw new Error(`Failed to create signed URL: ${signedError.message}`);
-    }
+    const { data: access, error: accessError } = await supabase.from('payslip_access_records').insert({
+      employee_email: body.employeeEmail.toLowerCase(), storage_path:fileName, label:`Payslip ${body.month}.pdf`,
+    }).select('id').single();
+    if (accessError || !access) throw new Error('Failed to register protected payslip access');
 
     console.log('Payslip PDF generated');
 
     return new Response(JSON.stringify({
       success: true,
-      url: signedData.signedUrl,
+      url: `https://greatpearlcoffeesystem.site/payslip/${access.id}`,
       fileName
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

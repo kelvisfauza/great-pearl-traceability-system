@@ -41,7 +41,7 @@ serve(async (req) => {
     );
 
     const body = await req.json().catch(() => ({}));
-    const { reviewId, phone, approverEmail, customReference } = body || {};
+    const { reviewId, approverEmail, customReference } = body || {};
     const action: "approve" | "finance_release" = body?.action === "finance_release" ? "finance_release" : "approve";
     let payoutMethod: string = body?.payoutMethod === "mobile_money" ? "yo" : body?.payoutMethod;
 
@@ -64,14 +64,14 @@ serve(async (req) => {
       if (!u?.user?.email) return fail("Please sign in again");
       const { data: me } = await supabase.from("employees").select("name, email, role, permissions, status")
         .ilike("email", u.user.email).maybeSingle();
-      const perms: string[] = Array.isArray(me?.permissions) ? me!.permissions : [];
+      const perms: string[] = Array.isArray(me?.permissions) ? me.permissions : [];
       const allowed = me && (["Super Admin", "Administrator"].includes(me.role) || perms.some((p) => String(p).startsWith("Finance")));
-      if (!allowed) return fail("Only Finance can release this payment");
-      financeActor = me!.name || me!.email;
+      if (!allowed || !me) return fail("Only Finance can release this payment");
+      financeActor = me.name || me.email;
       if (!["awaiting_finance", "failed"].includes(String(review.payout_status))) {
         return fail("This overtime is not waiting for Finance");
       }
-      if (review.reviewed_by && String(review.reviewed_by).toLowerCase() === String(me!.email).toLowerCase() && !["Super Admin"].includes(me!.role)) {
+      if (review.reviewed_by && String(review.reviewed_by).toLowerCase() === String(me.email).toLowerCase() && !["Super Admin"].includes(me.role)) {
         return fail("You approved this overtime — another Finance person must release it");
       }
     } else if (review.status !== "pending") {
@@ -87,7 +87,7 @@ serve(async (req) => {
     // when attendance records lacked a real email. Fall back to lookup by name.
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     let userId: string | null = null;
-    let employeePhone: string | null = phone || null;
+    let employeePhone: string | null = null;
     let resolvedEmail: string | null = null;
     try {
       let emp: any = null;
@@ -107,7 +107,7 @@ serve(async (req) => {
           .maybeSingle();
         emp = r2.data;
       }
-      if (emp?.phone && !employeePhone) employeePhone = emp.phone;
+      if (emp?.phone) employeePhone = emp.phone;
       if (emp?.email) resolvedEmail = emp.email;
       if (emp?.auth_user_id && UUID_RE.test(String(emp.auth_user_id))) {
         userId = emp.auth_user_id;
@@ -148,9 +148,6 @@ serve(async (req) => {
         });
       } catch (_) { /* ignore */ }
       return ok({ reviewId, payoutStatus: "awaiting_finance", amount });
-    }
-    if (action === "finance_release" && payoutMethod !== "cash" && !phone && review.payout_destination && review.payout_destination !== "cash") {
-      employeePhone = review.payout_destination;
     }
 
     let payoutDestination = "wallet";

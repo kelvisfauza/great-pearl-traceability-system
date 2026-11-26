@@ -56,7 +56,6 @@ serve(async (req) => {
 
     const requestId: string = body?.request_id;
     const provider: string = body?.provider; // 'yo' | 'gosente' | 'cash'
-    const phoneIn: string = body?.phone || "";
     if (!requestId || !["yo", "gosente", "cash"].includes(provider)) {
       return respond(false, { error: "request_id and a valid provider (yo | gosente | cash) are required" });
     }
@@ -82,7 +81,11 @@ serve(async (req) => {
     const details = (reqRow.details || {}) as Record<string, any>;
     const recipientName: string =
       details.recipient_name || details.employee_name || reqRow.requestedby_name || "Recipient";
-    const phone: string = phoneIn || reqRow.disbursement_phone || details.recipient_phone || details.phone || "";
+    // Payment recipients were captured on the approved request, not on release.
+    const phone: string = reqRow.disbursement_phone || details.recipient_phone || details.phone || "";
+    if (provider !== "cash" && !/^256\d{9}$/.test(gsNormalize(phone))) {
+      return respond(false, { error: "The approved request needs a valid saved recipient phone" });
+    }
 
     // Lock the row so a second admin can't double-pay
     const payoutRef = `AR-${String(reqRow.id).slice(0, 8)}-${Date.now()}`;

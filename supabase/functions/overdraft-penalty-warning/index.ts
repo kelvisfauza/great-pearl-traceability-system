@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { requireInternalOrAdmin, requireStaff } from "../_shared/internal-auth.ts";
 
 const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString();
 
@@ -32,8 +32,13 @@ Deno.serve(async (req) => {
 
     // ── TEST / PREVIEW MODE ────────────────────────────────────────────
     if (body?.test === true) {
-      const recipient = String(body.email || "fauzakusa@greatpearlcoffee.com").trim();
-      const outstanding = Number(body.outstanding ?? 250_000);
+      const caller = await requireStaff(req, corsHeaders);
+      if (caller instanceof Response) return caller;
+      if (!caller.email || !caller.userId) throw new Error("Sign in to send yourself a test");
+      const { data: employee } = await admin.from("employees").select("email,name,disabled,status").ilike("email", caller.email).maybeSingle();
+      if (!employee || employee.disabled || String(employee.status).toLowerCase() !== "active") throw new Error("Account unavailable");
+      const recipient = employee.email;
+      const outstanding = 250_000;
       const rate = 0.10; // 10%/day
       const todayPenalty = Math.round(outstanding * rate);
       // compound 3 days
@@ -47,7 +52,7 @@ Deno.serve(async (req) => {
           recipientEmail: recipient,
           idempotencyKey: `od-penalty-warning-TEST-${Date.now()}`,
           templateData: {
-            employeeName: String(body.name || "Admin"),
+            employeeName: employee.name || "Admin",
             outstanding: fmt(outstanding),
             daysOutstanding: "6",
             projectedPenaltyToday: fmt(todayPenalty),

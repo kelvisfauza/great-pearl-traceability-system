@@ -1,4 +1,5 @@
-import { requireInternalOrAdmin } from '../_shared/internal-auth.ts'
+import { requireStaff } from '../_shared/internal-auth.ts'
+import { mayReply } from '../_shared/reply-access.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5'
 
 const corsHeaders = {
@@ -15,8 +16,8 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization') || ''
     const jwt = authHeader.replace(/^Bearer\s+/i, '')
     if (!jwt) return json({ ok: false, error: 'Not authenticated' }, 401)
-    const __denied = await requireInternalOrAdmin(req, corsHeaders)
-    if (__denied) return __denied
+    const caller = await requireStaff(req, corsHeaders)
+    if (caller instanceof Response) return caller
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -40,7 +41,11 @@ Deno.serve(async (req) => {
       .from('support_tickets').select('*').eq('id', ticketId).single()
     if (tErr || !ticket) return json({ ok: false, error: 'Ticket not found' })
 
-    const authorName = user.user_metadata?.name || user.email?.split('@')[0] || 'Support'
+    const { data: employee } = await supabase.from('employees').select('id,name,status,disabled').ilike('email', user.email || '').maybeSingle()
+    const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id',user.id).in('role',['Administrator','Super Admin'])
+    if (!employee || employee.disabled || String(employee.status).toLowerCase() !== 'active' || !mayReply({ userId:user.id, employeeId:employee.id, isAdministrator:!!roles?.length },ticket.assigned_to)) return json({ ok:false,error:'Only the assigned employee or an administrator may reply' },403)
+
+    const authorName = employee.name || 'Support'
 
     const { error: rErr } = await supabase.from('support_ticket_replies').insert({
       ticket_id: ticketId,

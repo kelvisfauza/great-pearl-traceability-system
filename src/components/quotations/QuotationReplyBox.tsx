@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ReplyOwnerControl } from '@/components/admin/ReplyOwnerControl';
 
 interface Props {
   quotationId: string;
@@ -43,6 +44,7 @@ const QuotationReplyBox = ({ quotationId, companyEmail, companyPhone, defaultSub
 
   return (
     <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
+      <ReplyOwnerControl kind="quotation" recordId={quotationId} />
       <div>
         <Label>Subject</Label>
         <Input value={subject} onChange={(e) => setSubject(e.target.value)} />

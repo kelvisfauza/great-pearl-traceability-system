@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { walletLockInput } from "./input.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,10 +21,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({} as any));
-    const action: "apply" | "release" = body?.action === "release" ? "release" : "apply";
-    const pct: number = Number(body?.percentage ?? 35);
-    const reason: string = body?.reason ||
-      "35% of your wallet has been temporarily locked until all attendance records are fully entered into the system. Once attendance is complete, the lock will be released.";
+    const { action, percentage: pct, reason } = walletLockInput(body);
 
     const { data: employees, error: empErr } = await supabase
       .from("employees")

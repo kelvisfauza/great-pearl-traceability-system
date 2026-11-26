@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Users, Send, Loader2, Printer, Search, Banknote, Smartphone } from 'lucide-react';
+import { ExternalPayoutQueue } from './ExternalPayoutQueue';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
@@ -93,6 +94,7 @@ const SupportStaffPerDiemSection: React.FC = () => {
         resetForm();
         setOpen(false);
         queryClient.invalidateQueries({ queryKey: ['support-staff-per-diem'] });
+        queryClient.invalidateQueries({ queryKey: ['external-payout-requests'] });
       } else {
         toast({ title: 'Issue', description: data?.error || data?.message || 'Failed', variant: 'destructive' });
       }
@@ -156,6 +158,7 @@ const SupportStaffPerDiemSection: React.FC = () => {
 
   return (
     <Card className="card-modern">
+      <ExternalPayoutQueue kind="support" />
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">

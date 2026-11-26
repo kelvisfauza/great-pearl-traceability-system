@@ -77,6 +77,29 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
+    // Derive ringing recipients and caller metadata from the saved call, never the request.
+    const { data: group, error: groupError } = await supabase.from('group_calls').select('host_id,call_type,status,conversation_id').eq('id', body.callId).maybeSingle();
+    if (groupError) throw groupError;
+    let allowedIds: string[] = [];
+    let savedCaller: string;
+    let savedKind: string;
+    if (group) {
+      if ((!__caller.internal && group.host_id !== __caller.userId) || !['ringing','active'].includes(group.status)) throw new Error('Call unavailable');
+      const { data: participants, error: pError } = await supabase.from('group_call_participants').select('user_id,status').eq('call_id', body.callId);
+      if (pError) throw pError;
+      allowedIds = (participants || []).filter(p => p.user_id !== group.host_id && ['invited','ringing'].includes(p.status)).map(p => p.user_id);
+      savedCaller = group.host_id; savedKind = group.call_type; body.conversationId = group.conversation_id || '';
+    } else {
+      const { data: direct, error: dError } = await supabase.from('call_sessions').select('caller_id,callee_id,call_type,status').eq('id', body.callId).maybeSingle();
+      if (dError) throw dError;
+      if (!direct || (!__caller.internal && direct.caller_id !== __caller.userId) || direct.status !== 'ringing') throw new Error('Call unavailable');
+      allowedIds = [direct.callee_id]; savedCaller = direct.caller_id; savedKind = direct.call_type; body.conversationId = '';
+    }
+    if (body.calleeUserIds.some(id => !allowedIds.includes(id))) throw new Error('Recipient is not invited to this call');
+    body.calleeUserIds = [...new Set(body.calleeUserIds)];
+    const { data: callerEmployee } = await supabase.from('employees').select('name').eq('auth_user_id', savedCaller).maybeSingle();
+    body.callerName = callerEmployee?.name || 'Caller'; body.callerId = savedCaller; body.kind = savedKind === 'video' ? 'video' : 'audio';
+
     const { data: tokens, error } = await supabase
       .from('device_tokens')
       .select('token, platform, user_id')
@@ -98,7 +121,7 @@ Deno.serve(async (req) => {
       callId: body.callId,
       conversationId: body.conversationId ?? '',
       callerName: body.callerName ?? 'Caller',
-      callerId: __caller.userId ?? body.callerId ?? '',
+      callerId: body.callerId ?? '',
       kind: body.kind ?? 'audio',
     };
 

@@ -13,9 +13,14 @@
 
 # Security fixes
 
-- [ ] Review only the 52 selected findings and group them by affected code.
-- [ ] Fix confirmed access-control, payment, messaging, and input-validation issues.
-- [ ] Add or update focused tests for changed security rules.
-- [ ] Deploy affected edge functions and apply required database migrations.
-- [ ] Verify builds/tests and update each selected finding's status.
-- [ ] Report fixed and remaining selected findings without changing any others.
+- [x] Review only the 52 selected findings and group them by affected code.
+- [x] Preserve custom supplier/support replies for assigned staff and administrators.
+- [x] Preserve external meal/support recipients with saved details and independent approval.
+- [x] Apply selected access-control, payment, messaging, and input-validation fixes; revoke all legacy payslip links.
+- [x] Add and run focused security tests: 16 Deno tests, 75 browser-independent tests, and rollback-only database checks.
+- [x] Deploy affected edge functions and apply required database migrations.
+- [x] Verify build and signed-out desktop/mobile payslip access; update verified selected findings only.
+- [ ] Verify signed-in payment approval, assigned replies and payslip downloads — blocked: external Supabase cannot mint a preview session.
+- [ ] Complete independent self-benefit approval for airtime batches (lov_finding_d8358fe31f23b951) — recipient/amount checks applied; real administrator workflow requires signed-in verification.
+- [ ] Identify owners of three preserved historical payslips — blocked: unmatched employee identities; administrator-only recovery retained.
+- [x] Report selected fixes and remaining verification limits; leave unrelated findings unchanged.

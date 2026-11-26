@@ -4,6 +4,7 @@ import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 import { requireInternalOrAdmin } from "../_shared/internal-auth.ts";
+import { prepareExternalPayout, completeExternalPayout } from "../_shared/external-payout.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,22 +23,24 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { phone, amount, withdrawCharge, description, receiverName, initiatedBy, initiatedByName, gateway } = await req.json();
+    const proposal = await prepareExternalPayout(req, supabase, "meal", await req.json(), corsHeaders);
+    if (!proposal.ready) return proposal.response;
+    const { phone, amount, withdrawCharge, description, receiverName, initiatedBy, initiatedByName, gateway, paymentMethod } = proposal.body;
     const chosenGateway = gateway === "gosente" ? "gosente" : "yo";
 
-    if (chosenGateway === "yo" && (!Deno.env.get("YO_API_USERNAME") || !Deno.env.get("YO_API_PASSWORD"))) {
+    if (paymentMethod !== "cash" && chosenGateway === "yo" && (!Deno.env.get("YO_API_USERNAME") || !Deno.env.get("YO_API_PASSWORD"))) {
       throw new Error("Yo Payments API credentials not configured");
     }
 
-    if (!phone || !amount || !description) {
+    if ((paymentMethod !== "cash" && !phone) || !amount || !description) {
       return new Response(
         JSON.stringify({ error: "Missing required fields: phone, amount, description" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const cleanPhone = normalizePhone(phone);
-    if (cleanPhone.length < 12) {
+    const cleanPhone = phone ? normalizePhone(phone) : "N/A";
+    if (paymentMethod !== "cash" && cleanPhone.length < 12) {
       return new Response(
         JSON.stringify({ error: "Invalid phone number format" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -59,6 +62,7 @@ serve(async (req) => {
     const { data: record, error: insertError } = await supabase
       .from("meal_disbursements")
       .insert({
+        external_request_id: proposal.sourceId,
         receiver_phone: cleanPhone,
         receiver_name: receiverName || null,
         description,
@@ -75,6 +79,13 @@ serve(async (req) => {
     if (insertError) {
       console.error("Insert error:", insertError);
       throw new Error("Failed to create disbursement record");
+    }
+
+    if (paymentMethod === "cash") {
+      const { error } = await supabase.from("meal_disbursements").update({ yo_status: "cash" }).eq("id", record.id);
+      if (error) throw error;
+      await completeExternalPayout(supabase, proposal.sourceId, record.id, "cash");
+      return new Response(JSON.stringify({ success: true, status: "cash", message: "Cash payment independently approved and recorded", recordId: record.id }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Initiate Yo Payment
@@ -219,6 +230,7 @@ serve(async (req) => {
       }
     }
 
+    await completeExternalPayout(supabase, proposal.sourceId, record.id, yoStatus);
     return new Response(
       JSON.stringify({
         success: result.success || yoStatus === "pending_approval",

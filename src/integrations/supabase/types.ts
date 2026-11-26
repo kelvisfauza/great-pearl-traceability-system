@@ -4479,6 +4479,81 @@ export type Database = {
         }
         Relationships: []
       }
+      external_payout_requests: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          approved_email: string | null
+          charge: number
+          created_at: string
+          description: string
+          id: string
+          kind: string
+          national_id: string | null
+          notes: string | null
+          payment_method: string
+          provider: string
+          recipient_name: string
+          recipient_phone: string
+          requested_by: string
+          requested_email: string
+          requested_name: string
+          result_record_id: string | null
+          result_status: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_email?: string | null
+          charge?: number
+          created_at?: string
+          description: string
+          id?: string
+          kind: string
+          national_id?: string | null
+          notes?: string | null
+          payment_method?: string
+          provider?: string
+          recipient_name: string
+          recipient_phone: string
+          requested_by: string
+          requested_email: string
+          requested_name: string
+          result_record_id?: string | null
+          result_status?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_email?: string | null
+          charge?: number
+          created_at?: string
+          description?: string
+          id?: string
+          kind?: string
+          national_id?: string | null
+          notes?: string | null
+          payment_method?: string
+          provider?: string
+          recipient_name?: string
+          recipient_phone?: string
+          requested_by?: string
+          requested_email?: string
+          requested_name?: string
+          result_record_id?: string | null
+          result_status?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       face_credentials: {
         Row: {
           created_at: string
@@ -7933,6 +8008,7 @@ export type Database = {
           amount: number
           created_at: string
           description: string
+          external_request_id: string | null
           id: string
           initiated_by: string
           initiated_by_name: string
@@ -7949,6 +8025,7 @@ export type Database = {
           amount: number
           created_at?: string
           description: string
+          external_request_id?: string | null
           id?: string
           initiated_by: string
           initiated_by_name: string
@@ -7965,6 +8042,7 @@ export type Database = {
           amount?: number
           created_at?: string
           description?: string
+          external_request_id?: string | null
           id?: string
           initiated_by?: string
           initiated_by_name?: string
@@ -9512,6 +9590,30 @@ export type Database = {
           total_nssf_employer?: number
           total_paye?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      payslip_access_records: {
+        Row: {
+          created_at: string
+          employee_email: string
+          id: string
+          label: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          employee_email: string
+          id?: string
+          label: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          employee_email?: string
+          id?: string
+          label?: string
+          storage_path?: string
         }
         Relationships: []
       }
@@ -11867,6 +11969,7 @@ export type Database = {
           approval_by: string | null
           approval_decision: string | null
           approval_notes: string | null
+          assigned_to: string | null
           company_name: string
           contact_name: string | null
           created_at: string
@@ -11899,6 +12002,7 @@ export type Database = {
           approval_by?: string | null
           approval_decision?: string | null
           approval_notes?: string | null
+          assigned_to?: string | null
           company_name: string
           contact_name?: string | null
           created_at?: string
@@ -11931,6 +12035,7 @@ export type Database = {
           approval_by?: string | null
           approval_decision?: string | null
           approval_notes?: string | null
+          assigned_to?: string | null
           company_name?: string
           contact_name?: string | null
           created_at?: string
@@ -14607,6 +14712,7 @@ export type Database = {
           amount: number
           created_at: string
           description: string
+          external_request_id: string | null
           id: string
           initiated_by: string
           initiated_by_name: string
@@ -14626,6 +14732,7 @@ export type Database = {
           amount: number
           created_at?: string
           description: string
+          external_request_id?: string | null
           id?: string
           initiated_by: string
           initiated_by_name: string
@@ -14645,6 +14752,7 @@ export type Database = {
           amount?: number
           created_at?: string
           description?: string
+          external_request_id?: string | null
           id?: string
           initiated_by?: string
           initiated_by_name?: string
@@ -18604,6 +18712,10 @@ export type Database = {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json
       }
+      assign_reply_owner: {
+        Args: { p_employee_id: string; p_kind: string; p_record_id: string }
+        Returns: Json
+      }
       attach_sale_to_delivery_note: {
         Args: { p_clearance_id: string; p_sale_id: string }
         Returns: Json
@@ -19817,6 +19929,20 @@ export type Database = {
         Returns: number
       }
       scan_system_red_flags: { Args: never; Returns: Json }
+      selected_qr_enroll_impl: {
+        Args: {
+          _device_label?: string
+          _lookup: string
+          _otp: string
+          _pin: string
+        }
+        Returns: Json
+      }
+      selected_qr_set_pin_impl: {
+        Args: { _lookup: string; _new_pin: string; _otp: string }
+        Returns: Json
+      }
+      selected_security_is_self: { Args: { doc: Json }; Returns: boolean }
       selected_staff_module_access: {
         Args: { p_modules: string[] }
         Returns: boolean

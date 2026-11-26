@@ -1,5 +1,6 @@
 import { withIpnSecret } from "../_shared/ipn-auth.ts";
-import { requireStaff } from "../_shared/internal-auth.ts";
+import { requireMilling } from "../_shared/milling-access.ts";
+import { validateCollection } from './collection-rules.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { normalizePhone } from "../_shared/yo-payments.ts";
@@ -27,7 +28,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-  const __caller = await requireStaff(req, corsHeaders);
+  const __caller = await requireMilling(req, corsHeaders);
   if (__caller instanceof Response) return __caller;
 
   try {
@@ -38,7 +39,16 @@ serve(async (req) => {
       throw new Error("Yo Payments API credentials not configured");
     }
 
-    const { phone, amount, customer_id, customer_name, initiated_by, allocations } = await req.json();
+    const body = await req.json();
+    const { phone, amount, customer_id } = body;
+    const db = createClient(Deno.env.get('SUPABASE_URL') || '',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '');
+    const proposed = Array.isArray(body.allocations) && body.allocations.length ? body.allocations : [{ customer_id, amount }];
+    const { data: customers, error: customerError } = await db.from('milling_customers').select('id,full_name,phone,current_balance').in('id', proposed.map((row: any) => row.customer_id));
+    if (customerError) throw new Error('Saved customer balances could not be verified');
+    const verified = validateCollection(phone,amount,proposed,customers || []);
+    const allocations = Array.isArray(body.allocations) && body.allocations.length ? verified : [];
+    const customer_name = verified[0]?.customer_name;
+    const initiated_by = __caller.email || 'internal';
 
     // Two modes:
     // 1) Single: requires customer_id + customer_name
