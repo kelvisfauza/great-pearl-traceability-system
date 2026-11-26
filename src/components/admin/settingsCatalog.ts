@@ -32,6 +32,7 @@ export const settingsTools: SettingsTool[] = [
   { id: "users", category: "people", title: "User permissions directory", keywords: "list employees rights", icon: Users, component: lazy(() => import("./UserPermissionsList")) },
   { id: "overview", category: "people", title: "Permission overview", keywords: "summary access roles", icon: Shield, component: lazy(() => import("./PermissionOverview")) },
   { id: "quick-permission", category: "people", title: "Quick permission assignment", keywords: "grant access staff", icon: KeyRound, component: lazy(() => import("./QuickPermissionAssignment")) },
+  { id: "automation", category: "money", title: "Automatic actions on/off", keywords: "auto approval withdrawal meal plan outlook out of office leave microsoft 365 treasury instant", icon: Banknote, component: lazy(() => import("./AutomationControls")) },
   { id: "providers", category: "money", title: "Payment providers", keywords: "yo gosentepay mobile money routing", icon: Banknote, component: lazy(() => import("./ProviderSettings")) },
   { id: "wallet-ops", category: "money", title: "Wallet operations", keywords: "credit debit adjustment balance", icon: Banknote, component: lazy(() => import("./AdminWalletOperations")) },
   { id: "wallet-freeze", category: "money", title: "Freeze or unfreeze wallets", keywords: "withdrawals blocked frozen", icon: Shield, component: lazy(() => import("./WalletFreezeManager")) },

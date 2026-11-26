@@ -8,3 +8,4 @@
 
 - Meal plan automatic Finance approval runs inside process-provider-submission send_to_finance through the shared evaluateMealAutoApproval rules, with a unique per-day marker, so only one auto-approval per Uganda day can ever claim a payout.
 - Small mobile-money wallet withdrawals are auto-reviewed by auto-approve-withdrawal using shared withdrawal-auto-approval rules, then paid through disburse-approval-request with the service key, so wallet debit, charge and failure restoration stay in one payout path.
+- Automatic actions (withdrawals, meal plans, Outlook leave reply) are switched via system_settings.automation_controls read by _shared/automation-controls; missing keys mean ON, failed reads keep money automation OFF.

@@ -1,3 +1,4 @@
+import { useAutomationControls } from "@/hooks/useAutomationControls";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -54,6 +55,7 @@ const LeaveRequests = () => {
   const [acting, setActing] = useState<{ row: LeaveRow; action: "approved" | "rejected" } | null>(null);
   const [form, setForm] = useState({ start: "", end: "", days: 0, type: "", note: "" });
   const [oof, setOof] = useState({ on: false, message: "" });
+  const { data: automation } = useAutomationControls();
   const [busy, setBusy] = useState(false);
 
   const ANNUAL_ENTITLEMENT = 21; // days per year
@@ -361,7 +363,7 @@ const LeaveRequests = () => {
             {acting && `${names[acting.row.requestedby]?.name || acting.row.requestedby}: ${fmt(acting.row.details.start_date)} → ${fmt(acting.row.details.end_date)} (${acting.row.details.days} days). A confirmation email will be sent.`}
           </p>
           <div><Label>{acting?.action === "approved" ? "Note (optional)" : "Reason"}</Label><Textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
-          {acting?.action === "approved" && (
+          {acting?.action === "approved" && automation?.outlook_ooo !== false && (
             <div className="space-y-2 rounded-md border p-3">
               <label className="flex items-center gap-2 text-sm font-medium"><Checkbox checked={oof.on} onCheckedChange={(v) => setOof({ ...oof, on: v === true })} />Set Outlook out-of-office reply</label>
               {oof.on && <>

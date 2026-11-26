@@ -1,3 +1,4 @@
+import { readAutomationControls } from "../_shared/automation-controls.ts";
 import { receiptLink } from "../_shared/receipt-token.ts";
 import { requireFinanceCaller } from "../_shared/finance-access.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -647,7 +648,8 @@ serve(async (req) => {
               .eq("request_type", "meal_plan").eq("status", "paid").order("created_at", { ascending: false }).limit(10),
           ]);
           const total = amt + chg;
-          const decision = evaluateMealAutoApproval({
+          const controls = await readAutomationControls(supabase);
+          const decision = !controls.mealAuto ? { ok: false, reasons: ["Automatic approval is turned off in Settings"] } : evaluateMealAutoApproval({
             requestType: submission.request_type,
             amount: total,
             description: submission.description || "",

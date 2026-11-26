@@ -1,3 +1,4 @@
+import { readAutomationControls } from "../_shared/automation-controls.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
@@ -30,6 +31,11 @@ Deno.serve(async (req) => {
     if (r.status !== "Pending Admin" || details.auto_review) return reply({ ok: true, decision: "manual", message: "Already reviewed" });
     if (Date.now() - new Date(r.created_at).getTime() > 15 * 60_000) return reply({ ok: true, decision: "manual", message: "Too old for automatic review" });
 
+    const controls = await readAutomationControls(db);
+    if (!controls.withdrawalAuto) {
+      await db.from("approval_requests").update({ details: { ...details, auto_review: { decision: "manual", reasons: ["Automatic approval is turned off in Settings"], checked_at: new Date().toISOString() } } }).eq("id", requestId);
+      return reply({ ok: true, decision: "manual", message: "Automatic approval is turned off" });
+    }
     const amount = Number(r.amount || 0);
     const email = String(r.requestedby || "").toLowerCase();
     const userId = String(details.user_id || "");
