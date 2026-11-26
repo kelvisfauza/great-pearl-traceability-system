@@ -1,4 +1,5 @@
 import { FinanceWalletOpsAndBalances } from '@/components/finance/FinanceWalletOpsAndBalances';
+import FinanceSalaryPayments from '@/components/finance/FinanceSalaryPayments';
 import FinanceProviderReleases from '@/components/finance/FinanceProviderReleases';
 import FinancePaymentHistory from '@/components/finance/FinancePaymentHistory';
 import { FinanceOvertimePayments } from '@/components/finance/FinanceOvertimePayments';
@@ -110,6 +111,7 @@ const Finance = () => {
           <div className="space-y-6">
             <PendingCashDeposits />
             <AwaitingDisbursementPanel />
+            <FinanceSalaryPayments />
             <PendingApprovalRequests />
             <FinanceWalletOpsAndBalances />
             <FinanceProviderReleases />
@@ -126,7 +128,7 @@ const Finance = () => {
       case 'vendor-accounts': return <VendorAccounts />;
       case 'advances': return <SupplierAdvancesPage />;
       case 'expenses': return <ExpenseManagement />;
-      case 'hr': return <HRPayments />;
+      case 'hr': return <div className="space-y-6"><FinanceSalaryPayments /><HRPayments /></div>;
       case 'daybook': return <DayBook />;
       case 'reports': return <FinanceReports />;
       case 'history':

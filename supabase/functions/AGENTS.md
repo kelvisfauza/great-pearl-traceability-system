@@ -1,5 +1,7 @@
 # Payment accounting
 
+- HR queues saved salary figures; Finance releases one salary through a row-locked private routine, atomically recovering advances and posting the treasury-backed wallet credit before completion; committed releases wake salary email delivery and bulk salary payouts are disabled.
+
 - Daily finance reports use a consistent service-only snapshot and unique saved report run; reconstruct treasury period balances from account journals, label current unpaid lists and stale provider observations, and never retry an uncertain email outcome.
 
 - Prepare durable GosentePay receipts before calling the provider; keep accepted bookkeeping failures recoverable without resending or refunding payouts, so payment acceptance cannot be undone by a recording failure.

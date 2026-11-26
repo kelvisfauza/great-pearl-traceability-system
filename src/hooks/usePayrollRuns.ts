@@ -56,7 +56,7 @@ export const usePayrollRuns = () => {
 
   const approveAndDisburse = async (runId: string, approvedBy: string, approvedByEmail: string) => {
     const { data, error } = await supabase.functions.invoke('approve-payroll-run', {
-      body: { runId, approvedBy, approvedByEmail, disburse: true },
+      body: { runId, approvedBy, approvedByEmail, disburse: false },
     });
     if (error) throw error;
     if (data?.ok === false) throw new Error(data.error || 'Approval failed');

@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
       .from('employee_salary_payments')
       .select('*')
       .eq('status', 'completed')
+      .not('finance_ledger_id', 'is', null)
       .order('completed_at', { ascending: false })
 
     if (paymentIds.length > 0) {
@@ -79,7 +80,7 @@ Deno.serve(async (req) => {
       const walletCredited = Number(payment.net_salary || 0)
       const totalDeductions = nssfEmployee + paye + advanceDeduction + timeDeduction
 
-      const { error: sendError } = await supabase.functions.invoke('send-transactional-email', {
+      const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-transactional-email', {
         body: {
           templateName: 'salary-credited',
           recipientEmail: payment.employee_email,
@@ -104,8 +105,8 @@ Deno.serve(async (req) => {
         },
       })
 
-      if (sendError) {
-        failed.push({ employee: payment.employee_name, email: payment.employee_email, error: sendError.message })
+      if (sendError || sendResult?.ok === false || sendResult?.success === false) {
+        failed.push({ employee: payment.employee_name, email: payment.employee_email, error: sendError?.message || sendResult?.error || 'Email was not accepted' })
       } else {
         sent.push({ employee: payment.employee_name, email: payment.employee_email })
       }

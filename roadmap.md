@@ -12,6 +12,13 @@
 - [x] Copy signed documents to SharePoint — Documents tab (needs Sites.ReadWrite.All)
 
 # Daily finance PDF
+
+# Salary Finance handoff
+- [ ] Route HR-approved salary payments to Finance without early wallet credits or emails.
+- [ ] Add individual Finance wallet release with atomic duplicate/funding protection.
+- [ ] Test approval/payment boundaries and notification timing; deploy and verify available flows.
+
+# Daily finance PDF (completed)
 - [x] Generate a saved finance snapshot with treasury account actions and payment status.
 - [x] Schedule one report daily at 8 PM Uganda time to Fauza's admin email.
 - [x] Inspect all six PDF pages, correct rejected balances in pending lists, and pass six timing/accounting tests.

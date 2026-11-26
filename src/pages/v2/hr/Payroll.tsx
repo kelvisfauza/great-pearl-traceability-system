@@ -38,7 +38,7 @@ const PayrollPage = () => {
   const handleApprove = async (id: string) => {
     try {
       await approveAndDisburse(id, employee?.name || 'Admin', employee?.email || '');
-      toast({ title: 'Approved & disbursed', description: 'Salaries credited to employee wallets.' });
+      toast({ title: 'Sent to Finance', description: 'Each salary is awaiting individual Finance wallet release.' });
     } catch (e: any) {
       toast({ title: 'Approval failed', description: e.message, variant: 'destructive' });
     }

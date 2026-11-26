@@ -106,7 +106,7 @@ const ProcessPayrollDialog = () => {
     salaryAmount: '',
     advanceDeduction: '',
     month: format(new Date(), 'MMMM yyyy'),
-    paymentMethod: 'Bank Transfer',
+    paymentMethod: 'wallet',
     notes: '',
   });
   const [employeeBankDetails, setEmployeeBankDetails] = useState<BankDetails | null>(null);
@@ -165,7 +165,7 @@ const ProcessPayrollDialog = () => {
       .select('id, net_salary, gross_salary, status, payment_month, payment_label, advance_deduction, time_deduction, notes')
       .eq('employee_id', emp.id)
       .eq('payment_month', selectedMonth)
-      .in('status', ['completed', 'processing']);
+      .in('status', ['completed', 'processing', 'pending_finance']);
 
     const paidThisMonth = existingPayments && existingPayments.length > 0;
     setAlreadyPaidCurrentMonth(!!paidThisMonth);
@@ -305,7 +305,7 @@ const ProcessPayrollDialog = () => {
         .select('id, payment_label, status')
         .eq('employee_id', selectedEmployee.id)
         .eq('payment_month', form.month)
-        .in('status', ['completed', 'processing']);
+        .in('status', ['completed', 'processing', 'pending_finance']);
 
       if (existingPayments && existingPayments.length > 0) {
         const sameTypePayment = existingPayments.find(p => {
@@ -357,12 +357,12 @@ const ProcessPayrollDialog = () => {
           processed_by_email: currentUser?.email || '',
           notes: `${paymentType === 'half' ? '[HALF SALARY] ' : paymentType === 'balance' ? '[BALANCE SALARY] ' : '[FULL SALARY] '}${alreadyPaidCurrentMonth && paymentType !== 'balance' ? '[NEXT MONTH PAYMENT] ' : ''}${form.notes || ''}`.trim() || null,
           payment_label: paymentType === 'half' ? 'HALF SALARY' : paymentType === 'balance' ? 'BALANCE SALARY' : 'FULL SALARY',
-          status: 'processing',
+          status: 'pending_finance',
         });
 
       if (error) throw error;
 
-      toast({ title: "Success", description: `Salary payment for ${selectedEmployee.name} initiated. Net: UGX ${netSalary.toLocaleString()}` });
+      toast({ title: "Success", description: `Salary payment for ${selectedEmployee.name} sent to Finance. Net: UGX ${netSalary.toLocaleString()}` });
       setSelectedEmployee(null);
       setAdvanceInfo(null);
       setTimeDeductionInfo(null);
@@ -371,125 +371,13 @@ const ProcessPayrollDialog = () => {
       setHalfPayAlreadyPaid(false);
       setHalfPayInfo(null);
       setPaymentType('full');
-      setForm({ salaryAmount: '', advanceDeduction: '', month: format(new Date(), 'MMMM yyyy'), paymentMethod: 'Bank Transfer', notes: '' });
+      setForm({ salaryAmount: '', advanceDeduction: '', month: format(new Date(), 'MMMM yyyy'), paymentMethod: 'wallet', notes: '' });
       fetchPayments();
     } catch (error) {
       console.error('Error processing payment:', error);
       toast({ title: "Error", description: "Failed to process payment", variant: "destructive" });
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleMarkComplete = async (payment: SalaryPayment) => {
-    const txId = `TXN-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
-    try {
-      const { error } = await supabase
-        .from('employee_salary_payments')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          completed_by: currentUser?.name || '',
-          transaction_id: txId,
-        })
-        .eq('id', payment.id);
-
-      if (error) throw error;
-
-      // Update salary advance balances if there was a deduction
-      if (payment.advance_deduction > 0 && payment.advance_id) {
-        try {
-          // Get all active advances for this employee
-          const { data: advances } = await supabase
-            .from('employee_salary_advances')
-            .select('id, remaining_balance, minimum_payment')
-            .eq('employee_email', payment.employee_email)
-            .eq('status', 'active')
-            .order('created_at', { ascending: true });
-
-          if (advances && advances.length > 0) {
-            let remainingDeduction = payment.advance_deduction;
-            for (const adv of advances) {
-              if (remainingDeduction <= 0) break;
-              const deductFromThis = Math.min(remainingDeduction, Number(adv.remaining_balance));
-              const newBalance = Math.max(0, Number(adv.remaining_balance) - deductFromThis);
-              await supabase
-                .from('employee_salary_advances')
-                .update({
-                  remaining_balance: newBalance,
-                  status: newBalance <= 0 ? 'paid_off' : 'active',
-                })
-                .eq('id', adv.id);
-              remainingDeduction -= deductFromThis;
-            }
-          }
-        } catch (err) {
-          console.error('Failed to update advance balance:', err);
-        }
-      }
-
-      // Mark time deductions as cleared for this payment
-      if (payment.time_deduction > 0) {
-        try {
-          const now = new Date();
-          const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-          
-          // Get employee_id from the payment's employee
-          const { data: empData } = await supabase
-            .from('employees')
-            .select('id')
-            .eq('email', payment.employee_email)
-            .single();
-
-          if (empData) {
-            await supabase
-              .from('time_deductions')
-              .update({ deducted_in_payment_id: payment.id })
-              .eq('employee_id', empData.id)
-              .eq('month', monthKey)
-              .is('deducted_in_payment_id', null);
-          }
-        } catch (err) {
-          console.error('Failed to clear time deductions:', err);
-        }
-      }
-
-      // Send SMS notification
-      if (payment.employee_phone) {
-        try {
-          const payLabel = payment.payment_label ? ` (${payment.payment_label})` : '';
-          let smsMessage = `Great Agro Coffee: Your salary${payLabel} for ${payment.payment_month} has been disbursed.\n\nGross: UGX ${Number(payment.gross_salary).toLocaleString()}`;
-          if (payment.advance_deduction > 0) {
-            smsMessage += `\nAdvance Deduction: -UGX ${Number(payment.advance_deduction).toLocaleString()}`;
-          }
-          if (payment.time_deduction > 0) {
-            smsMessage += `\nTime Deduction: -UGX ${Number(payment.time_deduction).toLocaleString()} (${payment.time_deduction_hours}hrs)`;
-          }
-          smsMessage += `\nNet Paid: UGX ${Number(payment.net_salary).toLocaleString()}`;
-          smsMessage += `\nTransaction ID: ${txId}`;
-
-          await supabase.functions.invoke('send-sms', {
-            body: { phone: payment.employee_phone, message: smsMessage },
-          });
-
-          await supabase
-            .from('employee_salary_payments')
-            .update({ sms_sent: true })
-            .eq('id', payment.id);
-        } catch (smsErr) {
-          console.error('SMS send failed:', smsErr);
-        }
-      }
-
-      toast({
-        title: "Payment Completed",
-        description: `${payment.employee_name}'s salary marked as paid. Transaction ID: ${txId}`
-      });
-      fetchPayments();
-    } catch (error) {
-      console.error('Error completing payment:', error);
-      toast({ title: "Error", description: "Failed to complete payment", variant: "destructive" });
     }
   };
 
@@ -620,9 +508,7 @@ const ProcessPayrollDialog = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                        <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="Mobile Money">Mobile Money</SelectItem>
+                        <SelectItem value="wallet">Employee Wallet</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -797,7 +683,7 @@ const ProcessPayrollDialog = () => {
 
                 <Button onClick={handleSubmit} disabled={submitting || !selectedEmployee} className="w-full gap-2">
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  {submitting ? 'Processing...' : `Process Payment — UGX ${netSalary.toLocaleString()}`}
+                  {submitting ? 'Processing...' : `Approve for Finance — UGX ${netSalary.toLocaleString()}`}
                 </Button>
               </CardContent>
             </Card>
@@ -823,7 +709,7 @@ const ProcessPayrollDialog = () => {
                           <TableHead>Month</TableHead>
                           <TableHead>Gross</TableHead>
                           <TableHead>Deductions</TableHead>
-                          <TableHead>Net Paid</TableHead>
+                          <TableHead>Net Salary</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Action</TableHead>
                         </TableRow>
@@ -857,16 +743,12 @@ const ProcessPayrollDialog = () => {
                                     payment.status === 'cancelled' ? 'bg-red-600' : 'bg-orange-500'
                                   }
                                 >
-                                  {payment.status === 'completed' ? 'Paid' : payment.status === 'cancelled' ? 'Cancelled' : 'Processing'}
+                                  {payment.status === 'completed' ? 'Paid' : payment.status === 'cancelled' ? 'Cancelled' : 'Awaiting Finance'}
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                {payment.status === 'processing' && (
+                                {['processing', 'pending_finance'].includes(payment.status) && (
                                   <div className="flex gap-1">
-                                    <Button size="sm" variant="outline" className="gap-1" onClick={() => handleMarkComplete(payment)}>
-                                      <CheckCircle className="h-3 w-3" />
-                                      Mark Paid
-                                    </Button>
                                     <Button size="sm" variant="outline" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => handleCancelPayment(payment)}>
                                       <XCircle className="h-3 w-3" />
                                       Cancel

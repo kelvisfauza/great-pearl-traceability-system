@@ -3421,6 +3421,9 @@ export type Database = {
           employee_id: string
           employee_name: string
           employee_phone: string | null
+          finance_ledger_id: string | null
+          finance_released_at: string | null
+          finance_released_by: string | null
           gross_salary: number
           id: string
           net_salary: number
@@ -3461,6 +3464,9 @@ export type Database = {
           employee_id: string
           employee_name: string
           employee_phone?: string | null
+          finance_ledger_id?: string | null
+          finance_released_at?: string | null
+          finance_released_by?: string | null
           gross_salary?: number
           id?: string
           net_salary?: number
@@ -3501,6 +3507,9 @@ export type Database = {
           employee_id?: string
           employee_name?: string
           employee_phone?: string | null
+          finance_ledger_id?: string | null
+          finance_released_at?: string | null
+          finance_released_by?: string | null
           gross_salary?: number
           id?: string
           net_salary?: number
@@ -18750,6 +18759,10 @@ export type Database = {
         Args: { _request_id: string }
         Returns: Json
       }
+      approve_salary_run_to_finance: {
+        Args: { p_run_id: string }
+        Returns: Json
+      }
       approve_transfer_reversal: {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json
@@ -19070,6 +19083,7 @@ export type Database = {
         Args: { p_error?: string; p_reference: string; p_status: string }
         Returns: Json
       }
+      finance_release_salary: { Args: { p_payment_id: string }; Returns: Json }
       finish_settings_alert: {
         Args: { p_error?: string; p_id: string; p_sent: boolean }
         Returns: undefined

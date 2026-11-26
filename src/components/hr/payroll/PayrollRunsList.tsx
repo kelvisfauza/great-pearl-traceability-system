@@ -53,7 +53,7 @@ export const PayrollRunsList = ({
               <Stat label="Gross" value={fmtUGX(r.total_gross)} />
               <Stat label="NSSF 5%" value={fmtUGX(r.total_nssf_employee)} color="text-orange-600" />
               <Stat label="PAYE" value={fmtUGX(r.total_paye)} color="text-orange-600" />
-              <Stat label="Net Disbursed" value={fmtUGX(r.total_net)} color="text-emerald-700" />
+              <Stat label="Net Salary" value={fmtUGX(r.total_net)} color="text-emerald-700" />
               <Stat label="NSSF 10% (Employer)" value={fmtUGX(r.total_nssf_employer)} color="text-muted-foreground" />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -70,7 +70,7 @@ export const PayrollRunsList = ({
                       try { await onApprove?.(r.id); } finally { setBusy(null); }
                     }}
                   >
-                    <CheckCircle2 className="h-4 w-4 mr-1" /> Approve & Disburse
+                    <CheckCircle2 className="h-4 w-4 mr-1" /> Approve for Finance
                   </Button>
                   <Button
                     size="sm"
