@@ -102,6 +102,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [sendingCode, setSendingCode] = useState(false);
   const [completedRef, setCompletedRef] = useState('');
   const [completedAmount, setCompletedAmount] = useState(0);
+  const [autoReview, setAutoReview] = useState<null | 'checking' | 'approved' | 'rejected' | 'manual'>(null);
   const { createWithdrawalRequest, refreshAccount } = useUserAccount();
   const { user, employee } = useAuth();
   const { toast } = useToast();
@@ -585,6 +586,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
       const autoEligible = channel === 'MOBILE_MONEY' && withdrawalAmount < 30000 && inserted?.id;
       if (autoEligible) {
+        setAutoReview('checking');
         setCompletedRef(ref);
         setCompletedAmount(withdrawalAmount);
         setStep('done');
@@ -595,11 +597,13 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
         });
         supabase.functions.invoke('auto-approve-withdrawal', { body: { requestId: inserted.id } })
           .then(({ data }) => {
-            if ((data as any)?.decision === 'reject') {
+            const d = (data as any)?.decision;
+            setAutoReview(d === 'approve' ? 'approved' : d === 'reject' ? 'rejected' : 'manual');
+            if (d === 'reject') {
               toast({ title: 'Withdrawal declined', description: (data as any)?.message || 'This withdrawal could not be approved.', variant: 'destructive', duration: 10000 });
             }
           })
-          .catch((e) => console.error('Auto review failed:', e));
+          .catch((e) => { console.error('Auto review failed:', e); setAutoReview('manual'); });
         return;
       }
       
@@ -626,6 +630,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
   const handleClose = () => {
     setStep('amount');
+    setAutoReview(null);
     setBankSubmitting(false);
     setAmount('');
     setChannel('CASH');
@@ -1037,13 +1042,18 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
               ) : (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                   <Clock className="h-10 w-10 text-amber-600 mx-auto mb-2" />
-                  <h3 className="font-bold text-amber-800">Withdrawal Submitted for Approval</h3>
+                  <h3 className="font-bold text-amber-800">{autoReview === 'checking' ? 'Withdrawal Request Received' : autoReview === 'approved' ? 'Withdrawal Approved' : autoReview === 'rejected' ? 'Withdrawal Declined' : 'Withdrawal Submitted for Approval'}</h3>
                   <p className="text-sm text-amber-700 mt-1">
                     Reference: <strong>{completedRef}</strong>
                   </p>
                   <p className="text-lg font-bold text-amber-800 mt-2">
                     {formatCurrency(completedAmount)}
                   </p>
+                  {autoReview && autoReview !== 'manual' ? (
+                  <p className="text-xs text-amber-600 mt-2">
+                    {autoReview === 'checking' ? 'Your request will be processed as soon as possible.' : autoReview === 'approved' ? 'Approved automatically. The money is being sent to your mobile money number; you will receive an SMS.' : 'This withdrawal could not be approved. You will receive an SMS with the reason.'}
+                  </p>
+                  ) : (<>
                   <p className="text-xs text-amber-600 mt-2">
                     {completedAmount > 100000 
                       ? '⚡ This requires 3 admin approvals + finance approval'
@@ -1052,6 +1062,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   <p className="text-xs text-amber-600 mt-1">
                     You will receive an SMS once approved. Money will NOT be deducted until fully approved.
                   </p>
+                  </>)}
                 </div>
               )}
 
