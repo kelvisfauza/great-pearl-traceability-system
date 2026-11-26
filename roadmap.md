@@ -11,12 +11,11 @@
 - [x] Official notices from Fauzakusa@greatpearlcoffee.com — Notices tab (needs Mail.Send)
 - [x] Copy signed documents to SharePoint — Documents tab (needs Sites.ReadWrite.All)
 
-# Daily finance PDF
-
 # Salary Finance handoff
-- [ ] Route HR-approved salary payments to Finance without early wallet credits or emails.
-- [ ] Add individual Finance wallet release with atomic duplicate/funding protection.
-- [ ] Test approval/payment boundaries and notification timing; deploy and verify available flows.
+- [x] Route HR-approved salary payments to Finance without early wallet credits or emails.
+- [x] Add individual Finance wallet release in V1/V2 with atomic duplicate/funding protection.
+- [x] Test approval/payment boundaries and email queue timing using rolled-back payments; deploy and verify clean builds.
+- [ ] Verify signed-in HR approval and Finance release screens — blocked: external Supabase cannot mint a preview session; no live salaries or emails sent.
 
 # Daily finance PDF (completed)
 - [x] Generate a saved finance snapshot with treasury account actions and payment status.
