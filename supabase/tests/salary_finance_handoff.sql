@@ -9,6 +9,7 @@ BEGIN
  VALUES(p,e.id::text,e.name,e.email,100,100,100,'December 2099','FULL SALARY','wallet','processing','Rollback HR test','rollback@example.invalid');
  IF NOT EXISTS(SELECT 1 FROM employee_salary_payments WHERE id=p AND status='pending_finance' AND completed_at IS NULL) THEN RAISE EXCEPTION 'HR did not queue salary'; END IF;
  IF (SELECT count(*) FROM ledger_entries WHERE reference='SAL-'||p::text)<>before_count THEN RAISE EXCEPTION 'HR approval credited the wallet early'; END IF;
+ IF EXISTS(SELECT 1 FROM net.http_request_queue WHERE url LIKE '%send-payroll-payment-emails' AND convert_from(body,'UTF8') LIKE '%'||p::text||'%') THEN RAISE EXCEPTION 'HR queued salary-paid email early'; END IF;
  BEGIN UPDATE employee_salary_payments SET status='completed' WHERE id=p; EXCEPTION WHEN OTHERS THEN denied:=true; END;
  IF NOT denied THEN RAISE EXCEPTION 'HR completion bypass was allowed'; END IF;
  PERFORM set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-000000000000","role":"authenticated"}',true);
@@ -22,6 +23,7 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM employee_salary_payments s JOIN ledger_entries l ON l.id=s.finance_ledger_id WHERE s.id=p AND s.status='completed' AND l.amount=100 AND l.reference='SAL-'||p::text) THEN RAISE EXCEPTION 'Wallet credit and paid status not bound'; END IF;
  SELECT balance INTO after_balance FROM treasury_accounts WHERE code='general';
  IF before_balance-after_balance<>100 THEN RAISE EXCEPTION 'Salary did not draw exactly UGX 100 from General'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM net.http_request_queue WHERE url LIKE '%send-payroll-payment-emails' AND convert_from(body,'UTF8') LIKE '%'||p::text||'%') THEN RAISE EXCEPTION 'Successful wallet credit did not queue its email'; END IF;
  result:=public.finance_release_salary(p);
  IF result->>'already_paid'<>'true' OR (SELECT count(*) FROM ledger_entries WHERE reference='SAL-'||p::text)<>1 THEN RAISE EXCEPTION 'Duplicate wallet credit'; END IF;
  RAISE NOTICE 'PASS: HR queues, early completion denied, unauthorized release denied, Finance atomic wallet credit and General debit, duplicate prevented';
