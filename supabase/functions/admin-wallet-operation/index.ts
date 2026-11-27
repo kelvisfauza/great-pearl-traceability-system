@@ -412,6 +412,18 @@ serve(async (req) => {
       if (confMethod === "instant" && !isSuperAdmin) {
         return respond(false, { error: "Only a super administrator can execute instantly" });
       }
+      // Separation of duties: nobody may instantly move money INTO their own wallet.
+      {
+        const me = String(actorEmail || "").toLowerCase().trim();
+        const tgt = String(target_email || "").toLowerCase().trim();
+        const dst = String(destination_email || "").toLowerCase().trim();
+        const benefitsActor =
+          (operation_type === "credit" && tgt === me) ||
+          (operation_type === "transfer" && dst === me);
+        if (benefitsActor && confMethod !== "second_admin") {
+          return respond(false, { error: "You cannot instantly credit your own wallet. Use second-administrator approval." });
+        }
+      }
 
       const { data: target } = await supabase
         .from("employees")

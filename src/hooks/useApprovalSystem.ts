@@ -89,7 +89,7 @@ export const useApprovalSystem = () => {
 
         console.log('👥 All active employees with phones:', allEmployees?.length || 0);
         console.log('✅ Filtered approvers:', approvers?.length || 0);
-        console.log('📋 Approver list:', approvers?.map(a => ({ name: a.name, role: a.role, dept: a.department, phone: a.phone })));
+        
 
         if (!approvers || approvers.length === 0) {
           const errorMsg = 'No approvers found with phone numbers';

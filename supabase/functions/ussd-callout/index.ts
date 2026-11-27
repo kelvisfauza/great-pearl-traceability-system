@@ -119,7 +119,7 @@ serve(async (req) => {
 
       const formattedBalance = `UGX ${balance.toLocaleString()}`;
 
-      console.log(`[USSD Callout] Customer ${customer.full_name}, balance: ${balance}, ref: ${paymentRef}`);
+      console.log(`[USSD Callout] Customer found, ref: ${paymentRef}`);
 
       return new Response(JSON.stringify({
         validated: true,

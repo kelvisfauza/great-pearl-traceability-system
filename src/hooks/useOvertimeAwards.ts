@@ -388,7 +388,7 @@ export const useOvertimeAwards = () => {
           const smsResult = await smsService.sendSMS(employeeData.phone, smsMessage);
           
           if (smsResult.success) {
-            console.log('✅ SMS sent successfully to:', employeeData.phone);
+            console.log('✅ SMS sent successfully');
           } else {
             console.error('⚠️ SMS failed:', smsResult.error);
           }

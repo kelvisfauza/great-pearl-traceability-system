@@ -595,15 +595,24 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           description: `Reference: ${ref}. Your request for UGX ${withdrawalAmount.toLocaleString()} will be processed as soon as possible.`,
           duration: 8000,
         });
-        supabase.functions.invoke('auto-approve-withdrawal', { body: { requestId: inserted.id } })
-          .then(({ data }) => {
-            const d = (data as any)?.decision;
-            setAutoReview(d === 'approve' ? 'approved' : d === 'reject' ? 'rejected' : 'manual');
-            if (d === 'reject') {
-              toast({ title: 'Withdrawal declined', description: (data as any)?.message || 'This withdrawal could not be approved.', variant: 'destructive', duration: 10000 });
+        // The server starts the automatic review; we only watch the saved result.
+        (async () => {
+          for (let i = 0; i < 15; i++) {
+            await new Promise((r) => setTimeout(r, 3000));
+            const { data: row } = await (supabase as any).from('approval_requests')
+              .select('status, rejection_reason, details').eq('id', inserted.id).maybeSingle();
+            const st = String(row?.status || '');
+            const decided = (row?.details as any)?.auto_review?.decision;
+            if (st === 'Approved' || decided === 'approve') { setAutoReview('approved'); return; }
+            if (st === 'Rejected') {
+              setAutoReview('rejected');
+              toast({ title: 'Withdrawal declined', description: row?.rejection_reason || 'This withdrawal could not be approved.', variant: 'destructive', duration: 10000 });
+              return;
             }
-          })
-          .catch((e) => { console.error('Auto review failed:', e); setAutoReview('manual'); });
+            if (decided === 'manual') { setAutoReview('manual'); return; }
+          }
+          setAutoReview('manual');
+        })().catch(() => setAutoReview('manual'));
         return;
       }
       

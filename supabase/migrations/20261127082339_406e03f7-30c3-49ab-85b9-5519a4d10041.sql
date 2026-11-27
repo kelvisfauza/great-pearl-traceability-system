@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.guard_auto_invest_email(), public.guard_bonus_self_award(), public.guard_budget_withdrawal_update(), public.wake_withdrawal_auto_review() FROM PUBLIC, anon, authenticated;

@@ -38,7 +38,7 @@ export const sendKibabaSMS = async () => {
       return { success: false, error: 'Employee not found' };
     }
     
-    console.log('📱 Kibaba\'s phone:', employee.phone);
+    
     
     if (!employee.phone) {
       console.log('⚠️ No phone number found for Kibaba');

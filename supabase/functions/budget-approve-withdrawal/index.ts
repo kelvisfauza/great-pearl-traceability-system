@@ -48,6 +48,14 @@ serve(async (req) => {
     const { data: reqRow } = await svcClient
       .from("budget_withdrawal_requests").select("*").eq("id", request_id).maybeSingle();
     if (!reqRow) return respond(false, { error: "Request missing after approval" });
+    {
+      const firstId = reqRow.first_approver_id;
+      if (!firstId || firstId === adminAuthId || firstId === reqRow.employee_id || reqRow.employee_id === adminAuthId) {
+        return respond(false, { error: "Two different administrators must approve this withdrawal" });
+      }
+      const { data: fr } = await svcClient.from("user_roles").select("role").eq("user_id", firstId).in("role", ["Administrator", "Super Admin"]);
+      if (!fr?.length) return respond(false, { error: "First approval is not from an administrator" });
+    }
 
     const { data: emp } = await svcClient
       .from("employees").select("id, name, email, phone")

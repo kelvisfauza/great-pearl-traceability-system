@@ -16,6 +16,7 @@ Deno.serve(async (req) => {
   try {
     const caller = await requireStaff(req, corsHeaders);
     if (caller instanceof Response) return caller;
+    if (!caller.internal && !caller.isAdmin) return reply({ ok: false, error: "Automatic review starts on its own after you submit." });
     const parsed = z.object({ requestId: z.string().uuid() }).safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return reply({ ok: false, error: "Choose a saved withdrawal request." });
     const url = Deno.env.get("SUPABASE_URL")!;
@@ -26,7 +27,7 @@ Deno.serve(async (req) => {
     const { data: r } = await db.from("approval_requests").select("*").eq("id", requestId).maybeSingle();
     if (!r) return reply({ ok: false, error: "Request not found" });
     const details = (r.details || {}) as Record<string, any>;
-    if (!caller.internal && String(r.requestedby || "").toLowerCase() !== caller.email) return reply({ ok: false, error: "Not your request" });
+    if (!caller.internal && String(r.requestedby || "").toLowerCase() === caller.email) return reply({ ok: false, error: "You cannot review your own request" });
     if (r.type !== "Withdrawal Request" || details.request_type !== "withdrawal") return reply({ ok: false, error: "Not a wallet withdrawal" });
     if (r.status !== "Pending Admin" || details.auto_review) return reply({ ok: true, decision: "manual", message: "Already reviewed" });
     if (Date.now() - new Date(r.created_at).getTime() > 15 * 60_000) return reply({ ok: true, decision: "manual", message: "Too old for automatic review" });

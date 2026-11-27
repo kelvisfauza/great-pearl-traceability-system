@@ -1,3 +1,4 @@
+import { escapeStrings } from "@/lib/escapeHtml";
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -252,7 +253,7 @@ const RegistrationRequestsManager = () => {
         companyName: "Great Agro Coffee Company"
       };
 
-      console.log('Generated credentials:', credentials);
+      
       setGeneratedCredentials(credentials);
 
       // Step 7: Update local state
@@ -401,7 +402,7 @@ const RegistrationRequestsManager = () => {
       return;
     }
     
-    console.log('Printing credentials for:', generatedCredentials.name);
+    
     
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -413,10 +414,11 @@ const RegistrationRequestsManager = () => {
       return;
     }
     
+    const safeCreds = escapeStrings(generatedCredentials as any);
     printWindow.document.write(`
       <html>
         <head>
-          <title>Login Credentials - ${generatedCredentials.companyName}</title>
+          <title>Login Credentials - ${safeCreds.companyName}</title>
           <style>
             body { 
               font-family: Arial, sans-serif; 
@@ -505,38 +507,38 @@ const RegistrationRequestsManager = () => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>${generatedCredentials.companyName}</h1>
+              <h1>${safeCreds.companyName}</h1>
               <h2>Employee Login Credentials</h2>
             </div>
             
             <div class="credentials">
               <div class="field">
                 <span class="label">Full Name:</span>
-                <span class="value">${generatedCredentials.name}</span>
+                <span class="value">${safeCreds.name}</span>
               </div>
               <div class="field">
                 <span class="label">Email/Username:</span>
-                <span class="value">${generatedCredentials.email}</span>
+                <span class="value">${safeCreds.email}</span>
               </div>
               <div class="field password-field">
                 <span class="label">Temporary Password:</span>
-                <span class="value" style="font-family: monospace; font-size: 16px; font-weight: bold;">${generatedCredentials.password}</span>
+                <span class="value" style="font-family: monospace; font-size: 16px; font-weight: bold;">${safeCreds.password}</span>
               </div>
               <div class="field">
                 <span class="label">Department:</span>
-                <span class="value">${generatedCredentials.department}</span>
+                <span class="value">${safeCreds.department}</span>
               </div>
               <div class="field">
                 <span class="label">Role:</span>
-                <span class="value">${generatedCredentials.role}</span>
+                <span class="value">${safeCreds.role}</span>
               </div>
               <div class="field">
                 <span class="label">Approved By:</span>
-                <span class="value">${generatedCredentials.approvedBy}</span>
+                <span class="value">${safeCreds.approvedBy}</span>
               </div>
               <div class="field">
                 <span class="label">Approved Date:</span>
-                <span class="value">${generatedCredentials.approvedDate}</span>
+                <span class="value">${safeCreds.approvedDate}</span>
               </div>
             </div>
             

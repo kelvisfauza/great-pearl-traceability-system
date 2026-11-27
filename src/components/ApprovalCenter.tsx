@@ -193,7 +193,7 @@ const ApprovalCenter = () => {
                 messageType: 'withdrawal_cash_fallback'
               }
             });
-            console.log('Cash fallback SMS sent to', phoneNumber);
+            console.log('Cash fallback SMS sent');
           } catch (smsErr) {
             console.error('Failed to send cash fallback SMS:', smsErr);
           }

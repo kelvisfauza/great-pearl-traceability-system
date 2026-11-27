@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
          );
        }
         resolvedEmail = String(matchedEmail).toLowerCase().trim();
-       console.log('🤖 Auto-identified face as', resolvedEmail, 'distance=', match.distance);
+       console.log('🤖 Auto-identified face, distance=', match.distance);
      }
 
      // Block disabled accounts (matches the rest of the app's auth policy)

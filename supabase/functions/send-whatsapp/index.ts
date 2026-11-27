@@ -147,7 +147,7 @@ serve(async (req) => {
       formattedPhone = formattedPhone.replace('+', '')
     }
 
-    console.log('Formatted phone for WhatsApp:', formattedPhone)
+    
 
     const template = templateName || 'test_whatsapp_template_en'
     const bodyPlaceholders = placeholders || [userName || 'User']

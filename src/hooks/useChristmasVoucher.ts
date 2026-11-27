@@ -314,7 +314,7 @@ export const useChristmasVoucher = () => {
         const smsResult = await smsService.sendSMS(employeeData.phone, smsMessage);
         
         if (smsResult.success) {
-          console.log('✅ Christmas voucher SMS sent successfully to:', employeeData.phone);
+          console.log('✅ Christmas voucher SMS sent successfully');
         } else {
           console.error('⚠️ Christmas voucher SMS failed:', smsResult.error);
         }

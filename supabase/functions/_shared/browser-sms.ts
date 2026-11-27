@@ -71,5 +71,7 @@ export async function prepareBrowserSms(db: any, body: Record<string, any>, send
   // turn them into arbitrary outbound messaging or spoof an OTP/transaction mirror.
   if (!privileged || type.startsWith('tx:') || type.startsWith('source:tx:') || /\b(?:code|password)\b/i.test(String(body.message || ''))) throw new Error('Use the saved-event notification workflow for this message.');
   if (typeof body.message !== 'string' || !body.message.trim() || body.message.length > 900) throw new Error('Staff notices must be between 1 and 900 characters.');
-  return { ...identity, message: body.message.trim(), messageType: type || 'general' };
+  const trimmed = body.message.trim();
+  const branded = /^great agro/i.test(trimmed) ? trimmed : `Great Agro Coffee notice: ${trimmed}`;
+  return { ...identity, message: branded.slice(0, 960), messageType: type || 'general' };
 }

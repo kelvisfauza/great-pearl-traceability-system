@@ -41,8 +41,12 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Get unified user ID
-      const { data: unifiedId } = await supabase.rpc("get_unified_user_id", { input_email: cfg.user_email });
+      // Resolve identity from the owning account, never the editable email field.
+      const { data: owner } = await supabase.auth.admin.getUserById(cfg.user_id);
+      const ownerEmail = owner?.user?.email?.toLowerCase();
+      if (!ownerEmail) { skipped++; continue; }
+      cfg.user_email = ownerEmail;
+      const { data: unifiedId } = await supabase.rpc("get_unified_user_id", { input_email: ownerEmail });
       const userId = unifiedId || cfg.user_id;
 
       // Get current balance

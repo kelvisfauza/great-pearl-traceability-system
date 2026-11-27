@@ -418,7 +418,7 @@ await savePrices({
           });
           emailsSent++;
         } catch (err) {
-          console.error(`Failed to send price email to ${emp.email}:`, err);
+          console.error('Failed to send price email:', err);
         }
       }
 

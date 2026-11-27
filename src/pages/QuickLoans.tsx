@@ -1,3 +1,4 @@
+import { escapeHtml, escapeStrings } from "@/lib/escapeHtml";
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSalaryAdvanceApprovals } from '@/hooks/useSalaryAdvanceApprovals';
@@ -2052,7 +2053,8 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
   };
 
 
-  const printLoanStatement = async (loan: any) => {
+  const printLoanStatement = async (rawLoan: any) => {
+    const loan = escapeStrings(rawLoan || {});
     // Fetch repayment installments for this loan
     const { data: repayments } = await supabase
       .from('loan_repayments')
@@ -2111,8 +2113,8 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
       return `
         <tr>
           <td style="padding:4px 8px;border:1px solid #eee;font-size:11px">${new Date(e.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-          <td style="padding:4px 8px;border:1px solid #eee;font-size:11px">${description}</td>
-          <td style="padding:4px 8px;border:1px solid #eee;font-size:11px">${e.reference || '—'}</td>
+          <td style="padding:4px 8px;border:1px solid #eee;font-size:11px">${escapeHtml(description)}</td>
+          <td style="padding:4px 8px;border:1px solid #eee;font-size:11px">${escapeHtml(e.reference || '—')}</td>
           <td style="padding:4px 8px;border:1px solid #eee;text-align:right;font-size:11px;color:${e.amount >= 0 ? '#16a34a' : '#dc2626'};font-weight:600">
             ${e.amount >= 0 ? '+' : ''}${Number(e.amount).toLocaleString()}
           </td>
@@ -2167,7 +2169,7 @@ const QuickLoans = ({ approvalDesk = false }: { approvalDesk?: boolean }) => {
         <div class="section-title">📋 Loan Details</div>
         <div class="grid grid-3">
           <div><div class="label">Borrower</div><div class="value">${loan.employee_name}</div></div>
-          <div><div class="label">Employee ID</div><div class="value">${employee?.employee_id || '—'}</div></div>
+          <div><div class="label">Employee ID</div><div class="value">${escapeHtml(employee?.employee_id || '—')}</div></div>
           <div><div class="label">Loan Type</div><div class="value">${loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan</div></div>
           <div><div class="label">Status</div><div class="value" style="color:${loan.status === 'active' ? '#16a34a' : loan.status === 'paid_off' ? '#1a365d' : '#dc2626'}">${loan.status.toUpperCase()}</div></div>
           <div><div class="label">Principal Amount</div><div class="value">UGX ${(loan.loan_amount || 0).toLocaleString()}</div></div>

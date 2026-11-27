@@ -161,13 +161,14 @@ export default function YoPaymentsReport() {
       r.recipient_name || "",
       r.phone || "",
       r.amount,
-      (r.description || "").replace(/"/g, '""'),
+      r.description || "",
       r.status,
       r.yo_reference || "",
       r.initiated_by || "",
       r.approved_by || "",
     ]);
-    const csv = [headers, ...rows].map((row) => row.map((v) => `"${v}"`).join(",")).join("\n");
+    const safeCell = (v: unknown) => { let s = String(v ?? ""); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return `"${s.replace(/"/g, '""')}"`; };
+    const csv = [headers, ...rows].map((row) => row.map(safeCell).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

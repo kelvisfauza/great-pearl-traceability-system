@@ -87,10 +87,8 @@ Deno.serve(async (req) => {
     .map(e => ({ name: (e.name as string) || 'Team', email: (e.email as string).trim() }))
     .filter(r => { const k = r.email.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true })
 
-  for (const em of extra) {
-    const k = em.trim().toLowerCase()
-    if (k && !seen.has(k)) { seen.add(k); recipients.push({ name: 'Team', email: em.trim() }) }
-  }
+  // Extra addresses are ignored unless they belong to a saved employee (already included above).
+  void extra
 
   const subject = 'Today: Work Starts at 11:00 AM (Tusker Lite Rwenzori Marathon) — Closing 7:30 PM'
   const text = `Due to the Tusker Lite Rwenzori Marathon and the resulting road closures, work today starts at 11:00 AM and is extended to 7:30 PM.

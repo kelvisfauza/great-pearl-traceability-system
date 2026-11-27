@@ -130,8 +130,21 @@ Deno.serve(async (req) => {
     };
     if (reqRow.updated_phone) profileUpdate.phone = reqRow.updated_phone;
     if (reqRow.emergency_contact) profileUpdate.emergency_contact = reqRow.emergency_contact;
-    if (ov.role) profileUpdate.role = ov.role;
-    if (Array.isArray(ov.permissions) && ov.permissions.length) profileUpdate.permissions = ov.permissions;
+    if (ov.role || (Array.isArray(ov.permissions) && ov.permissions.length)) {
+      const tok = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+      let callerIsAdmin = tok === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      if (!callerIsAdmin && tok) {
+        const uc = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: `Bearer ${tok}` } } });
+        const { data: u } = await uc.auth.getUser(tok);
+        if (u?.user) {
+          const { data: r } = await supabase.from('user_roles').select('role').eq('user_id', u.user.id).in('role', ['Administrator', 'Super Admin']);
+          callerIsAdmin = !!r?.length;
+        }
+      }
+      if (!callerIsAdmin) return json({ ok: false, error: 'Only administrators can change roles or permissions' });
+      if (ov.role) profileUpdate.role = ov.role;
+      if (Array.isArray(ov.permissions) && ov.permissions.length) profileUpdate.permissions = ov.permissions;
+    }
     await supabase.from('employees').update(profileUpdate).ilike('email', reqRow.employee_email);
 
     await supabase

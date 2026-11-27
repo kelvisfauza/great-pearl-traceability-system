@@ -72,6 +72,11 @@ Deno.serve(async (req) => {
 
     if (action === "download") {
       if (!/^[A-Za-z0-9!_-]+$/.test(id)) return json({ ok: false, error: "Invalid file id" });
+      const lr = await fetch(`${GATEWAY}/me/drive/root:/${encodeURIComponent(FOLDER)}:/children`, { headers: authHeaders() });
+      if (!lr.ok) return json({ ok: false, error: "Could not verify file" });
+      const lj = await lr.json();
+      const allowed = (lj.value || []).some((f: any) => f.id === id && f.file && f.name?.toLowerCase().endsWith(".xlsx"));
+      if (!allowed) return json({ ok: false, error: "File is not in the shared folder" });
       const r = await fetch(`${GATEWAY}/me/drive/items/${id}/content`, {
         headers: authHeaders(),
         redirect: "follow",

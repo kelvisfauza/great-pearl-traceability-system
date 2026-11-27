@@ -117,10 +117,10 @@ export const sendApprovalActionEmails = async (params: ApprovalEmailParams, stag
           },
         });
 
-        if (sendErr) { console.error('Approval email failed for', approver.email, sendErr); continue; }
-        console.log(`✅ Approval action email sent to ${approver.name} (${approver.email})`);
+        if (sendErr) { console.error('Approval email failed', sendErr); continue; }
+        console.log('✅ Approval action email sent');
       } catch (err) {
-        console.error(`Failed to send approval email to ${approver.email}:`, err);
+        console.error('Failed to send approval email:', err);
       }
     }
   } catch (err) {

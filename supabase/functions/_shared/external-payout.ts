@@ -21,6 +21,11 @@ export async function prepareExternalPayout(req: Request, db: any, kind: "meal" 
     if (!Number.isFinite(amount) || amount < 500 || !Number.isFinite(charge) || charge < 0 || !name || name.length > 100 || !description || description.length > 2000 || (method !== "cash" && !/^256\d{9}$/.test(phone))) {
       return { ready: false as const, response: reply({ ok: false, success: false, error: "Valid recipient, amount, charge and description are required" }) };
     }
+    if (kind === "support" && method !== "cash") {
+      const local9 = phone.slice(3);
+      const { data: staff } = await db.from("employees").select("id").in("phone", [phone, "+" + phone, "0" + local9, local9]).limit(1);
+      if (!staff?.length) return { ready: false as const, response: reply({ ok: false, success: false, error: "Support staff payments go only to a phone number saved on an employee record" }) };
+    }
     const { data, error } = await db.from("external_payout_requests").insert({
       kind, recipient_name: name, recipient_phone: phone, national_id: input.nationalId || null, description, amount, charge,
       payment_method: method, provider: (input.gateway || input.paymentProvider) === "gosente" ? "gosente" : "yo", notes: input.notes || null,

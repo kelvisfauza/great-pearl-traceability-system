@@ -116,6 +116,29 @@ Deno.serve(async (req) => {
     )
   }
 
+  // Browser callers may only email saved company contacts (staff or saved suppliers).
+  if (!__caller.internal && !template.to) {
+    const addr = String(effectiveRecipient).trim().toLowerCase()
+    let saved = /@greatpearlcoffee\.com$/.test(addr)
+    try {
+      const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+      if (!saved) {
+        const { data: e } = await sb.from('employees').select('id').ilike('email', addr).limit(1)
+        saved = !!(e && e.length)
+      }
+      if (!saved) {
+        const { data: s } = await sb.from('suppliers').select('id').ilike('email', addr).limit(1)
+        saved = !!(s && s.length)
+      }
+    } catch { /* fall through to deny */ }
+    if (!saved) {
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Emails can only be sent to saved staff or supplier contacts.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+  }
+
   // Centralized DISABLED account guard.
   // Block sending to any employee whose account has been disabled by an admin.
   // The 'operations' mailbox and CC copies bypass this check (handled below).
