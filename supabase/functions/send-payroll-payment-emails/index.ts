@@ -80,6 +80,22 @@ Deno.serve(async (req) => {
       const walletCredited = Number(payment.net_salary || 0)
       const totalDeductions = nssfEmployee + paye + advanceDeduction + timeDeduction
 
+      let payslipUrl = ''
+      try {
+        const { data: slip } = await supabase.functions.invoke('generate-payslip', {
+          body: {
+            employeeName: payment.employee_name, employeeEmail: payment.employee_email,
+            employeeId: payment.employee_id || '', department: payment.department || '',
+            month: payment.payment_month || month, grossSalary, advanceDeduction: advanceDeduction + timeDeduction,
+            netSalary: walletCredited, paymentMethod: 'Wallet',
+            transactionId: payment.transaction_id || `SAL-${payment.id}`,
+            processedDate: new Date(payment.completed_at || Date.now()).toLocaleDateString('en-GB', { timeZone: 'Africa/Kampala' }),
+            nssfEmployee, nssfEmployer: Number(payment.nssf_employer || 0), paye,
+          },
+        })
+        payslipUrl = slip?.url || ''
+      } catch (e) { console.error('payslip generation failed', payment.id, e) }
+
       const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-transactional-email', {
         body: {
           templateName: 'salary-credited',
@@ -96,7 +112,7 @@ Deno.serve(async (req) => {
             hasDeductions: totalDeductions > 0,
             department: payment.department || '',
             transactionId: payment.transaction_id || payment.disbursement_reference || `SAL-${payment.id}`,
-            payslipUrl: '',
+            payslipUrl,
             nssfEmployee: money(nssfEmployee),
             nssfEmployer: money(payment.nssf_employer || 0),
             paye: money(paye),
