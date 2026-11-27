@@ -121,8 +121,10 @@ Deno.serve(async (req) => {
         },
       })
 
+      let sendDetail = ''
+      if (sendError) { try { sendDetail = await (sendError as any).context?.text?.() } catch { /* ignore */ } }
       if (sendError || sendResult?.ok === false || sendResult?.success === false) {
-        failed.push({ employee: payment.employee_name, email: payment.employee_email, error: sendError?.message || sendResult?.error || 'Email was not accepted' })
+        failed.push({ employee: payment.employee_name, email: payment.employee_email, error: (sendDetail ? `${sendError?.message}: ${sendDetail}` : '') || sendError?.message || sendResult?.error || 'Email was not accepted' })
       } else {
         sent.push({ employee: payment.employee_name, email: payment.employee_email })
       }
