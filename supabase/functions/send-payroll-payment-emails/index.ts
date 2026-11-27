@@ -57,6 +57,7 @@ Deno.serve(async (req) => {
       // A resend needs a fresh key, otherwise the mail provider drops it as a duplicate
       const idempotencyKey = resend ? `${baseKey}-r${Date.now()}` : baseKey
       if (sent.length + failed.length > 0) await new Promise((r) => setTimeout(r, 1500))
+      let emailAlreadySent = false
       if (!resend) {
         const { data: existing } = await supabase
           .from('sent_emails_log')
@@ -67,10 +68,11 @@ Deno.serve(async (req) => {
           .eq('status', 'sent')
           .maybeSingle()
 
-        if (existing) {
+        if (existing && payment.sms_sent) {
           skipped.push({ employee: payment.employee_name, reason: 'already sent', email: payment.employee_email })
           continue
         }
+        emailAlreadySent = !!existing
       }
 
       const grossSalary = Number(payment.gross_salary || payment.salary_amount || 0)
@@ -98,8 +100,8 @@ Deno.serve(async (req) => {
         payslipUrl = slip?.url || ''
       } catch (e) { console.error('payslip generation failed', payment.id, e) }
 
-      let sendResult: any = null; let sendError: any = null
-      for (let attempt = 0; attempt < 4; attempt++) {
+      let sendResult: any = { ok: true }; let sendError: any = null
+      for (let attempt = 0; attempt < 2 && !emailAlreadySent; attempt++) {
         if (attempt > 0) await new Promise((r) => setTimeout(r, 8000 * attempt))
         ;({ data: sendResult, error: sendError } = await supabase.functions.invoke('send-transactional-email', {
         headers: svcHeaders,
@@ -107,6 +109,7 @@ Deno.serve(async (req) => {
           templateName: 'salary-credited',
           recipientEmail: payment.employee_email,
           idempotencyKey,
+          skipSms: true,
           templateData: {
             employeeName: payment.employee_name,
             month: payment.payment_month || month,
@@ -129,12 +132,28 @@ Deno.serve(async (req) => {
         const msg = JSON.stringify(sendResult?.error || '')
         if (!sendError && !/429|rate_limit|High demand/i.test(msg)) break
       }
+      // Dedicated salary text, independent of email delivery.
+      let smsOk = !!payment.sms_sent
+      if (!smsOk || resend) {
+        const { data: emp } = await supabase.from('employees').select('phone').ilike('email', payment.employee_email).maybeSingle()
+        if (emp?.phone) {
+          const msg = `Great Agro Coffee: Your ${payment.payment_month || month} salary of UGX ${money(walletCredited)} has been credited to your wallet.${payslipUrl ? ` Payslip: ${payslipUrl}` : ''}`
+          const { data: smsRes, error: smsErr } = await supabase.functions.invoke('send-sms', {
+            headers: svcHeaders,
+            body: { phone: emp.phone, message: msg, userName: payment.employee_name, recipientEmail: payment.employee_email, messageType: 'tx:salary-credited', idempotency_key: `sms-${baseKey}` },
+          })
+          smsOk = !smsErr && smsRes?.ok !== false && smsRes?.success !== false
+          if (smsOk) await supabase.from('employee_salary_payments').update({ sms_sent: true }).eq('id', payment.id)
+          else console.error('salary sms failed', payment.id, smsErr?.message || smsRes?.error)
+        }
+      }
+
       let sendDetail = ''
       if (sendError) { try { sendDetail = await (sendError as any).context?.text?.() } catch { /* ignore */ } }
       if (sendError || sendResult?.ok === false || sendResult?.success === false) {
-        failed.push({ employee: payment.employee_name, email: payment.employee_email, error: (sendDetail ? `${sendError?.message}: ${sendDetail}` : '') || sendError?.message || sendResult?.error || 'Email was not accepted' })
+        failed.push({ employee: payment.employee_name, email: payment.employee_email, sms: smsOk, error: (sendDetail ? `${sendError?.message}: ${sendDetail}` : '') || sendError?.message || sendResult?.error || 'Email was not accepted' })
       } else {
-        sent.push({ employee: payment.employee_name, email: payment.employee_email })
+        sent.push({ employee: payment.employee_name, email: payment.employee_email, sms: smsOk })
       }
     }
 
