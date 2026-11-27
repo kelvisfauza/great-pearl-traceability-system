@@ -63,15 +63,11 @@ Deno.serve(async (req) => {
       return json({ ok: false, success: false, error: messages[String(check.error)] || messages.invalid });
     }
 
-    if (!employee.phone) {
-      return json({ ok: false, success: false, error: 'No phone number is saved on your employee record. Contact HR.' });
-    }
-
     const code = fiveDigitCode();
     const { data: issued, error: issueError } = await db.rpc('issue_withdrawal_request_otp', {
       p_user_id: caller.userId,
       p_employee_email: caller.email,
-      p_phone: employee.phone,
+      p_phone: employee.phone || '',
       p_code: code,
     });
     if (issueError) throw new Error('Could not prepare a withdrawal code.');
@@ -87,6 +83,7 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     const sendSms = async () => {
+      if (!employee.phone) return false;
       try {
         const response = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
           method: 'POST',

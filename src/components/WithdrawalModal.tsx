@@ -98,6 +98,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<Step>('amount');
   const [verificationCode, setVerificationCode] = useState('');
+  const [codeDelivery, setCodeDelivery] = useState<'sms' | 'email' | null>(null);
   const [sendingCode, setSendingCode] = useState(false);
   const [completedRef, setCompletedRef] = useState('');
   const [completedAmount, setCompletedAmount] = useState(0);
@@ -426,6 +427,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Could not send the withdrawal code.');
+      setCodeDelivery(data.delivery === 'email' ? 'email' : 'sms');
 
       toast({
         title: 'Verification Code Sent',
@@ -631,6 +633,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     setPayoutMode('MOBILE');
     setBankSubmitted(false);
     setVerificationCode('');
+    setCodeDelivery(null);
     setCompletedRef('');
     setCompletedAmount(0);
     setUseInstant(false);
@@ -942,8 +945,9 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
               <Alert>
                 <ShieldCheck className="h-4 w-4" />
                 <AlertDescription>
-                  A 5-digit verification code has been sent to your phone
-                  {employee?.phone ? ` (****${employee.phone.slice(-4)})` : ''}.
+                  {codeDelivery === 'email'
+                    ? `A 5-digit verification code has been sent to your email (${employee?.email || user?.email}).`
+                    : `A 5-digit verification code has been sent to your phone${employee?.phone ? ` (****${employee.phone.slice(-4)})` : ''}.`}
                   <br />
                   <span className="text-xs text-muted-foreground">
                     Amount: <strong>{formatCurrency(parseFloat(amount))}</strong>
