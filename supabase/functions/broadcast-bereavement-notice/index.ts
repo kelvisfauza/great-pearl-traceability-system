@@ -86,7 +86,7 @@ const HTML = (name: string) => `<!doctype html>
           </table>
         </td></tr>
         <tr><td style="background:#f9fafb;padding:20px 32px;border-top:1px solid #e5e7eb;text-align:center;">
-          <div style="font-size:13px;color:#374151;font-weight:600;">Great Agro Coffee &mdash; Member of Hello YEDA COFFEE COMPANY LIMITED</div>
+          <div style="font-size:13px;color:#374151;font-weight:600;">Great Agro Coffee &mdash; Member of YEDA COFFEE COMPANY LIMITED</div>
           <div style="font-size:12px;color:#9ca3af;margin-top:4px;">Head Office &middot; P.O Box 431420, Kasese, Uganda</div>
         </td></tr>
       </table>
@@ -118,7 +118,7 @@ Operations Office: +256 393 101 103
 Email: operations@greatpearlcoffee.com
 
 - Great Agro Coffee
-Member of Hello YEDA COFFEE COMPANY LIMITED
+Member of YEDA COFFEE COMPANY LIMITED
 Head Office - P.O Box 431420, Kasese, Uganda`
 
 Deno.serve(async (req) => {

@@ -10,7 +10,7 @@ function respond(ok: boolean, payload: Record<string, unknown>, status = 200) {
 }
 
 const COMPANY = "Great Agro Coffee";
-const PARENT = "Hello YEDA COFFEE COMPANY LIMITED";
+const PARENT = "YEDA COFFEE COMPANY LIMITED";
 
 function fmtDate(d: string): string {
   try {

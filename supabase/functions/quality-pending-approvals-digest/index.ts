@@ -68,7 +68,7 @@ const HTML = (name: string, list: any[], oldest: number) => `<!doctype html>
           </p>
         </td></tr>
         <tr><td style="background:#f9fafb;padding:18px 28px;border-top:1px solid #e5e7eb;text-align:center;">
-          <div style="font-size:13px;color:#374151;font-weight:600;">Great Agro Coffee &mdash; Member of Hello YEDA COFFEE COMPANY LIMITED</div>
+          <div style="font-size:13px;color:#374151;font-weight:600;">Great Agro Coffee &mdash; Member of YEDA COFFEE COMPANY LIMITED</div>
           <div style="font-size:12px;color:#9ca3af;margin-top:4px;">Head Office &middot; P.O Box 431420, Kasese, Uganda &middot; Operations: +256 393 101 103</div>
         </td></tr>
       </table>
@@ -87,7 +87,7 @@ ${list.map((a: any) => `- ${a.batch_number || '—'} | ${a.supplier_name || '—
 Open: ${APP_URL}
 
 - Great Agro Coffee
-Member of Hello YEDA COFFEE COMPANY LIMITED`
+Member of YEDA COFFEE COMPANY LIMITED`
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
