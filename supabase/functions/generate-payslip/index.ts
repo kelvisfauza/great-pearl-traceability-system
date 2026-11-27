@@ -88,7 +88,7 @@ function generatePayslipPDF(data: PayslipData, x: Enrich): Uint8Array {
   doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text('GREAT AGRO COFFEE', L, 14);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
   doc.text('A member of Hello YEDA COFFEE COMPANY LIMITED', L, 20);
-  doc.text('P.O Box 431420, Kasese, Uganda  |  Fauzakusa@greatpearlcoffee.com', L, 25);
+  doc.text('P.O Box 431420, Kasese, Uganda', L, 25);
   doc.text('greatpearlcoffeesystem.site', L, 30);
   doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text('PAYSLIP', R, 14, { align: 'right' });
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
