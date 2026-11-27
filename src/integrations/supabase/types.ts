@@ -18135,6 +18135,42 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawal_request_otps: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          employee_email: string
+          expires_at: string
+          id: string
+          phone: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          employee_email: string
+          expires_at: string
+          id?: string
+          phone: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          employee_email?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       withdrawal_verification_codes: {
         Row: {
           approver_email: string
@@ -19666,6 +19702,15 @@ export type Database = {
         Args: { p_count?: number; p_issued_by_name?: string }
         Returns: string[]
       }
+      issue_withdrawal_request_otp: {
+        Args: {
+          p_code: string
+          p_employee_email: string
+          p_phone: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       link_quality_posting: {
         Args: { p_delivery_id?: string; p_id: string; p_order_id?: string }
         Returns: Json
@@ -20577,6 +20622,10 @@ export type Database = {
       }
       verify_withdrawal_otp: {
         Args: { _code: string; _id: string }
+        Returns: Json
+      }
+      verify_withdrawal_request_otp: {
+        Args: { p_code: string; p_user_id: string }
         Returns: Json
       }
       withdrawal_service_charge: { Args: { p_amount: number }; Returns: number }

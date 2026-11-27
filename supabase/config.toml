@@ -180,6 +180,8 @@ project_id = "pudfybkyfedeggmokhco"
     verify_jwt = true
   [functions.twofa-verification]
     verify_jwt = true
+  [functions.withdrawal-request-verification]
+    verify_jwt = true
   [functions.send-transactional-email]
     verify_jwt = false
   [functions.preview-transactional-email]

@@ -17,3 +17,11 @@ export function fourDigitCode(): string {
   do { number = crypto.getRandomValues(new Uint32Array(1))[0]; } while (number >= limit);
   return String(1000 + number % 9000);
 }
+
+/** Rejection sampling keeps every five-digit withdrawal code equally likely. */
+export function fiveDigitCode(): string {
+  const limit = Math.floor(0x1_0000_0000 / 90_000) * 90_000;
+  let number: number;
+  do { number = crypto.getRandomValues(new Uint32Array(1))[0]; } while (number >= limit);
+  return String(10_000 + number % 90_000);
+}

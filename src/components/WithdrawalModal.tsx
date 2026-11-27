@@ -98,7 +98,6 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<Step>('amount');
   const [verificationCode, setVerificationCode] = useState('');
-  const [sentCode, setSentCode] = useState('');
   const [sendingCode, setSendingCode] = useState(false);
   const [completedRef, setCompletedRef] = useState('');
   const [completedAmount, setCompletedAmount] = useState(0);
@@ -415,48 +414,33 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   };
 
   const generateAndSendCode = async () => {
-    if (!employee?.email) {
-      toast({
-        title: "No Email",
-        description: "Your employee profile does not have an email. Please contact HR.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setSendingCode(true);
     try {
-      const code = String(Math.floor(10000 + Math.random() * 90000));
-      setSentCode(code);
-
-      const { error } = await supabase.functions.invoke('send-transactional-email', {
+      const { data, error } = await supabase.functions.invoke('withdrawal-request-verification', {
         body: {
-          templateName: 'withdrawal-verification',
-          recipientEmail: employee.email,
-          idempotencyKey: `withdrawal-verify-${employee.email}-${Date.now()}`,
-          templateData: {
-            name: employee.name,
-            code,
-            amount: amount ? Number(amount).toLocaleString() : undefined,
-            method: channel || undefined,
-          },
-        }
+          action: 'send_code',
+          amount: amount ? Number(amount) : undefined,
+          method: channel || undefined,
+        },
       });
 
       if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Could not send the withdrawal code.');
 
       toast({
-        title: "Verification Code Sent",
-        description: `A 5-digit code has been sent to your email (${employee.email}).`,
+        title: 'Verification Code Sent',
+        description: data.delivery === 'sms'
+          ? `A 5-digit code has been sent to your phone${employee?.phone ? ` (****${employee.phone.slice(-4)})` : ''}.`
+          : `SMS was unavailable, so the code was sent to your email (${employee?.email || user?.email}).`,
       });
 
       setStep('verify');
     } catch (error) {
       console.error('Error sending verification code:', error);
       toast({
-        title: "Failed to Send Code",
-        description: "Could not send the verification email. Please try again.",
-        variant: "destructive",
+        title: 'Failed to Send Code',
+        description: error instanceof Error ? error.message : 'Could not send the withdrawal code. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setSendingCode(false);
@@ -513,16 +497,6 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   };
 
   const handleVerifyAndWithdraw = async () => {
-    // (mobile / cash flow)
-    if (verificationCode !== sentCode) {
-      toast({
-        title: "Invalid Code",
-        description: "The verification code you entered is incorrect. Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (withdrawalStatus.disabled) {
       toast({
         title: 'Withdrawals Disabled',
@@ -543,6 +517,12 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
     setLoading(true);
     try {
+      const { data: verification, error: verificationError } = await supabase.functions.invoke('withdrawal-request-verification', {
+        body: { action: 'verify_code', code: verificationCode },
+      });
+      if (verificationError) throw verificationError;
+      if (!verification?.success) throw new Error(verification?.error || 'The withdrawal code could not be verified.');
+
       const withdrawalAmount = parseFloat(amount);
       const ref = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
       
@@ -651,7 +631,6 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     setPayoutMode('MOBILE');
     setBankSubmitted(false);
     setVerificationCode('');
-    setSentCode('');
     setCompletedRef('');
     setCompletedAmount(0);
     setUseInstant(false);
