@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
+    const svcHeaders = { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!}` }
     const body = await req.json().catch(() => ({}))
     const month = body.month || new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
     const paymentIds: string[] = Array.isArray(body.paymentIds) ? body.paymentIds : []
@@ -83,6 +84,7 @@ Deno.serve(async (req) => {
       let payslipUrl = ''
       try {
         const { data: slip } = await supabase.functions.invoke('generate-payslip', {
+          headers: svcHeaders,
           body: {
             employeeName: payment.employee_name, employeeEmail: payment.employee_email,
             employeeId: payment.employee_id || '', department: payment.department || '',
@@ -97,6 +99,7 @@ Deno.serve(async (req) => {
       } catch (e) { console.error('payslip generation failed', payment.id, e) }
 
       const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-transactional-email', {
+        headers: svcHeaders,
         body: {
           templateName: 'salary-credited',
           recipientEmail: payment.employee_email,
