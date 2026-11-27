@@ -1,5 +1,5 @@
 // Automatic approval for small mobile-money wallet withdrawals (owner rules, Nov 2026).
-export const WITHDRAWAL_AUTO_LIMIT = 30000; // strictly below
+export const WITHDRAWAL_AUTO_LIMIT = 30000; // inclusive; the service charge is not counted
 export const TRANSFER_CATEGORIES = ['INTERNAL_TRANSFER', 'TRANSFER_IN'];
 export const POINTS_CATEGORIES = ['SYSTEM_AWARD', 'LOYALTY', 'LOYALTY_REWARD', 'BONUS'];
 export const WORK_ACTIVITY_DAYS = 3; // must have signed in or attended within this many days
@@ -13,7 +13,8 @@ export interface WithdrawalAutoInput {
   availableBalance: number;   // after pending holds
   recentTransferIn: number;   // fellow-employee transfers received in the review window
   recentUnconfirmedPoints: number; // points/rewards credited in the window with no treasury backing
-  otherWithdrawalsToday: number;
+  otherWithdrawalsToday: number;       // all non-rejected requests, used for monitoring
+  automaticWithdrawalsToday: number;  // only prior automatic approvals count toward the daily limit
   payoutBalance: number;      // GosentePay
   payoutFee: number;
   walletFrozen: boolean;
@@ -55,7 +56,8 @@ export function evaluateWithdrawalAutoApproval(i: WithdrawalAutoInput): Decision
     reasons.push(i.daysSinceLastWork === null ? 'No record of the employee working' : `No work activity in the last ${workDays} days`);
   if (usable < need) reasons.push('Wallet cannot cover the amount and charge without overdraft');
   else if (i.recentUnconfirmedPoints > 0 && usable - i.recentUnconfirmedPoints < need) reasons.push('Depends on points or rewards that are not yet confirmed');
-  if (watch) reasons.push(`Employee already made ${i.otherWithdrawalsToday} other withdrawal(s) today`);
+  if (i.automaticWithdrawalsToday >= maxPerDay)
+    reasons.push(`Employee already used ${i.automaticWithdrawalsToday} automatic withdrawal(s) today`);
   if (i.payoutBalance < i.amount + i.payoutFee) reasons.push('Not enough money on GosentePay');
   return { decision: reasons.length ? 'manual' : 'approve', reasons, watch };
 }

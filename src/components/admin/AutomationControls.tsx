@@ -13,9 +13,9 @@ import { AUTOMATION_BOUNDS, AUTOMATION_DEFAULTS, useAutomationControls, type Aut
 type Field = { key: AutomationNumberKey; label: string; help: string; unit: string; step?: number };
 
 const WITHDRAWAL_FIELDS: Field[] = [
-  { key: "withdrawal_limit", label: "Automatic limit", unit: "UGX", help: "Withdrawals BELOW this amount are paid automatically. This amount and above follow normal approval." },
+  { key: "withdrawal_limit", label: "Automatic limit", unit: "UGX", help: "Withdrawals up to and including this amount can be paid automatically. The service charge is not counted; higher amounts follow normal approval." },
   { key: "work_days", label: "Must have worked within", unit: "days", help: "Staff with no sign-in or clock-in in this many days go to normal approval." },
-  { key: "max_per_day", label: "Automatic withdrawals per person per day", unit: "per day", help: "Extra withdrawals the same day go to normal approval and you get a watch alert." },
+  { key: "max_per_day", label: "Automatic withdrawals per person per day", unit: "per day", help: "Only automatic approvals count. Admin-approved withdrawals do not use this allowance; extra automatic withdrawals go to normal approval." },
   { key: "source_days", label: "Check money received in the last", unit: "days", help: "Money from fellow employees in this period is always rejected; recent points or rewards go to normal approval." },
 ];
 const MEAL_FIELDS: Field[] = [

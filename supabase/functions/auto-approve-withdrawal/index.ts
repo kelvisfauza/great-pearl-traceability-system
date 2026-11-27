@@ -17,20 +17,20 @@ Deno.serve(async (req) => {
     const caller = await requireStaff(req, corsHeaders);
     if (caller instanceof Response) return caller;
     if (!caller.internal && !caller.isAdmin) return reply({ ok: false, error: "Automatic review starts on its own after you submit." });
-    const parsed = z.object({ requestId: z.string().uuid() }).safeParse(await req.json().catch(() => ({})));
+    const parsed = z.object({ requestId: z.string().uuid(), recheck: z.boolean().optional() }).safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return reply({ ok: false, error: "Choose a saved withdrawal request." });
     const url = Deno.env.get("SUPABASE_URL")!;
     const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const db = createClient(url, svcKey);
-    const { requestId } = parsed.data;
+    const { requestId, recheck = false } = parsed.data;
 
     const { data: r } = await db.from("approval_requests").select("*").eq("id", requestId).maybeSingle();
     if (!r) return reply({ ok: false, error: "Request not found" });
     const details = (r.details || {}) as Record<string, any>;
     if (!caller.internal && String(r.requestedby || "").toLowerCase() === caller.email) return reply({ ok: false, error: "You cannot review your own request" });
     if (r.type !== "Withdrawal Request" || details.request_type !== "withdrawal") return reply({ ok: false, error: "Not a wallet withdrawal" });
-    if (r.status !== "Pending Admin" || details.auto_review) return reply({ ok: true, decision: "manual", message: "Already reviewed" });
-    if (Date.now() - new Date(r.created_at).getTime() > 15 * 60_000) return reply({ ok: true, decision: "manual", message: "Too old for automatic review" });
+    if (r.status !== "Pending Admin" || (details.auto_review && !recheck)) return reply({ ok: true, decision: "manual", message: "Already reviewed" });
+    if (!recheck && Date.now() - new Date(r.created_at).getTime() > 15 * 60_000) return reply({ ok: true, decision: "manual", message: "Too old for automatic review" });
 
     const controls = await readAutomationControls(db);
     if (!controls.withdrawalAuto) {
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       db.rpc("withdrawal_service_charge", { p_amount: amount }),
       db.rpc("get_user_balance_safe", { user_email: email }),
       db.from("ledger_entries").select("amount, source_category, entry_type, created_at").eq("user_id", userId).gte("created_at", since).order("created_at", { ascending: true }).limit(2000),
-      db.from("approval_requests").select("id, status").eq("type", "Withdrawal Request").ilike("requestedby", email).gte("created_at", dayStart).neq("id", requestId),
+      db.from("approval_requests").select("id, status, admin_approved_by, finance_approved_by, details").eq("type", "Withdrawal Request").ilike("requestedby", email).gte("created_at", dayStart).neq("id", requestId),
       db.from("gosentepay_balance").select("balance").limit(1).maybeSingle(),
       db.from("employees").select("name, phone, wallet_frozen, status, disabled").ilike("email", email).maybeSingle(),
     ]);
@@ -73,7 +73,11 @@ Deno.serve(async (req) => {
       return left;
     };
     const credit = stillHeld;
-    const otherToday = (today || []).filter((t: any) => !/reject|cancel/i.test(String(t.status))).length;
+    const activeToday = (today || []).filter((t: any) => !/reject|cancel/i.test(String(t.status)));
+    const otherToday = activeToday.length;
+    const automaticToday = activeToday.filter((t: any) =>
+      t.admin_approved_by === AUTO || t.finance_approved_by === AUTO || t.details?.auto_review?.decision === "approve"
+    ).length;
     const chg = Number(fee || 0);
     const reportedAvailable = (bal as any)?.[0]?.available_balance;
     const availableBalance = reportedAvailable === null || reportedAvailable === undefined
@@ -86,13 +90,14 @@ Deno.serve(async (req) => {
       recentTransferIn: credit(c => TRANSFER_CATEGORIES.includes(c.source_category)),
       recentUnconfirmedPoints: credit(c => POINTS_ENTRY_TYPES.includes(c.entry_type)),
       otherWithdrawalsToday: otherToday,
+      automaticWithdrawalsToday: automaticToday,
       payoutBalance: Number((gp as any)?.balance || 0), payoutFee: gosenteWithdrawFee(amount),
       walletFrozen: !!(emp as any)?.wallet_frozen,
       employeeActive: !!emp && (emp as any).status === "Active" && !(emp as any).disabled,
       onLeave, suspended, daysSinceLastWork,
       limit: controls.withdrawalLimit, workDays: controls.workDays, maxPerDay: controls.maxPerDay,
     });
-    const review = { decision: d.decision, reasons: d.reasons, checked_at: new Date().toISOString(), fee: chg, other_withdrawals_today: otherToday };
+    const review = { decision: d.decision, reasons: d.reasons, checked_at: new Date().toISOString(), fee: chg, other_withdrawals_today: otherToday, automatic_withdrawals_today: automaticToday, rechecked: recheck || undefined };
     const name = (emp as any)?.name || r.requestedby_name || "Staff";
     const sms = async (phone: string | null | undefined, message: string, userName: string, messageType = "payout_confirmation") => {
       if (!phone) return;
