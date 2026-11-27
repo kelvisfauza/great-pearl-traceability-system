@@ -110,6 +110,8 @@ serve(async (req) => {
       .from("treasury_pool_balance")
       .update({
         last_yo_synced_balance: totalUGX,
+        // Keep the recorded Yo float (used to block Yo payouts) equal to the real Yo balance
+        yo_balance: totalUGX,
         last_yo_synced_at: new Date().toISOString(),
       })
       .eq("id", 1);
