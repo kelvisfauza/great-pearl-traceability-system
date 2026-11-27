@@ -98,7 +98,10 @@ Deno.serve(async (req) => {
         payslipUrl = slip?.url || ''
       } catch (e) { console.error('payslip generation failed', payment.id, e) }
 
-      const { data: sendResult, error: sendError } = await supabase.functions.invoke('send-transactional-email', {
+      let sendResult: any = null; let sendError: any = null
+      for (let attempt = 0; attempt < 4; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 8000 * attempt))
+        ;({ data: sendResult, error: sendError } = await supabase.functions.invoke('send-transactional-email', {
         headers: svcHeaders,
         body: {
           templateName: 'salary-credited',
@@ -122,8 +125,10 @@ Deno.serve(async (req) => {
             totalDeductions: money(totalDeductions),
           },
         },
-      })
-
+      }))
+        const msg = JSON.stringify(sendResult?.error || '')
+        if (!sendError && !/429|rate_limit|High demand/i.test(msg)) break
+      }
       let sendDetail = ''
       if (sendError) { try { sendDetail = await (sendError as any).context?.text?.() } catch { /* ignore */ } }
       if (sendError || sendResult?.ok === false || sendResult?.success === false) {
