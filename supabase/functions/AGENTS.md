@@ -1,6 +1,6 @@
 # Payment accounting
 
-- HR queues saved salary figures; Finance releases one salary through a row-locked private routine, atomically recovering advances and posting the treasury-backed wallet credit before completion; committed releases wake salary email delivery and bulk salary payouts are disabled.
+- HR queues salaries at full net after NSSF/PAYE; Finance releases one salary through a row-locked private routine that credits that full net from General, then debits planned advances from the wallet as separate internal salary_advance_recovery entries back to General (shortfalls use the normal overdraft); loans and overdraft recovery stay with their existing wallet processes. Committed releases wake salary email delivery and bulk salary payouts are disabled.
 
 - Daily finance reports use a consistent service-only snapshot and unique saved report run; summaries count account-journal external legs once, classify provider payments by saved requests, separate investment credits from profit and use balanced classified accounting journals for P&L. Reconstruct period balances, label current unpaid lists and stale provider observations, preserve issued PDFs and never retry uncertain email outcomes.
 
