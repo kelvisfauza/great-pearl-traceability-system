@@ -45,7 +45,7 @@ export function evaluateWithdrawalAutoApproval(i: WithdrawalAutoInput): Decision
     return { decision: 'reject', reasons: ['This withdrawal uses money transferred from a fellow employee'], watch };
   }
   const reasons: string[] = [];
-  if (i.amount >= limit) reasons.push(`Amount is UGX ${limit.toLocaleString()} or more`);
+  if (i.amount > limit) reasons.push(`Amount is above UGX ${limit.toLocaleString()}`);
   if (i.channel !== 'MOBILE_MONEY') reasons.push('Only mobile money withdrawals are paid automatically');
   if (i.walletFrozen) reasons.push('Wallet is frozen');
   if (i.employeeActive === false) reasons.push('Employee is not active');

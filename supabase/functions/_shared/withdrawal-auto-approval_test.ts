@@ -7,10 +7,6 @@ Deno.test('current request is not counted twice against its own balance', () => 
   assertEquals(available, 19980);
   assertEquals(ev({ ...base, amount: 15000, walletBalance: 19980, availableBalance: available }).decision, 'approve');
 });
-Deno.test('29,999 approved, 30,000 goes to normal approval', () => {
-  assertEquals(ev({ ...base, amount: 29999 }).decision, 'approve');
-  assertEquals(ev({ ...base, amount: 30000 }).decision, 'manual');
-});
 Deno.test('money from a fellow employee is rejected', () => assertEquals(ev({ ...base, walletBalance: 25000, availableBalance: 25000, recentTransferIn: 20000 }).decision, 'reject'));
 Deno.test('transfer not needed for this amount is fine', () => assertEquals(ev({ ...base, recentTransferIn: 5000 }).decision, 'approve'));
 Deno.test('overdraft-funded goes to normal approval', () => assertEquals(ev({ ...base, walletBalance: 10000, availableBalance: 10000 }).decision, 'manual'));
@@ -29,3 +25,5 @@ Deno.test('suspended or inactive goes to normal approval', () => {
 Deno.test('admin limit of 50,000 approves 40,000', () => assertEquals(ev({ ...base, amount: 40000, walletBalance: 60000, availableBalance: 60000, limit: 50000 }).decision, 'approve'));
 Deno.test('admin limit of 10,000 sends 20,000 to normal approval', () => assertEquals(ev({ ...base, limit: 10000 }).decision, 'manual'));
 Deno.test('two per day allowed: second withdrawal approved', () => assertEquals(ev({ ...base, otherWithdrawalsToday: 1, maxPerDay: 2 }).decision, 'approve'));
+Deno.test('exactly 30,000 (charge excluded) is approved', () => assertEquals(ev({ ...base, amount: 30000, fee: 1600, walletBalance: 40000, availableBalance: 40000, limit: 30000 }).decision, 'approve'));
+Deno.test('30,001 goes to normal approval', () => assertEquals(ev({ ...base, amount: 30001, walletBalance: 40000, availableBalance: 40000, limit: 30000 }).decision, 'manual'));
