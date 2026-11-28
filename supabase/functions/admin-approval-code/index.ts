@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       // Deliver via BulkSMS.com premium route
       const res = await fetch(`${url}/functions/v1/send-sms`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${service}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${service}` },
         body: JSON.stringify({
           phone,
           message: smsText,
