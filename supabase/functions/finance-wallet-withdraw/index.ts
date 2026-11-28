@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
 
       await fetch(`${url}/functions/v1/send-sms`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${service}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${service}` },
         body: JSON.stringify({
           phone: emp.phone,
           message: `Great Agro Coffee: Finance (${myName}) wants to withdraw UGX ${amount.toLocaleString()} from your wallet for: ${reason}. Code: ${code}. Give this code only if you agree. Valid 10 min.`,
@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
 
       await fetch(`${url}/functions/v1/send-sms`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: anon, Authorization: `Bearer ${service}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${service}` },
         body: JSON.stringify({
           phone: emp.phone,
           message: `Great Agro Coffee: UGX ${amount.toLocaleString()} withdrawn from your wallet by Finance (${myName}) for ${reason}, paid by ${methodLabel}${method === "cash" ? "" : ` to ${payPhone}`}. Ref ${reference}.`,

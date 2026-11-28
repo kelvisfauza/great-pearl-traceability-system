@@ -44,7 +44,6 @@ async function sendSms(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "apikey": anon,
         "Authorization": `Bearer ${service}`,
       },
       body: JSON.stringify({
