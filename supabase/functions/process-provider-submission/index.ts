@@ -1,3 +1,4 @@
+import { mealRecheckAllowed, returnMealForCorrection } from "../_shared/meal-correction-rules.ts";
 import { readAutomationControls } from "../_shared/automation-controls.ts";
 import { receiptLink } from "../_shared/receipt-token.ts";
 import { requireFinanceCaller } from "../_shared/finance-access.ts";
@@ -353,7 +354,13 @@ serve(async (req) => {
       !!resendKey &&
       (req.headers.get("x-resend-key") || body.resendKey) === resendKey;
 
-    const reviewer = caller.user;
+    const reviewer = caller.user || (caller.internal && action === "meal_recheck"
+      ? { id: null, email: "System automatic checks" } : null);
+    if (action === "meal_recheck" && !caller.internal) {
+      return new Response(JSON.stringify({ ok: false, error: "Trusted automatic recheck required" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (!reviewer && !trustedResend) {
       return new Response(JSON.stringify({ ok: false, error: "Not authenticated" }), {
         status: 200,
@@ -478,7 +485,7 @@ serve(async (req) => {
       });
     }
 
-    if (!submissionId || !["approve", "reject", "send_to_finance", "finance_release"].includes(action)) {
+    if (!submissionId || !["approve", "reject", "send_to_finance", "finance_release", "meal_recheck"].includes(action)) {
       return new Response(JSON.stringify({ ok: false, error: "Invalid request" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -502,7 +509,18 @@ serve(async (req) => {
       });
     }
 
-    if (submission.status !== "pending") {
+    if (submission.request_type === "meal_plan" && submission.status === "awaiting_finance" &&
+      ["finance_release", "reject"].includes(action) && body.revision !== submission.meal_revision) {
+      return new Response(JSON.stringify({ ok: false, error: "Procurement changed this plan. Refresh Finance before making a decision." }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (action === "meal_recheck" && (!Number.isInteger(body.revision) || !mealRecheckAllowed(submission, body.revision))) {
+      return new Response(JSON.stringify({ ok: false, error: "Meal plan changed or payment started" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (action !== "meal_recheck" && submission.status !== "pending") {
       // Finance release / reject operates on rows the admin already approved.
       if ((isFinanceRelease || action === "reject") && submission.status === "awaiting_finance") {
         // allowed — fall through, unless already part-paid
@@ -541,9 +559,10 @@ serve(async (req) => {
       const fromStatuses = isFinanceRelease ? ["awaiting_finance"] : ["pending", "processing"];
       const { data: claimed, error: claimErr } = await supabase
         .from("provider_submission_requests")
-        .update({ status: "processing" })
+        .update({ status: "processing", ...(isFinanceRelease ? { finance_released_by_name: reviewer.email } : {}) })
         .eq("id", submissionId)
         .in("status", fromStatuses)
+        .eq("meal_revision", submission.meal_revision ?? 0)
         .select("id")
         .maybeSingle();
       if (claimErr || !claimed) {
@@ -563,17 +582,19 @@ serve(async (req) => {
     let reviewerName = emp?.name || reviewer.email || "Admin";
 
     // 🏦 ADMIN APPROVE → SEND TO FINANCE (no money moves here)
-    if (action === "send_to_finance") {
+    if (action === "send_to_finance" || action === "meal_recheck") {
       const amt = amountOverride !== undefined && amountOverride !== null && Number(amountOverride) > 0
         ? Number(amountOverride)
         : Number(submission.amount);
-      const chg = Number(withdrawCharge || 0);
+      const approvedAmount = action === "meal_recheck" ? Number(submission.admin_approved_amount) : amt;
+      const chg = action === "meal_recheck" ? Number(submission.admin_approved_charge || 0) : Number(withdrawCharge || 0);
       if (!Number.isFinite(amt) || amt < 500) {
         return new Response(JSON.stringify({ ok: false, error: "Amount must be at least 500 UGX" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      if (action === "send_to_finance") {
       const { data: claimed } = await supabase
         .from("provider_submission_requests")
         .update({
@@ -636,25 +657,29 @@ serve(async (req) => {
           console.error("send_to_finance email error:", e);
         }
       }
+      }
       // 🤖 AUTOMATIC FINANCE APPROVAL — meal plans only, once per company per day.
       let autoNote: string | null = null;
       if (submission.request_type === "meal_plan") {
         try {
+          if (action === "meal_recheck" && !submission.reviewed_by) throw new Error("Saved Admin approval identity is missing");
           const today = kampalaDay(new Date());
-          const [{ data: todayRow }, { data: bal }, { data: recent }] = await Promise.all([
+          const [{ data: todayRow, error: dayError }, { data: bal, error: balanceError }, { data: recent, error: historyError }, { data: partial, error: partialError }] = await Promise.all([
             supabase.from("provider_submission_requests").select("id").eq("auto_approval_day", today).maybeSingle(),
             supabase.from("gosentepay_balance").select("balance").limit(1).maybeSingle(),
             supabase.from("provider_submission_requests").select("admin_approved_amount, amount, description")
               .eq("request_type", "meal_plan").eq("status", "paid").order("created_at", { ascending: false }).limit(20),
+            supabase.from("partial_payments").select("id").eq("source_type", "provider").eq("source_id", submissionId).maybeSingle(),
           ]);
-          const total = amt + chg;
+          if (dayError || balanceError || historyError || partialError) throw new Error("Automatic-check data unavailable");
+          const total = approvedAmount + chg;
           const controls = await readAutomationControls(supabase);
-          const decision = !controls.mealAuto ? { ok: false, reasons: ["Automatic approval is turned off in Settings"] } : evaluateMealAutoApproval({
+          const decision = partial ? { ok: false, reasons: ["Finance has started a part-payment workflow"] } : !controls.mealAuto ? { ok: false, reasons: ["Automatic approval is turned off in Settings"] } : evaluateMealAutoApproval({
             requestType: submission.request_type,
             amount: total,
             description: submission.description || "",
             requestedPaymentMethod: submission.requested_payment_method,
-            autoApprovedToday: !!todayRow,
+            autoApprovedToday: !!todayRow && todayRow.id !== submissionId,
             payoutBalance: Number((bal as any)?.balance || 0),
             payoutFee: gosenteWithdrawFee(total),
             recentPaidAmounts: (recent || []).map((r: any) => Number(r.admin_approved_amount || r.amount || 0)),
@@ -663,17 +688,17 @@ serve(async (req) => {
           });
           if (decision.ok) {
             const { data: autoClaim, error: autoErr } = await supabase.from("provider_submission_requests")
-              .update({ status: "processing", auto_approval_day: today, auto_approval_note: "Approved automatically by the system" })
-              .eq("id", submissionId).eq("status", "awaiting_finance").is("auto_approval_day", null)
+              .update({ status: "processing", meal_correction_pending: false, finance_released_by_name: `System auto-approval (Admin: ${submission.admin_approved_by_name || reviewerName})`, auto_approval_day: today, auto_approval_note: "Approved automatically by the system" })
+              .eq("id", submissionId).eq("status", "awaiting_finance").eq("meal_revision", submission.meal_revision ?? 0)
               .select("id").maybeSingle();
             if (autoClaim && !autoErr) {
               autoApproved = true;
               isFinanceRelease = true;
               paymentMode = "gosente";
-              (submission as any).admin_approved_amount = amt;
+              (submission as any).admin_approved_amount = approvedAmount;
               (submission as any).admin_approved_charge = chg;
               (submission as any).status = "processing";
-              reviewerName = `System auto-approval (Admin: ${reviewerName})`;
+              reviewerName = `System auto-approval (Admin: ${submission.admin_approved_by_name || reviewerName})`;
             } else {
               autoNote = "Left for Finance: a meal plan was already approved automatically today";
             }
@@ -685,12 +710,14 @@ serve(async (req) => {
           autoNote = "Left for Finance: automatic checks could not run";
         }
         if (autoNote) {
-          await supabase.from("provider_submission_requests").update({ auto_approval_note: autoNote }).eq("id", submissionId);
+          const returned = await returnMealForCorrection(supabase, submission, autoNote);
+          if (!returned.ok) console.warn("Meal correction handoff skipped: plan changed or Finance started payment");
+          else if (!returned.notified) autoNote += "; Procurement email not confirmed — see decision trail";
         }
       }
       if (!autoApproved) {
         return new Response(
-          JSON.stringify({ ok: true, status: "awaiting_finance", message: autoNote ? `Approved — sent to Finance. ${autoNote}` : "Approved — sent to Finance to release the funds" }),
+          JSON.stringify({ ok: true, status: "awaiting_finance", message: autoNote ? `Admin approval retained — Procurement correction requested; Finance can still release. ${autoNote}` : "Approved — sent to Finance to release the funds" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -724,6 +751,7 @@ serve(async (req) => {
         })
         .eq("id", submissionId)
         .eq("status", submission.status)
+        .eq("meal_revision", submission.meal_revision ?? 0)
         .select("id");
       if (!rejUpd?.length) {
         return new Response(JSON.stringify({ ok: false, error: "Already processed" }), {
@@ -796,7 +824,7 @@ serve(async (req) => {
       withdraw_charge: numCharge,
       total_amount: totalAmount,
       yo_status: "pending",
-      initiated_by: reviewer.id,
+      initiated_by: reviewer.id ?? submission.reviewed_by,
       initiated_by_name: overridden
         ? `${reviewerName} (self-submitted, amount adjusted from ${originalAmount.toLocaleString()})`
         : `${reviewerName} (self-submitted)`,
@@ -852,6 +880,10 @@ serve(async (req) => {
         .single();
       if (insertErr || !inserted) {
         console.error("Insert error:", insertErr);
+        if (autoApproved) {
+          await supabase.from("provider_submission_requests").update({ status: "awaiting_finance", payout_status: "failed" }).eq("id", submissionId).eq("status", "processing");
+          await returnMealForCorrection(supabase, submission, "Automatic payout could not be prepared. Finance may release unchanged after the recording issue is resolved.");
+        }
         return new Response(
           JSON.stringify({ ok: false, error: "Failed to create payout record" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -942,6 +974,7 @@ serve(async (req) => {
       await supabase.from("provider_submission_requests")
         .update({ status: isFinanceRelease ? "awaiting_finance" : "pending", payout_status: "failed", payout_message: `Not funded: ${reservedTreasury.error || "Operations account empty"}` })
         .eq("id", submission.id).eq("status", "processing");
+      if (autoApproved) await returnMealForCorrection(supabase, submission, `Automatic payout failed: ${reservedTreasury.error || "Operations account cannot cover payment"}. Finance may release unchanged when funded.`);
       return new Response(
         JSON.stringify({ ok: false, success: false, code: "TREASURY_INSUFFICIENT", error: reservedTreasury.error || "Operations / Procurement account cannot cover this payment" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -1051,7 +1084,7 @@ serve(async (req) => {
       .from("provider_submission_requests")
       .update({
         status: submissionStatus,
-        reviewed_by: reviewer.id,
+        reviewed_by: reviewer.id ?? submission.reviewed_by,
         reviewed_by_name: reviewerName,
         reviewed_at: new Date().toISOString(),
         payout_record_id: record.id,
@@ -1210,6 +1243,7 @@ serve(async (req) => {
       await supabase.from("provider_submission_requests").update({
         auto_approval_note: paid ? "Approved and paid automatically by the system; receipt queued" : `Approved automatically but payout failed — waiting for Finance: ${displayMessage}`,
       }).eq("id", submissionId);
+      if (!paid) await returnMealForCorrection(supabase, submission, `Automatic payout failed: ${displayMessage}. Correct the plan or let Finance release unchanged.`);
       try {
         const { data: admins } = await supabase.from("employees").select("phone, name, email").ilike("email", "fauzakusa@greatpearlcoffee.com");
         for (const a of admins || []) {

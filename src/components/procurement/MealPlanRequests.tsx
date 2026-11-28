@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { mealPlanPayload, type MealPayment } from '@/lib/mealPlanRules';
 import { downloadMealPlanTemplate, printMealPlanTemplates } from '@/utils/mealPlanPdf';
 import VendorAccountSelector from '@/components/vendors/VendorAccountSelector';
+import MealPlanTrail from '@/components/procurement/MealPlanTrail';
 import { useVendorAccounts } from '@/hooks/useVendorAccounts';
 
 const empty = { documentNumber: '', name: '', phone: '', email: '', amount: '', description: '', payment: 'mobile_money' as MealPayment };
@@ -44,7 +45,7 @@ export default function MealPlanRequests() {
   const qc = useQueryClient();
   const safeSearch = documentSearch.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
   const { data: requests = [], error: loadError } = useQuery({ queryKey: ['paper-meal-requests', safeSearch], queryFn: async () => {
-    let query = (supabase as any).from('provider_submission_requests').select('id,invoice_number,paper_document_number,provider_name,amount,status,requested_payment_method').eq('request_type','meal_plan');
+    let query = (supabase as any).from('provider_submission_requests').select('id,invoice_number,paper_document_number,provider_name,amount,status,requested_payment_method,meal_correction_pending').eq('request_type','meal_plan');
     if (safeSearch) query = query.or(`invoice_number.ilike.%${safeSearch}%,paper_document_number.ilike.%${safeSearch}%`);
     const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
     if (error) throw error; return data || [];
@@ -118,6 +119,6 @@ export default function MealPlanRequests() {
       </TableBody></Table></div>}
       <p className="text-xs text-muted-foreground">{safeSearch ? 'Up to 50 matching records' : 'Latest 50 issued forms and meal requests'}</p>
     </div>
-    <div className="border-t pt-4 space-y-3"><h3 className="font-medium">Paper meal-plan requests</h3>{loadError && <p className="text-destructive">Unable to load meal-plan requests.</p>}<div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Document</TableHead><TableHead>Recipient</TableHead><TableHead>Amount (UGX)</TableHead><TableHead>Payment</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{requests.map((r: any) => <TableRow key={r.id}><TableCell>{r.invoice_number}</TableCell><TableCell>{r.provider_name}</TableCell><TableCell>{Number(r.amount).toLocaleString()}</TableCell><TableCell>{r.requested_payment_method === 'cash' ? 'Cash' : 'Mobile money'}</TableCell><TableCell>{r.status.replaceAll('_',' ')}</TableCell></TableRow>)}{!requests.length && <TableRow><TableCell colSpan={5} className="text-muted-foreground">No paper meal-plan requests.</TableCell></TableRow>}</TableBody></Table></div></div>
+    <div className="border-t pt-4 space-y-3"><h3 className="font-medium">Paper meal-plan requests</h3>{loadError && <p className="text-destructive">Unable to load meal-plan requests.</p>}<div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Document</TableHead><TableHead>Recipient</TableHead><TableHead>Amount (UGX)</TableHead><TableHead>Payment</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{requests.map((r: any) => <TableRow key={r.id}><TableCell>{r.invoice_number}</TableCell><TableCell>{r.provider_name}</TableCell><TableCell>{Number(r.amount).toLocaleString()}</TableCell><TableCell>{r.requested_payment_method === 'cash' ? 'Cash' : 'Mobile money'}</TableCell><TableCell>{r.status.replaceAll('_',' ')}{r.meal_correction_pending && <p className="text-xs text-primary">Correction requested in Procurement Review</p>}<MealPlanTrail submissionId={r.id} /></TableCell></TableRow>)}{!requests.length && <TableRow><TableCell colSpan={5} className="text-muted-foreground">No paper meal-plan requests.</TableCell></TableRow>}</TableBody></Table></div></div>
   </section>;
 }

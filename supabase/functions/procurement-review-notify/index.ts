@@ -14,7 +14,7 @@ const REVIEW_URL = 'https://greatpearlcoffeesystem.site/procurement-review'
 const APPROVALS_URL = 'https://greatpearlcoffeesystem.site/approvals'
 
 const NoticeBody = z.object({
-  mode: z.enum(['scan', 'returned', 'reviewed']).default('scan'),
+  mode: z.enum(['scan', 'returned', 'reviewed', 'meal_retry']).default('scan'),
   source_table: z.enum(['approval_requests', 'provider_submission_requests']).default('approval_requests'),
   record_id: z.string().trim().max(200).optional(),
 })
@@ -38,6 +38,29 @@ const esc = (v: unknown) =>
   String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 const money = (n: unknown) => `UGX ${Number(n || 0).toLocaleString('en-UG')}`
+
+// This sender supports one recipient, not CC; copy Operations explicitly and idempotently.
+async function sendNoticeWithOperations(
+  payload: Parameters<typeof sendLovableEmail>[0] & { cc?: string[] },
+  options: Parameters<typeof sendLovableEmail>[1],
+) {
+  const { cc, ...notice } = payload
+  const sent = await sendLovableEmail(notice, options)
+  if (!sent.success) throw new Error('Email service did not accept the notice')
+  if (cc?.includes(OPERATIONS_EMAIL) && notice.to !== OPERATIONS_EMAIL) {
+    const key = options.idempotencyKey || notice.idempotency_key || ''
+    const suffix = `-${notice.to}`
+    const copyKey = `${key.endsWith(suffix) ? key.slice(0, -suffix.length) : key}-operations`
+    const copy = await sendLovableEmail({ ...notice, to: OPERATIONS_EMAIL,
+      html: `<p>Operations copy — original recipient: ${esc(notice.to)}</p>${notice.html}`,
+      text: `Operations copy — original recipient: ${notice.to}\n${notice.text}`,
+      idempotency_key: copyKey,
+    }, { ...options, idempotencyKey: copyKey })
+    if (!copy.success) throw new Error('Operations copy was not accepted')
+  }
+  return sent
+}
+
 
 const shell = (heading: string, body: string, ctaLabel: string, ctaUrl: string) => `<!doctype html>
 <html><body style="margin:0;padding:0;background:#f4f4f5;font-family:'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
@@ -111,6 +134,23 @@ Deno.serve(async (req) => {
     if (!parsed.success) return new Response(JSON.stringify({ ok: false, error: 'Invalid notice request.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     const payload = parsed.data
     const mode = payload.mode
+    if (mode === 'meal_retry') {
+      if (!caller.internal) return json({ ok: false, error: 'Trusted notification worker required' })
+      const { data: pending, error } = await supabase.from('procurement_reviews').select('record_id')
+        .eq('source_table', 'provider_submission_requests').eq('decision', 'returned')
+        .eq('returned_by', 'System automatic checks').is('return_notified_at', null).limit(50)
+      if (error) return json({ ok: false, error: 'Could not load pending correction notices' })
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      if (!serviceKey) return json({ ok: false, error: 'Notice service unavailable' })
+      for (const review of pending || []) {
+        await supabase.functions.invoke('procurement-review-notify', {
+          headers: { Authorization: `Bearer ${serviceKey}` },
+          body: { mode: 'returned', source_table: 'provider_submission_requests', record_id: review.record_id },
+        })
+      }
+      await supabase.rpc('drain_meal_notice_retry')
+      return json({ ok: true, checked: pending?.length || 0 })
+    }
     let callerName: string | null = null
     if (!caller.internal && mode !== 'scan') {
       const { data: employee, error } = await supabase.from('employees').select('name,disabled,status,permissions').ilike('email', caller.email || '').maybeSingle()
@@ -159,6 +199,14 @@ Deno.serve(async (req) => {
         return dept.includes('procurement') || role.includes('procurement') || perms.some((p: string) => p.includes('procurement'))
       })
 
+      const systemCorrection = sourceTable === 'provider_submission_requests' && review.returned_by === 'System automatic checks'
+      if (systemCorrection) {
+        const { data: plan, error: planError } = await supabase.from('provider_submission_requests')
+          .select('request_type,status,meal_correction_pending,auto_approval_note').eq('id', recordId).maybeSingle()
+        if (planError || !plan || plan.request_type !== 'meal_plan' || plan.status !== 'awaiting_finance' || !plan.meal_correction_pending || plan.auto_approval_note !== review.return_reason) {
+          return json({ ok: false, error: 'This correction is no longer awaiting Procurement' })
+        }
+      }
       let adminName = review.returned_by || 'Administrator'
       if (review.returned_by) {
         const { data: adm } = await supabase.from('employees').select('name').ilike('email', review.returned_by).maybeSingle()
@@ -169,7 +217,7 @@ Deno.serve(async (req) => {
         <p style="font-size:15px;margin:0 0 14px;">Dear <strong>{{NAME}}</strong>,</p>
         <p style="font-size:15px;line-height:1.7;margin:0 0 14px;">
           <strong>${esc(adminName)}</strong> has <strong>sent the request below back to procurement</strong> for changes.
-          Please review the instructions, correct the amount or details, and send it back for administrator approval.
+          ${systemCorrection ? 'Admin approval is retained. Correct the listed items and amounts, then submit for automatic rechecking. Finance may approve the current plan first; if paid, do not submit another plan.' : 'Please review the instructions, correct the amount or details, and send it back for administrator approval.'}
         </p>
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;margin:8px 0 14px;">
           <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;background:#f9fafb;width:180px;">Request</td><td style="padding:8px 10px;border:1px solid #e5e7eb;">${esc(review.request_title || 'Request')}</td></tr>
@@ -185,7 +233,7 @@ Deno.serve(async (req) => {
         const idem = `proc-review-returned-${review.id}-${review.return_count || 1}-${email}`
         if (lovableApiKey) {
           try {
-            await sendLovableEmail({
+            await sendNoticeWithOperations({
               to: email,
               from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
               sender_domain: SENDER_DOMAIN,
@@ -203,7 +251,7 @@ Deno.serve(async (req) => {
             results.push({ email, email_status: `failed: ${e?.message}` })
           }
         }
-        await sendSms(
+        if (!systemCorrection) await sendSms(
           person.phone,
           `SENT BACK BY ADMIN: ${review.request_title || 'Request'} ${money(review.amount)}. ${adminName} asks: ${String(review.return_reason || '').slice(0, 90)}. Edit & resubmit at ${REVIEW_URL} - Great Agro Coffee`,
           person.name,
@@ -211,8 +259,18 @@ Deno.serve(async (req) => {
         )
       }
 
-      await supabase.from('procurement_reviews').update({ return_notified_at: new Date().toISOString() }).eq('id', review.id)
-      return json({ ok: true, notified: reviewers.length, results })
+      const allAccepted = reviewers.length > 0 && results.length === reviewers.length && results.every(r => r.email_status === 'sent')
+      if (allAccepted) await supabase.from('procurement_reviews').update({ return_notified_at: new Date().toISOString() }).eq('id', review.id).eq('return_count', review.return_count)
+      if (systemCorrection) {
+        const { error: trailError } = await supabase.from('meal_plan_events').insert({
+          submission_id: recordId, event_type: allAccepted ? 'procurement_email_accepted' : 'procurement_email_failed',
+          actor: 'System notification', reason: allAccepted ? 'Email service accepted the correction notices; Operations copied' : 'One or more correction emails were not accepted',
+          after_data: { return_count: review.return_count, results },
+        })
+        if (trailError) return json({ ok: false, error: 'Could not record notification results', results })
+      }
+      if (systemCorrection && allAccepted) await supabase.rpc('drain_meal_notice_retry')
+      return json({ ok: allAccepted, notified: reviewers.length, results })
     }
 
     // ---------------------------------------------------------------
@@ -283,7 +341,7 @@ Deno.serve(async (req) => {
         const idem = `proc-review-${review.id}-${r.email}`
         if (lovableApiKey) {
           try {
-            await sendLovableEmail({
+            await sendNoticeWithOperations({
               to: r.email,
               from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
               sender_domain: SENDER_DOMAIN,
@@ -436,7 +494,7 @@ Deno.serve(async (req) => {
       const idem = `proc-review-pending-${fresh[0].id}-${email}`
       if (lovableApiKey) {
         try {
-          await sendLovableEmail({
+          await sendNoticeWithOperations({
             to: email,
             from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
             sender_domain: SENDER_DOMAIN,

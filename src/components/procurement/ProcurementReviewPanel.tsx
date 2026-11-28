@@ -17,6 +17,7 @@ import ProviderReplyDialog from '@/components/procurement/ProviderReplyDialog';
 import VendorAccounts from '@/components/vendors/VendorAccounts';
 import VendorAccountSelector from '@/components/vendors/VendorAccountSelector';
 import { vendorAction } from '@/hooks/useVendorAccounts';
+import MealPlanTrail from '@/components/procurement/MealPlanTrail';
 import { canClearVendorRequest, needsVendorAccount } from '@/lib/vendorAccountRules';
 
 const PENDING_STATUSES = [
@@ -29,6 +30,9 @@ const PENDING_STATUSES = [
 ];
 
 interface PendingRequest {
+  meal_correction_pending?: boolean;
+  meal_revision?: number;
+  editable_description?: string | null;
   request_type?: string;
   service_provider_id?: string | null;
   source_table: string;
@@ -120,8 +124,8 @@ const ProcurementReviewPanel = () => {
           .limit(200),
         (supabase as any)
           .from('provider_submission_requests')
-          .select('id,request_type,provider_name,phone,amount,description,status,created_at,invoice_number,paper_document_number,requested_payment_method,service_provider_id')
-          .eq('status', 'pending')
+          .select('id,request_type,provider_name,phone,amount,description,status,created_at,invoice_number,paper_document_number,requested_payment_method,service_provider_id,meal_correction_pending,meal_revision')
+          .in('status', ['pending', 'awaiting_finance'])
           .order('created_at', { ascending: false })
           .limit(200),
         (supabase as any)
@@ -139,9 +143,12 @@ const ProcurementReviewPanel = () => {
         .filter((r) => !/withdraw|failed payout|retry/i.test(`${r.type || ''} ${r.title || ''}`))
         .map((r) => ({ ...r, source_table: 'approval_requests' }));
 
-      const providerRows: PendingRequest[] = ((providers || []) as any[]).map((r) => ({
+      const providerRows: PendingRequest[] = ((providers || []) as any[]).filter(r => r.status === 'pending' || r.meal_correction_pending).map((r) => ({
         source_table: 'provider_submission_requests',
         request_type: r.request_type,
+        meal_correction_pending: r.meal_correction_pending,
+        meal_revision: r.meal_revision,
+        editable_description: r.description,
         service_provider_id: r.service_provider_id,
         id: r.id,
         title: `${PROVIDER_LABEL[String(r.request_type)] || 'Provider Request'} — ${r.provider_name || 'Unnamed'}`,
@@ -242,7 +249,7 @@ const ProcurementReviewPanel = () => {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); const timer = window.setInterval(load, 15000); return () => window.clearInterval(timer); }, [load]);
 
   const pendingCount = useMemo(
     () => requests.filter((r) => needsAction(reviews[`${r.source_table}:${r.id}`]?.decision)).length,
@@ -254,7 +261,7 @@ const ProcurementReviewPanel = () => {
     setDialog({ open: true, request, decision });
     setNotes(existing?.notes || '');
     setAmount(String(request.amount ?? ''));
-    setDescription(request.description || '');
+    setDescription(request.editable_description ?? request.description ?? '');
     setAdminEmail(existing?.recommended_admin_email || '');
     setVendorId(request.service_provider_id || '');
   };
@@ -264,6 +271,19 @@ const ProcurementReviewPanel = () => {
     if (!request) return;
     setSaving(true);
     try {
+      if (request.meal_correction_pending) {
+        if (dialog.decision !== 'approved') throw new Error('Finance retains the decision to release or reject this Admin-approved plan.');
+        const { data, error } = await (supabase as any).rpc('submit_meal_correction', {
+          p_id: request.id, p_revision: request.meal_revision ?? 0,
+          p_amount: Number(amount), p_description: description, p_notes: notes || null,
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || 'Correction could not be submitted');
+        toast({ title: 'Correction submitted', description: data.message });
+        setDialog({ open: false, request: null, decision: 'approved' });
+        await load();
+        return;
+      }
       if (dialog.decision === 'approved' && !canClearVendorRequest(request.source_table, request.request_type || '', vendorId)) {
         throw new Error('Choose a vendor account before sending this request for approval. New vendors can be created in Vendor accounts.');
       }
@@ -394,7 +414,7 @@ const ProcurementReviewPanel = () => {
                         <p className="font-medium truncate">{request.title}</p>
                         <Badge variant="outline">{request.type}</Badge>
                         {needsVendorAccount(request.source_table, request.request_type || '') && <Badge variant="outline">{request.service_provider_id ? 'Vendor attached' : 'Vendor not attached'}</Badge>}
-                        {decisionBadge(decision)}
+                        {request.meal_correction_pending ? <Badge variant="secondary">Correction requested · Admin approved</Badge> : decisionBadge(decision)}
                       </div>
                       {request.description && (
                         <p className="text-sm text-muted-foreground mt-1">{request.description}</p>
@@ -417,12 +437,14 @@ const ProcurementReviewPanel = () => {
                   {review && decision === 'returned' && (
                     <div className="text-xs rounded p-3 space-y-1 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
                       <p className="font-semibold text-orange-800 dark:text-orange-200">
-                        Administrator {review.returned_by || ''} sent this back{review.returned_at ? ` on ${new Date(review.returned_at).toLocaleString()}` : ''}
+                        {request.meal_correction_pending ? 'Automatic checks' : `Administrator ${review.returned_by || ''}`} sent this back{review.returned_at ? ` on ${new Date(review.returned_at).toLocaleString()}` : ''}
                         {Number(review.return_count || 0) > 1 ? ` (returned ${review.return_count} times)` : ''}.
                       </p>
                       <p><strong>What to change:</strong> {review.return_reason || 'See administrator instructions'}</p>
                       {review.notes && <p><strong>Your earlier observations:</strong> {review.notes}</p>}
-                      <p>Use <em>Edit details</em> to correct the amount or description, then approve and send it back for admin approval.</p>
+                      {request.meal_correction_pending
+                        ? <p>Admin approval is retained. Submit corrected item prices for automatic rechecking. Finance may release this plan unchanged first.</p>
+                        : <p>Use <em>Edit details</em> to correct the amount or description, then approve and send it back for admin approval.</p>}
                     </div>
                   )}
 
@@ -439,14 +461,15 @@ const ProcurementReviewPanel = () => {
                     </div>
                   )}
 
+                  {request.request_type === 'meal_plan' && <MealPlanTrail submissionId={request.id} />}
                   {needsAction(decision) ? (
                     <div className="flex items-center gap-2 flex-wrap">
                       <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => openDialog(request, 'approved')}>
-                        <CheckCircle className="h-4 w-4 mr-2" /> Approve &amp; send to admin
+                        <CheckCircle className="h-4 w-4 mr-2" /> {request.meal_correction_pending ? 'Correct & resubmit' : 'Approve & send to admin'}
                       </Button>
-                      <Button size="sm" variant="destructive" onClick={() => openDialog(request, 'rejected')}>
+                      {!request.meal_correction_pending && <Button size="sm" variant="destructive" onClick={() => openDialog(request, 'rejected')}>
                         <XCircle className="h-4 w-4 mr-2" /> Reject
-                      </Button>
+                      </Button>}
                       <Button size="sm" variant="outline" onClick={() => openDialog(request, 'approved')}>
                         <Pencil className="h-4 w-4 mr-2" /> Edit details
                       </Button>
@@ -485,6 +508,7 @@ const ProcurementReviewPanel = () => {
                         <p className="font-medium truncate">{h.title}</p>
                         {decisionBadge(h.decision)}
                         <Badge variant="outline">Now: {h.current_status}</Badge>
+                        {h.request_type === 'meal_plan' && <MealPlanTrail submissionId={h.record_id} />}
                       </div>
                       <p className="font-semibold whitespace-nowrap">{money(h.amount)}</p>
                     </div>
@@ -568,11 +592,11 @@ const ProcurementReviewPanel = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {dialog.decision === 'approved' ? 'Clear request for administration' : 'Reject request'}
+              {dialog.request?.meal_correction_pending ? 'Correct approved meal plan' : dialog.decision === 'approved' ? 'Clear request for administration' : 'Reject request'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {dialog.request && needsVendorAccount(dialog.request.source_table, dialog.request.request_type || '') && <VendorAccountSelector value={vendorId} onChange={setVendorId} />}
+            {dialog.request && !dialog.request.meal_correction_pending && needsVendorAccount(dialog.request.source_table, dialog.request.request_type || '') && <VendorAccountSelector value={vendorId} onChange={setVendorId} />}
             <div>
               <Label>Amount (UGX)</Label>
               <Input
@@ -598,7 +622,7 @@ const ProcurementReviewPanel = () => {
               <Label>{dialog.decision === 'approved' ? 'Your observations for the admin' : 'Reason for rejection'}</Label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="What did you verify or find?" />
             </div>
-            {dialog.decision === 'approved' && (
+            {dialog.decision === 'approved' && !dialog.request?.meal_correction_pending && (
               <div>
                 <Label>Send to which administrator?</Label>
                 <Select value={adminEmail} onValueChange={setAdminEmail}>
@@ -623,11 +647,11 @@ const ProcurementReviewPanel = () => {
             </Button>
             <Button
               onClick={submit}
-              disabled={saving || (dialog.decision === 'rejected' && !notes.trim()) || (dialog.decision === 'approved' && Boolean(dialog.request) && !canClearVendorRequest(dialog.request?.source_table || '', dialog.request?.request_type || '', vendorId))}
+              disabled={saving || (dialog.decision === 'rejected' && !notes.trim()) || (dialog.decision === 'approved' && !dialog.request?.meal_correction_pending && Boolean(dialog.request) && !canClearVendorRequest(dialog.request?.source_table || '', dialog.request?.request_type || '', vendorId))}
               className={dialog.decision === 'approved' ? 'bg-green-600 hover:bg-green-700' : ''}
               variant={dialog.decision === 'rejected' ? 'destructive' : 'default'}
             >
-              {saving ? 'Saving...' : dialog.decision === 'approved' ? 'Approve & notify admin' : 'Reject request'}
+              {saving ? 'Saving...' : dialog.request?.meal_correction_pending ? 'Submit correction & recheck' : dialog.decision === 'approved' ? 'Approve & notify admin' : 'Reject request'}
             </Button>
           </DialogFooter>
         </DialogContent>

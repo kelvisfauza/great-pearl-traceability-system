@@ -8108,6 +8108,47 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_plan_events: {
+        Row: {
+          actor: string
+          after_data: Json | null
+          before_data: Json | null
+          created_at: string
+          event_type: string
+          id: string
+          reason: string | null
+          submission_id: string
+        }
+        Insert: {
+          actor: string
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          event_type: string
+          id?: string
+          reason?: string | null
+          submission_id: string
+        }
+        Update: {
+          actor?: string
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          reason?: string | null
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_events_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "provider_submission_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meal_plan_forms: {
         Row: {
           created_at: string
@@ -10425,6 +10466,8 @@ export type Database = {
           finance_released_by_name: string | null
           id: string
           invoice_number: string | null
+          meal_correction_pending: boolean
+          meal_revision: number
           national_id: string | null
           paper_document_number: string | null
           payout_message: string | null
@@ -10458,6 +10501,8 @@ export type Database = {
           finance_released_by_name?: string | null
           id?: string
           invoice_number?: string | null
+          meal_correction_pending?: boolean
+          meal_revision?: number
           national_id?: string | null
           paper_document_number?: string | null
           payout_message?: string | null
@@ -10491,6 +10536,8 @@ export type Database = {
           finance_released_by_name?: string | null
           id?: string
           invoice_number?: string | null
+          meal_correction_pending?: boolean
+          meal_revision?: number
           national_id?: string | null
           paper_document_number?: string | null
           payout_message?: string | null
@@ -19085,6 +19132,7 @@ export type Database = {
         }[]
       }
       display_supplier_summary: { Args: never; Returns: Json }
+      drain_meal_notice_retry: { Args: never; Returns: undefined }
       ensure_inventory_batch_source_for_record: {
         Args: { p_coffee_record_id: string }
         Returns: Json
@@ -19998,6 +20046,10 @@ export type Database = {
         Args: { p_sale_id: string }
         Returns: undefined
       }
+      return_meal_for_correction: {
+        Args: { p_id: string; p_reason: string; p_revision: number }
+        Returns: Json
+      }
       reverse_treasury_profit: {
         Args: {
           p_amount: number
@@ -20152,6 +20204,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      submit_meal_correction: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_id: string
+          p_notes?: string
+          p_revision: number
+        }
+        Returns: Json
       }
       submit_per_diem_form: {
         Args: { p_number: string }

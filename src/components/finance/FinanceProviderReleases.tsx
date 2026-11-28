@@ -10,6 +10,7 @@ import { Loader2, Banknote, Smartphone, Wallet, HandCoins } from 'lucide-react';
 import ReleaseReceiptDialog from '@/components/finance/ReleaseReceiptDialog';
 import PartPayControl from '@/components/finance/PartPayControl';
 import { waitForFunds } from '@/lib/waitForFunds';
+import MealPlanTrail from '@/components/procurement/MealPlanTrail';
 import { mealPaymentAllowed } from '@/lib/mealPlanRules';
 
 type PayMethod = 'momo' | 'gosente' | 'cash';
@@ -42,7 +43,7 @@ const FinanceProviderReleases: React.FC = () => {
     try {
       const { data, error, timedOut } = await waitForFunds(
         () => invokeFinanceFunction('process-provider-submission', {
-          body: { action: 'finance_release', submissionId: s.id, paymentMode: mode },
+          body: { action: 'finance_release', submissionId: s.id, paymentMode: mode, revision: s.meal_revision ?? 0 },
         }),
         (sec) => setWaiting((w) => ({ ...w, [s.id]: sec })),
       );
@@ -88,7 +89,7 @@ const FinanceProviderReleases: React.FC = () => {
     setReleasing(s.id);
     try {
       const { data, error } = await invokeFinanceFunction('process-provider-submission', {
-        body: { action: 'reject', submissionId: s.id, rejectionReason: reason.trim() },
+        body: { action: 'reject', submissionId: s.id, rejectionReason: reason.trim(), revision: s.meal_revision ?? 0 },
       });
       if (error) throw error;
       if (!(data as any)?.ok) throw new Error((data as any)?.error || 'Reject failed');
@@ -161,6 +162,8 @@ const FinanceProviderReleases: React.FC = () => {
                   <p className="text-sm bg-muted/50 p-2 rounded">{s.description}</p>
                   {s.requested_payment_method && <p className="text-sm font-medium">Payment on document: {s.requested_payment_method === 'cash' ? 'Cash' : `Mobile money to ${s.phone}`}</p>}
                   {s.auto_approval_note && <p className="text-xs rounded bg-muted px-2 py-1.5"><strong>Automatic approval:</strong> {s.auto_approval_note}</p>}
+                  {s.meal_correction_pending && <p className="text-sm text-primary">Procurement correction requested. Finance may approve and release this plan unchanged; payment closes the correction request.</p>}
+                  {s.request_type === 'meal_plan' && <MealPlanTrail submissionId={s.id} />}
                   {s.payout_status === 'failed' && (
                     <div className="text-xs bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded px-2 py-1.5">
                       <strong>Previous payout failed.</strong> {s.payout_message || 'The payment provider rejected it.'} Fund the account, then tap Try again.

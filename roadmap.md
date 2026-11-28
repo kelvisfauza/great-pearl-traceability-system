@@ -1,5 +1,11 @@
 # Roadmap — Microsoft 365
 
+# Meal-plan correction handoff
+- [x] Return failed automatic checks to Procurement with reasons and email, retaining Finance release.
+- [x] Recheck corrected plans under existing Admin approval; protect edits against payment races and partial payments.
+- [x] Track returns, revisions, notifications and payment outcomes; 32 tests and rollback-only decision-order checks passed.
+- [ ] Verify signed-in correction and Finance flows — blocked: external Supabase preview session unavailable.
+
 - [x] Teams meetings: start/schedule + SMS to chosen staff
 - [x] Staff: last sign-in column (needs AuditLog.Read.All)
 - [x] Devices: new-this-week alert + not seen 3+ weeks filter
