@@ -1,0 +1,51 @@
+DO $$
+DECLARE uid uuid; mail text; vendor public.service_providers; request_id uuid; result jsonb; changed integer; denied boolean;
+BEGIN
+ SELECT u.id,u.email INTO uid,mail FROM auth.users u JOIN public.employees e ON lower(e.email)=lower(u.email) WHERE coalesce(e.disabled,false)=false AND lower(e.status)='active' AND public.is_procurement_reviewer(u.id) LIMIT 1;
+ IF uid IS NULL THEN RAISE EXCEPTION 'No active Procurement identity available for rollback tests'; END IF;
+ SELECT * INTO vendor FROM public.service_providers WHERE length(name)>=2 AND phone IS NOT NULL LIMIT 1;
+ IF vendor.id IS NULL THEN RAISE EXCEPTION 'No vendor available for rollback fixture'; END IF;
+ BEGIN
+  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',uid,'email',mail,'role','service_role')::text,true);
+  PERFORM set_config('request.jwt.claim.role','service_role',true);
+  request_id:=gen_random_uuid();
+  INSERT INTO public.provider_submission_requests(id,request_type,provider_name,phone,amount,description,status,requested_payment_method,service_provider_id) VALUES(request_id,'meal_plan',vendor.name,vendor.phone,47500,E'Meat - 36000\nRice - 11500','pending','mobile_money',vendor.id);
+  UPDATE public.provider_submission_requests SET status='awaiting_finance',admin_approved_amount=47500,admin_approved_charge=0,admin_approved_by_name='Rollback test approver',reviewed_by=uid WHERE id=request_id;
+  result:=public.return_meal_for_correction(request_id,0,'Meat is above its usual price; reduce to 18000');
+  IF NOT (result->>'ok')::boolean THEN RAISE EXCEPTION 'Return failed: %',result; END IF;
+  PERFORM set_config('request.jwt.claim.role','authenticated',true);
+  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',uid,'email',mail,'role','authenticated')::text,true);
+  result:=public.submit_meal_correction(request_id,0,47501,'Meat - 47501','Test');
+  IF (result->>'ok')::boolean THEN RAISE EXCEPTION 'Correction bypassed Admin amount ceiling'; END IF;
+  result:=public.submit_meal_correction(request_id,0,29500,E'Meat - 18000\nRice - 11500','Corrected meat price');
+  IF NOT (result->>'ok')::boolean THEN RAISE EXCEPTION 'Correction failed: %',result; END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.provider_submission_requests WHERE id=request_id AND admin_approved_amount=29500 AND admin_approved_by_name='Rollback test approver' AND reviewed_by=uid AND meal_revision=1 AND status='awaiting_finance' AND NOT meal_correction_pending) THEN RAISE EXCEPTION 'Correction lost Admin approval or changed queue status'; END IF;
+  UPDATE public.provider_submission_requests SET status='processing' WHERE id=request_id AND meal_revision=0 AND status='awaiting_finance'; GET DIAGNOSTICS changed=ROW_COUNT;
+  IF changed<>0 THEN RAISE EXCEPTION 'Stale Finance revision claimed corrected plan'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.meal_plan_events WHERE submission_id=request_id AND event_type='correction_submitted' AND after_data->>'amount'='29500') THEN RAISE EXCEPTION 'Correction not tracked'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.meal_plan_events WHERE submission_id=request_id AND event_type='automatic_recheck_queued') THEN RAISE EXCEPTION 'Automatic recheck not queued'; END IF;
+  denied:=false;
+  BEGIN UPDATE public.meal_plan_events SET reason='changed' WHERE submission_id=request_id; EXCEPTION WHEN OTHERS THEN IF SQLERRM='Meal decision trails are permanent' THEN denied:=true; ELSE RAISE; END IF; END;
+  IF NOT denied THEN RAISE EXCEPTION 'Decision trail was mutable'; END IF;
+  PERFORM set_config('request.jwt.claim.role','service_role',true);
+  result:=public.return_meal_for_correction(request_id,1,'Another failed check');
+  UPDATE public.provider_submission_requests SET status='paid',payout_status='success' WHERE id=request_id;
+  PERFORM set_config('request.jwt.claim.role','authenticated',true);
+  result:=public.submit_meal_correction(request_id,1,29000,'Meat - 29000','Late edit');
+  IF (result->>'ok')::boolean THEN RAISE EXCEPTION 'Finance-first payment allowed a late correction'; END IF;
+  IF EXISTS(SELECT 1 FROM public.procurement_reviews WHERE record_id=request_id::text AND decision='returned') THEN RAISE EXCEPTION 'Paid plan stayed in Procurement corrections'; END IF;
+  PERFORM set_config('request.jwt.claim.role','service_role',true);
+  request_id:=gen_random_uuid();
+  INSERT INTO public.provider_submission_requests(id,request_type,provider_name,phone,amount,description,status,requested_payment_method,service_provider_id) VALUES(request_id,'meal_plan',vendor.name,vendor.phone,47500,'Meat - 47500','pending','mobile_money',vendor.id);
+  UPDATE public.provider_submission_requests SET status='awaiting_finance',admin_approved_amount=47500,admin_approved_by_name='Rollback test approver',reviewed_by=uid WHERE id=request_id;
+  result:=public.return_meal_for_correction(request_id,0,'Correct meat price');
+  INSERT INTO public.partial_payments(source_type,source_id,title,payee_name,total_amount,paid_amount) VALUES('provider',request_id::text,'Rollback test',vendor.name,47500,0);
+  PERFORM set_config('request.jwt.claim.role','authenticated',true);
+  result:=public.submit_meal_correction(request_id,0,29500,'Meat - 29500','Late correction');
+  IF (result->>'ok')::boolean THEN RAISE EXCEPTION 'Part-payment-first workflow allowed correction'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.meal_plan_events WHERE submission_id=request_id AND event_type='finance_part_payment_claimed') THEN RAISE EXCEPTION 'Part-payment decision missing trail'; END IF;
+  RAISE EXCEPTION 'ROLLBACK_MEAL_TESTS_PASSED';
+ EXCEPTION WHEN OTHERS THEN
+  IF SQLERRM='ROLLBACK_MEAL_TESTS_PASSED' THEN RAISE NOTICE 'PASS: retained approval, amount ceiling, stale revision, payment-first, part-payment-first, immutable trail and automatic recheck queue; all fixtures rolled back'; ELSE RAISE; END IF;
+ END;
+END $$;
