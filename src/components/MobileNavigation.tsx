@@ -13,6 +13,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
+import { useNavigationActionCounts } from "@/hooks/useNavigationActionCounts";
+import NavigationActionBadge from "@/components/NavigationActionBadge";
 
 interface MobileNavigationProps {
   isOpen: boolean;
@@ -113,6 +115,7 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
   };
 
   const filteredItems = getFilteredNavigationItems();
+  const actionCount = useNavigationActionCounts(filteredItems.flatMap(section => section.items.flatMap((item: any) => [item.path, ...(item.children || []).map((child: any) => child.path)])));
 
   if (!isOpen) return null;
 
@@ -174,12 +177,13 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
                           }`}
                         >
                           <Icon className="h-5 w-5 flex-shrink-0" />
-                          <span className="text-sm font-medium">{item.name}</span>
+                          <span className="text-sm font-medium min-w-0 flex-1 break-words">{item.name}</span>
+                          <NavigationActionBadge state={actionCount(item.path)} />
                         </Link>
                         {item.children?.length > 0 && <Button variant="ghost" size="icon" aria-label={`Toggle ${item.name} links`} aria-expanded={openGroups.includes(item.path)} onClick={() => setOpenGroups(prev => prev.includes(item.path) ? prev.filter(path => path !== item.path) : [...prev, item.path])}><ChevronDown className="h-4 w-4" /></Button>}
                         </div>
                         {openGroups.includes(item.path) && item.children?.map((child: any) => (
-                          <Link key={child.path} to={child.path} onClick={onClose} className={`flex items-center gap-3 ml-6 px-3 py-2 rounded-md text-sm ${location.pathname === child.path ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent'}`}><child.icon className="h-4 w-4 shrink-0" />{child.name}</Link>
+                          <Link key={child.path} to={child.path} onClick={onClose} className={`flex items-center gap-3 ml-6 px-3 py-2 rounded-md text-sm ${location.pathname === child.path ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent'}`}><child.icon className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 break-words">{child.name}</span><NavigationActionBadge state={actionCount(child.path)} /></Link>
                         ))}
                         </div>
                       );

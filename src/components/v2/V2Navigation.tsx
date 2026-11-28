@@ -34,6 +34,8 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigationActionCounts } from "@/hooks/useNavigationActionCounts";
+import NavigationActionBadge from "@/components/NavigationActionBadge";
 
 // Department to navigation mapping
 const DEPARTMENT_NAV_CONFIG: Record<string, { 
@@ -311,6 +313,7 @@ const V2Navigation = () => {
   };
 
   const navItems = getNavItems();
+  const actionCount = useNavigationActionCounts(navItems.flatMap(section => section.items.filter((item: any) => hasPermission(item.permission)).flatMap((item: any) => [item.path, ...(item.children || []).filter((child: any) => !child.adminOnly || isAdmin()).map((child: any) => child.path)])));
 
   return (
     <Card>
@@ -380,7 +383,8 @@ const V2Navigation = () => {
                   >
                     <Link to={item.path}>
                       <Icon className="mr-2 h-4 w-4" />
-                      {item.label}
+                      <span className="min-w-0 flex-1 whitespace-normal text-left">{item.label}</span>
+                      <NavigationActionBadge state={actionCount(item.path)} />
                     </Link>
                   </Button>
                   {item.children?.some((child: any) => !child.adminOnly || isAdmin()) && (
@@ -388,7 +392,7 @@ const V2Navigation = () => {
                   )}
                   </div>
                   {openGroups.includes(item.path) && item.children?.filter((child: any) => !child.adminOnly || isAdmin()).map((child: any) => (
-                    <Button key={child.path} variant={location.pathname === child.path ? "secondary" : "ghost"} className="w-[calc(100%-1.5rem)] ml-6 justify-start" asChild><Link to={child.path}><child.icon className="mr-2 h-4 w-4" />{child.label}</Link></Button>
+                    <Button key={child.path} variant={location.pathname === child.path ? "secondary" : "ghost"} className="w-[calc(100%-1.5rem)] ml-6 justify-start" asChild><Link to={child.path}><child.icon className="mr-2 h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 whitespace-normal text-left">{child.label}</span><NavigationActionBadge state={actionCount(child.path)} /></Link></Button>
                   ))}
                   </div>
                 );

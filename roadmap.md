@@ -1,5 +1,10 @@
 # Roadmap — Microsoft 365
 
+# Navigation action counts
+- [x] Add shared saved awaiting-action counts to desktop, mobile/tablet and V2 menus.
+- [x] Eight count-rule tests passed; build clean and signed-out tablet/phone pages checked without runtime errors.
+- [ ] Verify signed-in navigation counts — blocked: external Supabase preview session unavailable.
+
 # Meal-plan correction handoff
 - [x] Return failed automatic checks to Procurement with reasons and email, retaining Finance release.
 - [x] Recheck corrected plans under existing Admin approval; protect edits against payment races and partial payments.

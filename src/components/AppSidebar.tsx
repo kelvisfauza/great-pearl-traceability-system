@@ -34,7 +34,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { isTraineeRole, isTraineeRouteAllowed } from "@/lib/trainee";
 import { useRoleBasedData } from "@/hooks/useRoleBasedData";
-import { useUnifiedApprovalRequests } from "@/hooks/useUnifiedApprovalRequests";
+import { useNavigationActionCounts } from "@/hooks/useNavigationActionCounts";
+import NavigationActionBadge from "@/components/NavigationActionBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -56,7 +57,6 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
   const location = useLocation();
   const { signOut, employee, hasPermission, isAdmin } = useAuth();
   const roleData = useRoleBasedData();
-  const { requests: pendingApprovals } = useUnifiedApprovalRequests();
   const [openSections, setOpenSections] = useState<string[]>(["Operations", "Management", "System", "Admin"]);
   const [openGroups, setOpenGroups] = useState<string[]>(["/procurement", "/human-resources", "/reports", "/data-analyst"]);
 
@@ -163,6 +163,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
   };
 
   const filteredNavigationItems = getFilteredNavigationItems();
+  const actionCount = useNavigationActionCounts(filteredNavigationItems.flatMap(section => section.items.flatMap((item: any) => [item.path, ...(item.children || []).map((child: any) => child.path)])));
 
   const handleLogout = async () => {
     try {
@@ -238,8 +239,6 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             <CollapsibleContent className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = location.pathname === item.path || item.children?.some((child: any) => location.pathname === child.path);
-                const isApprovals = item.name === "Approvals";
-                const approvalCount = pendingApprovals?.length || 0;
                 return (
                   <div key={item.path}>
                   <div className="flex items-center">
@@ -256,13 +255,9 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
                   >
                     <item.icon className="h-4 w-4 flex-shrink-0" />
                     {!isCollapsed && (
-                      <span className="flex-1 flex items-center justify-between">
-                        {item.name}
-                        {isApprovals && approvalCount > 0 && (
-                          <Badge variant="destructive" className="ml-2 h-5 min-w-5 px-1.5 text-xs">
-                            {approvalCount > 99 ? '99+' : approvalCount}
-                          </Badge>
-                        )}
+                      <span className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                        <span className="min-w-0 break-words">{item.name}</span>
+                        <NavigationActionBadge state={actionCount(item.path)} />
                       </span>
                     )}
                   </Link>
@@ -274,7 +269,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
                   </div>
                   {!isCollapsed && openGroups.includes(item.path) && item.children?.map((child: any) => (
                     <Link key={child.path} to={child.path} className={cn("flex items-center gap-3 ml-6 px-3 py-2 rounded-md text-sm", location.pathname === child.path ? "bg-primary text-primary-foreground font-medium" : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground")}>
-                      <child.icon className="h-4 w-4 shrink-0" />{child.name}
+                      <child.icon className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 break-words">{child.name}</span><NavigationActionBadge state={actionCount(child.path)} />
                     </Link>
                   ))}
                   </div>
@@ -285,8 +280,6 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             {/* Show icons only when collapsed */}
             {isCollapsed && section.items.flatMap((item: any) => [item, ...(item.children || [])]).map((item) => {
               const isActive = location.pathname === item.path;
-              const isApprovals = item.name === "Approvals";
-              const approvalCount = pendingApprovals?.length || 0;
               return (
                 <Link
                   key={item.path}
@@ -300,11 +293,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
                   title={item.name}
                 >
                   <item.icon className="h-4 w-4" />
-                  {isApprovals && approvalCount > 0 && (
-                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px]">
-                      {approvalCount > 99 ? '99+' : approvalCount}
-                    </Badge>
-                  )}
+                  <NavigationActionBadge state={actionCount(item.path)} compact />
                 </Link>
               );
             })}
