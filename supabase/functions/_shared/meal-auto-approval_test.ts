@@ -23,3 +23,8 @@ Deno.test('item far above its usual price waits', () =>
   assertEquals(evaluateMealAutoApproval({ ...base, amount: 30000, description: 'Beans - 30000', recentDescriptions: hist }).ok, false));
 Deno.test('new item waits for Finance', () =>
   assertEquals(evaluateMealAutoApproval({ ...base, amount: 5000, description: 'Fish - 5000', recentDescriptions: hist }).ok, false));
+
+Deno.test("charges written without a dash count, and a small new item does not block", () => {
+  const r = evaluateMealAutoApproval({ requestType: 'meal_plan', amount: 24000, description: 'beans - 11000, chaco - 4000, cooking oil - 2000, tomatoes - 1000, onions - 1000, salt - 1000, ovacadoes - 1000, transport - 2000, charges 1000', requestedPaymentMethod: 'mobile_money', autoApprovedToday: false, payoutBalance: 500000, payoutFee: 1600, recentPaidAmounts: [24000], recentDescriptions: ['beans - 12000, chaco - 4000, cooking oil - 2000, tomatoes - 1000, onions - 1000, ovacadoes - 2000'] });
+  if (!r.ok) throw new Error(r.reasons.join('; '));
+});

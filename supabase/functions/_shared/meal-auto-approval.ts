@@ -11,7 +11,7 @@ export function kampalaDay(now: Date): string {
 export function parseMealItems(description: string): { name: string; amount: number }[] {
   const items: { name: string; amount: number }[] = [];
   for (const raw of String(description || '').split(/[\n,]+/)) {
-    const m = raw.trim().match(/^([A-Za-z][A-Za-z\s'&/().]*?)\s*[-:=]\s*([\d,]+)\s*$/);
+    const m = raw.trim().match(/^([A-Za-z][A-Za-z\s'&/().]*?)\s*(?:[-:=]\s*|\s)([\d,]+)\s*$/);
     if (m) items.push({ name: m[1].trim(), amount: Number(m[2].replace(/,/g, '')) });
   }
   return items;
@@ -58,7 +58,7 @@ export function evaluateMealAutoApproval(i: MealAutoInput): { ok: boolean; reaso
       const k = itemKey(it.name);
       if (CHARGE_KEYS.has(k)) continue;
       const past = (history.get(k) || []).sort((a, b) => a - b);
-      if (past.length === 0) { reasons.push(`${it.name} has not been bought in recent meal plans`); continue; }
+      if (past.length === 0) { if (it.amount <= NEW_ITEM_ALLOWANCE) continue; reasons.push(`${it.name} has not been bought in recent meal plans`); continue; }
       const median = past[Math.floor(past.length / 2)];
       if (it.amount > median * mult) reasons.push(`${it.name} costs UGX ${it.amount.toLocaleString()}, usually about UGX ${median.toLocaleString()}`);
     }
@@ -66,6 +66,8 @@ export function evaluateMealAutoApproval(i: MealAutoInput): { ok: boolean; reaso
   return { ok: reasons.length === 0, reasons };
 }
 
+// Small new items (e.g. salt) do not block automatic approval.
+export const NEW_ITEM_ALLOWANCE = 2000;
 const CHARGE_KEYS = new Set(['charges', 'charge', 'fee', 'fees', 'transport', 'withdraw charges']);
 export function itemKey(name: string): string {
   return name.toLowerCase().replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim().replace(/(?<=\w{3})s$/, '');
